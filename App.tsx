@@ -54,6 +54,15 @@ const IncomeInputBox = ({ label, value, onChange, type = 'number', placeholder =
     </div>
 );
 
+const DEFAULT_INCOME_DATA = {
+    packagingRevenue: 0,
+    cardCharge: 0,
+    cardFee: 0,
+    intlShipping: 0,
+    dadReceivable: 0,
+    paymentNote: ''
+};
+
 const App: React.FC = () => {
   // --- State ---
   const [view, setView] = useState<ViewState>('products');
@@ -96,16 +105,9 @@ const App: React.FC = () => {
   const [detailSortMode, setDetailSortMode] = useState<'buyer' | 'product'>('buyer');
 
   // Income View State
-  const [incomeData, setIncomeData] = useState({
-      packagingRevenue: 0,
-      cardCharge: 0,
-      cardFee: 0,
-      intlShipping: 0,
-      dadReceivable: 0,
-      paymentNote: ''
-  });
+  const [incomeData, setIncomeData] = useState(DEFAULT_INCOME_DATA);
 
-  // --- Firestore Real-time Listeners ---
+  // --- Firestore Real-time Listeners (Global Data) ---
   useEffect(() => {
     // 1. Product Groups
     const unsubGroups = onSnapshot(collection(db, 'productGroups'), (snapshot) => {
@@ -172,31 +174,36 @@ const App: React.FC = () => {
         }
     });
 
-    // 5. Settings (Income Data)
-    const unsubIncome = onSnapshot(doc(db, 'settings', 'income'), (docSnap) => {
-        if (docSnap.exists()) {
-            setIncomeData(docSnap.data() as any);
-        } else {
-             // Initialize income if missing
-             setDoc(doc(db, 'settings', 'income'), {
-                packagingRevenue: 0,
-                cardCharge: 0,
-                cardFee: 0,
-                intlShipping: 0,
-                dadReceivable: 0,
-                paymentNote: ''
-             });
-        }
-    });
-
     return () => {
         unsubGroups();
         unsubItems();
         unsubOrderGroups();
         unsubOrderItems();
-        unsubIncome();
     };
   }, []);
+
+  // --- Firestore Listener (Income Data - Specific to Selected Order Group) ---
+  useEffect(() => {
+    if (!selectedOrderGroup) {
+        setIncomeData(DEFAULT_INCOME_DATA);
+        return;
+    }
+
+    // Immediately reset to defaults to prevent seeing previous group's data while loading
+    setIncomeData(DEFAULT_INCOME_DATA);
+
+    // Listen to a specific document for this order group in 'incomeSettings' collection
+    const unsubIncome = onSnapshot(doc(db, 'incomeSettings', selectedOrderGroup), (docSnap) => {
+        if (docSnap.exists()) {
+            setIncomeData(docSnap.data() as any);
+        } else {
+             // If no data exists for this specific group yet, keep defaults (or could try to load from a template)
+             setIncomeData(DEFAULT_INCOME_DATA);
+        }
+    });
+
+    return () => unsubIncome();
+  }, [selectedOrderGroup]);
 
 
   // --- Computed ---
@@ -381,8 +388,10 @@ const App: React.FC = () => {
   // --- Firebase Actions ---
 
   const handleManualSaveIncome = async () => {
+      if (!selectedOrderGroup) return;
       try {
-        await setDoc(doc(db, 'settings', 'income'), incomeData);
+        // Save to specific document for this order group
+        await setDoc(doc(db, 'incomeSettings', selectedOrderGroup), incomeData);
         alert("儲存成功！");
       } catch (e) {
         console.error(e);
@@ -1371,161 +1380,151 @@ const App: React.FC = () => {
   };
 
   const renderDetailsView = () => {
-      const targetItems = selectedOrderGroup 
-        ? orderItems.filter(i => i.orderGroupId === selectedOrderGroup) 
-        : orderItems;
-
-      const map = new Map<string, { key: string, label: string, totalQty: number, totalPrice: number, items: any[] }>();
-      
-      targetItems.forEach(item => {
+    // Logic for grouping
+    const map = new Map<string, { key: string, label: string, totalQty: number, totalPrice: number, items: any[] }>();
+    
+    activeOrderItems.forEach(item => {
           const product = productItems.find(p => p.groupId === item.productGroupId && p.id === item.productItemId);
           const total = (product?.inputPrice || 0) * item.quantity;
-          
           let key, label;
+          
           if (detailSortMode === 'buyer') {
               key = item.buyer;
-              label = item.buyer;
+              label = item.buyer || '(未填寫買家)';
           } else {
               key = `${item.productGroupId}-${item.productItemId}`;
-              // Update: Label as clean product name
-              label = `${product ? cleanProductName(product.name) : '未知商品'}`;
+              label = product ? cleanProductName(product.name) : `未知商品 (${key})`;
           }
-
-          if (!map.has(key)) {
-              map.set(key, { key, label, totalQty: 0, totalPrice: 0, items: [] });
-          }
+          
+          if (!map.has(key)) map.set(key, { key, label, totalQty: 0, totalPrice: 0, items: [] });
           const group = map.get(key)!;
           group.totalQty += item.quantity;
           group.totalPrice += total;
           group.items.push({ ...item, product, total });
-      });
+    });
+    
+    const groupedData = Array.from(map.values());
+    
+    if (detailSortMode === 'buyer') {
+        groupedData.sort((a, b) => a.label.localeCompare(b.label, 'zh-TW'));
+        groupedData.forEach(g => {
+            g.items.sort((a: any, b: any) => {
+                const idA = `${a.productGroupId}-${a.productItemId}`;
+                const idB = `${b.productGroupId}-${b.productItemId}`;
+                return idA.localeCompare(idB);
+            });
+        });
+    } else {
+        groupedData.sort((a, b) => a.key.localeCompare(b.key));
+        groupedData.forEach(g => {
+            g.items.sort((a: any, b: any) => a.buyer.localeCompare(b.buyer, 'zh-TW'));
+        });
+    }
 
-      const groupedData = Array.from(map.values());
-
-      // --- Sorting Logic ---
-      if (detailSortMode === 'buyer') {
-          // 1. Sort Buyers Alphabetically (Highest Category)
-          groupedData.sort((a, b) => a.label.localeCompare(b.label, 'zh-TW'));
-          
-          // 2. Sort Items by Product ID (Sub-category)
-          groupedData.forEach(g => {
-              g.items.sort((a: any, b: any) => {
-                  const idA = `${a.productGroupId}-${a.productItemId}`;
-                  const idB = `${b.productGroupId}-${b.productItemId}`;
-                  return idA.localeCompare(idB);
-              });
-          });
-      } else {
-          // 1. Sort Products by ID (Highest Category)
-          groupedData.sort((a, b) => a.key.localeCompare(b.key));
-          
-          // 2. Sort Items by Buyer Name (Sub-category)
-          groupedData.forEach(g => {
-              g.items.sort((a: any, b: any) => a.buyer.localeCompare(b.buyer, 'zh-TW'));
-          });
-      }
-
-      return (
-        <div className="flex flex-col h-full overflow-hidden">
-            {/* Header Area */}
-            <div className="bg-blue-950 p-3 shadow-lg border-b border-blue-900 shrink-0">
-                <div className="flex justify-between items-center mb-2">
-                    <h2 className="text-xl font-bold text-cyan-400 tracking-wide">購買明細</h2>
-                    <div className="flex gap-2">
-                        {/* View Switcher */}
-                        <div className="bg-blue-900/50 p-1 rounded-lg flex border border-blue-800">
-                            <button 
-                                onClick={() => setDetailSortMode('buyer')}
-                                className={`px-2 py-1 rounded-md text-xs font-bold flex items-center transition-all ${detailSortMode === 'buyer' ? 'bg-cyan-600 text-white shadow' : 'text-blue-300 hover:text-white'}`}
-                            >
-                                <User size={14} className="mr-1"/> 依買家
-                            </button>
-                            <button 
-                                onClick={() => setDetailSortMode('product')}
-                                className={`px-2 py-1 rounded-md text-xs font-bold flex items-center transition-all ${detailSortMode === 'product' ? 'bg-cyan-600 text-white shadow' : 'text-blue-300 hover:text-white'}`}
-                            >
-                                <Box size={14} className="mr-1"/> 依商品
-                            </button>
+    return (
+        <div className="flex flex-col h-full overflow-hidden bg-slate-50">
+             {/* Header */}
+             <div className="bg-blue-950 p-3 shadow-lg border-b border-blue-900 shrink-0">
+                 <div className="flex justify-between items-center mb-2">
+                     <div className="flex items-center gap-2">
+                         <h2 className="text-xl font-bold text-cyan-400 tracking-wide">購買明細</h2>
+                         <div className="bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full flex items-center gap-1">
+                             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                             <span className="text-[10px] text-emerald-400 font-bold">雲端連線中</span>
                         </div>
-                        <button 
-                            onClick={handleExportDetails}
-                            className="flex items-center text-xs font-bold bg-emerald-700 hover:bg-emerald-600 text-emerald-100 px-3 py-1.5 rounded-full transition-colors border border-emerald-600 shadow"
-                            title="匯出明細"
-                        >
-                            <Download size={16} />
-                        </button>
-                    </div>
-                </div>
-                 
-                 {/* Selector for Details - No "All" Button */}
-                 <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-                     {orderGroups.slice().reverse().map(group => (
-                         <button
-                            key={group.id}
-                            onClick={() => setSelectedOrderGroup(group.id)}
-                            className={`flex-shrink-0 px-4 py-1.5 rounded-lg font-mono text-sm font-bold border transition-all ${selectedOrderGroup === group.id ? 'bg-cyan-600 text-white border-cyan-500 shadow-md shadow-cyan-900/50' : 'bg-blue-900/50 text-blue-200 border-blue-800 hover:bg-blue-800'}`}
-                         >
-                             {group.id}
-                         </button>
-                     ))}
-                 </div>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto p-3 space-y-3 pb-24">
-                {groupedData.length === 0 ? (
-                     <div className="flex flex-col items-center justify-center py-16 text-slate-400">
-                         <List size={64} className="mb-4 opacity-30"/>
-                         <p className="text-lg">尚無明細資料</p>
                      </div>
-                ) : (
-                    groupedData.map(group => (
-                        <div key={group.key} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                            <div className="bg-slate-50 p-3 flex justify-between items-center border-b border-slate-100">
-                                <div className="font-bold text-slate-800 text-xl flex items-center">
-                                    {detailSortMode === 'buyer' ? <User size={24} className="text-blue-500 mr-2"/> : <Box size={24} className="text-emerald-500 mr-2"/>}
-                                    {group.label}
+                     <button 
+                        onClick={handleExportDetails}
+                        className="flex items-center text-xs font-bold bg-emerald-700 hover:bg-emerald-600 text-emerald-100 px-3 py-1.5 rounded-full transition-colors border border-emerald-600 shadow"
+                        title="匯出明細"
+                    >
+                        <Download size={16} />
+                    </button>
+                 </div>
+                 <div className="flex justify-between items-center gap-2">
+                     {/* Order Group Selector */}
+                     <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar flex-1">
+                         {orderGroups.slice().reverse().map(group => (
+                             <button
+                                key={group.id}
+                                onClick={() => setSelectedOrderGroup(group.id)}
+                                className={`flex-shrink-0 px-4 py-1.5 rounded-lg font-mono text-sm font-bold border transition-all ${selectedOrderGroup === group.id ? 'bg-cyan-600 text-white border-cyan-500 shadow-md shadow-cyan-900/50' : 'bg-blue-900/50 text-blue-200 border-blue-800 hover:bg-blue-800'}`}
+                             >
+                                 {group.id}
+                             </button>
+                         ))}
+                     </div>
+                     
+                     {/* Sort Toggle */}
+                     <div className="flex bg-blue-900 p-0.5 rounded-lg border border-blue-800 shrink-0">
+                        <button 
+                            onClick={() => setDetailSortMode('buyer')}
+                            className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${detailSortMode === 'buyer' ? 'bg-cyan-500 text-white shadow-sm' : 'text-blue-300 hover:text-white'}`}
+                        >
+                            依買家
+                        </button>
+                        <button 
+                            onClick={() => setDetailSortMode('product')}
+                            className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${detailSortMode === 'product' ? 'bg-cyan-500 text-white shadow-sm' : 'text-blue-300 hover:text-white'}`}
+                        >
+                            依商品
+                        </button>
+                     </div>
+                 </div>
+             </div>
+
+             {/* Content */}
+             <div className="flex-1 overflow-y-auto p-2 pb-24 space-y-3">
+                 {activeOrderItems.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-slate-400">
+                        <List size={64} className="mb-4 opacity-30"/>
+                        <p className="text-lg">尚無訂單資料</p>
+                    </div>
+                 ) : (
+                    groupedData.map((group) => (
+                        <div key={group.key} className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                            {/* Group Header */}
+                            <div className="bg-slate-50 p-3 border-b border-slate-100 flex justify-between items-center">
+                                <div className="flex items-center gap-2 overflow-hidden">
+                                    {detailSortMode === 'buyer' ? <User size={18} className="text-blue-500"/> : <Box size={18} className="text-amber-500"/>}
+                                    <span className="font-bold text-slate-800 text-lg truncate">{group.label}</span>
                                 </div>
-                                <div className="text-right">
-                                    <div className="text-sm text-slate-400 font-bold uppercase">Total</div>
-                                    <div className="font-mono text-emerald-600 font-bold text-lg">{formatCurrency(group.totalPrice)}</div>
+                                <div className="text-right shrink-0">
+                                    <div className="text-xs text-slate-500 font-bold mb-0.5">總計</div>
+                                    <div className="text-emerald-600 font-bold font-mono text-lg leading-none">{formatCurrency(group.totalPrice)}</div>
                                 </div>
                             </div>
-                            <div className="divide-y divide-slate-100">
-                                {group.items.map((item: any) => (
-                                    <div key={item.id} className="p-3 flex justify-between items-center hover:bg-slate-50">
-                                        <div className="flex-1 pr-2">
+                            
+                            {/* Items */}
+                            <div className="divide-y divide-slate-50">
+                                {group.items.map((item: any, idx: number) => (
+                                    <div key={idx} className="p-3 flex justify-between items-center hover:bg-slate-50 transition-colors">
+                                        <div className="flex-1 mr-3 min-w-0">
                                             {detailSortMode === 'buyer' ? (
-                                                <div className="flex flex-col">
-                                                    {/* Mode Buyer: Show Product Name : Description */}
-                                                    <div className="font-bold text-slate-800 text-lg">
-                                                       {item.product ? cleanProductName(item.product.name) : ''} <span className="text-slate-400 mx-1">:</span> <span className="text-slate-600">{item.description}</span>
-                                                    </div>
-                                                </div>
+                                                <>
+                                                    <div className="font-bold text-slate-700 text-sm mb-0.5 truncate">{item.product?.name ? cleanProductName(item.product.name) : '未知商品'}</div>
+                                                    <div className="text-xs text-slate-400">{item.description}</div>
+                                                </>
                                             ) : (
-                                                <div className="flex flex-col">
-                                                    {/* Mode Product: Show Buyer (Description if any) */}
-                                                    <div className="font-bold text-slate-800 text-lg">
-                                                       {item.buyer} 
-                                                    </div>
-                                                </div>
+                                                <>
+                                                    <div className="font-bold text-slate-700 text-sm mb-0.5 truncate">{item.buyer}</div>
+                                                    <div className="text-xs text-slate-400">{item.description}</div>
+                                                </>
                                             )}
                                         </div>
-                                        <div className="flex flex-col items-end gap-0.5 min-w-[80px]">
-                                            <div className="text-lg">
-                                                <span className="text-slate-400 text-sm mr-1">x</span>
-                                                <span className="font-bold text-slate-800">{item.quantity}</span>
-                                            </div>
-                                            <div className="font-mono text-slate-600 font-medium text-lg">{formatCurrency(item.total)}</div>
+                                        <div className="flex items-center gap-3 shrink-0">
+                                            <div className="bg-slate-100 text-slate-600 px-2 py-1 rounded text-xs font-bold">x{item.quantity}</div>
+                                            <div className="text-slate-800 font-mono font-bold w-16 text-right">{formatCurrency(item.total)}</div>
                                         </div>
                                     </div>
                                 ))}
                             </div>
                         </div>
                     ))
-                )}
-            </div>
+                 )}
+             </div>
         </div>
-      );
+    );
   };
 
   return (
