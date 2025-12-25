@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { ProductGroup, ProductItem, OrderGroup, OrderItem, ViewState } from './types';
 import { INITIAL_PRODUCT_GROUPS, INITIAL_PRODUCT_ITEMS, INITIAL_ORDER_GROUPS, INITIAL_ORDER_ITEMS } from './constants';
-import { getNextGroupId, getNextItemId, getNextOrderGroupId, calculateProductStats, formatCurrency, generateUUID } from './utils';
+import { getNextGroupId, getNextItemId, getNextOrderGroupId, calculateProductStats, formatCurrency, generateUUID, cleanProductName } from './utils';
 import ProductForm from './components/ProductForm';
 import { Trash2, Edit, Plus, Package, ShoppingCart, List, BarChart2, ChevronRight, ChevronDown, User, Box, X, Calculator, Download, Save } from 'lucide-react';
 import { db } from './firebase';
@@ -130,6 +130,7 @@ const App: React.FC = () => {
     // 2. Product Items
     const unsubItems = onSnapshot(collection(db, 'productItems'), (snapshot) => {
         const items = snapshot.docs.map(d => d.data() as ProductItem);
+        // Sort by ID is usually sufficient here if Group is sorted
         setProductItems(items);
         if (snapshot.empty) {
              const batch = writeBatch(db);
@@ -199,10 +200,13 @@ const App: React.FC = () => {
 
 
   // --- Computed ---
+  // Ensure items are sorted by ID when filtering
   const filteredProducts = useMemo(() => {
     return productGroups.map(group => ({
       group,
-      items: productItems.filter(item => item.groupId === group.id)
+      items: productItems
+        .filter(item => item.groupId === group.id)
+        .sort((a, b) => a.id.localeCompare(b.id))
     }));
   }, [productGroups, productItems]);
 
@@ -210,9 +214,16 @@ const App: React.FC = () => {
     orderGroups.find(g => g.id === selectedOrderGroup), 
   [orderGroups, selectedOrderGroup]);
 
-  const activeOrderItems = useMemo(() => 
-    orderItems.filter(i => i.orderGroupId === selectedOrderGroup),
-  [orderItems, selectedOrderGroup]);
+  // Sort Order Items: Group ID -> Item ID -> Buyer
+  const activeOrderItems = useMemo(() => {
+    return orderItems
+        .filter(i => i.orderGroupId === selectedOrderGroup)
+        .sort((a, b) => {
+            if (a.productGroupId !== b.productGroupId) return a.productGroupId.localeCompare(b.productGroupId);
+            if (a.productItemId !== b.productItemId) return a.productItemId.localeCompare(b.productItemId);
+            return a.buyer.localeCompare(b.buyer, 'zh-TW');
+        });
+  }, [orderItems, selectedOrderGroup]);
 
   // --- Export Helper ---
   const downloadCSV = (filename: string, headers: string[], rows: (string | number)[][]) => {
@@ -823,7 +834,8 @@ const App: React.FC = () => {
                                                     }}
                                                     title="點擊修改商品名稱"
                                                 >
-                                                    {item.name}
+                                                    {/* Clean name everywhere */}
+                                                    {cleanProductName(item.name)}
                                                 </span>
                                             )}
                                         </div>
@@ -941,18 +953,40 @@ const App: React.FC = () => {
                               return (
                                   <div key={item.id} className="bg-white p-3 rounded-xl shadow-sm border border-slate-200 text-base hover:border-blue-300 transition-colors relative">
                                       
-                                      {/* Row 1: ID & Date */}
-                                      <div className="flex justify-between items-center text-sm text-slate-500 font-mono border-b border-slate-100 pb-1 mb-2">
-                                          <span className="bg-slate-100 px-1.5 rounded">{item.productGroupId}-{item.productItemId}</span>
-                                          <span>{item.date}</span>
+                                      {/* Row 1: Date & Actions (No Code Badge) */}
+                                      <div className="flex justify-between items-start mb-2 border-b border-slate-100 pb-2">
+                                          {/* Hided code per user request "不顯示代碼", kept date */}
+                                          <div className="flex items-center gap-2 text-sm text-slate-500 font-mono">
+                                              {/* Removed the ID badge */}
+                                              <span className="text-xs bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-bold">{item.date}</span>
+                                          </div>
+                                          <div className="flex gap-2">
+                                              <button 
+                                                onClick={() => { setEditingOrderItem(item); setIsOrderEntryOpen(true); }} 
+                                                className="text-blue-500 hover:text-blue-700 p-1.5 rounded-lg bg-blue-50 border border-blue-100"
+                                              >
+                                                <Edit size={16} />
+                                              </button>
+                                              <button 
+                                                onClick={(e) => handleDeleteOrderItem(e, item.id)} 
+                                                className="text-rose-500 hover:text-rose-700 p-1.5 rounded-lg bg-white border border-rose-200 shadow-sm hover:bg-rose-50"
+                                              >
+                                                <Trash2 size={16} />
+                                              </button>
+                                          </div>
                                       </div>
 
-                                      {/* Row 2: Product Name : Description */}
-                                      <div className="mb-3 pr-20">
+                                      {/* Row 2: Product Name (Stripped of leading numbers) : Description */}
+                                      <div className="mb-3">
                                            <div className="text-lg leading-tight">
-                                               <span className="font-bold text-slate-800">{product?.name}</span>
-                                               <span className="mx-1 text-slate-400 font-bold">:</span>
-                                               <span className="text-slate-600 font-medium">{item.description}</span>
+                                               {/* Remove leading number and dot (e.g., "1.Product" -> "Product") */}
+                                               <span className="font-bold text-slate-800">{product ? cleanProductName(product.name) : ''}</span>
+                                               {item.description && (
+                                                <>
+                                                    <span className="mx-1 text-slate-400 font-bold">:</span>
+                                                    <span className="text-slate-600 font-medium">{item.description}</span>
+                                                </>
+                                               )}
                                            </div>
                                       </div>
 
@@ -965,22 +999,6 @@ const App: React.FC = () => {
                                              <div className="font-bold text-slate-600 text-sm">x<span className="text-lg ml-0.5">{item.quantity}</span></div>
                                              <div className="font-mono font-bold text-emerald-600 text-xl">{formatCurrency(total)}</div>
                                           </div>
-                                      </div>
-                                      
-                                      {/* Actions Positioned Absolute Top-Right */}
-                                      <div className="absolute top-3 right-3 flex gap-2">
-                                          <button 
-                                            onClick={() => { setEditingOrderItem(item); setIsOrderEntryOpen(true); }} 
-                                            className="text-blue-500 hover:text-blue-700 p-1.5 rounded-lg bg-blue-50 border border-blue-100"
-                                          >
-                                            <Edit size={18} />
-                                          </button>
-                                          <button 
-                                            onClick={(e) => handleDeleteOrderItem(e, item.id)} 
-                                            className="text-rose-500 hover:text-rose-700 p-1.5 rounded-lg bg-white border border-rose-200 shadow-sm hover:bg-rose-50"
-                                          >
-                                            <Trash2 size={18} />
-                                          </button>
                                       </div>
 
                                       {item.remarks && <div className="mt-2 text-amber-600 text-sm border-t border-slate-100 pt-1"><span className="text-slate-400 font-bold mr-1">備註:</span> {item.remarks}</div>}
@@ -1327,7 +1345,7 @@ const App: React.FC = () => {
                                     .sort((a, b) => a.id.localeCompare(b.id))
                                     .map(item => (
                                     <div key={item.id} className="grid grid-cols-12 gap-1 px-2 py-2 items-center text-sm font-bold text-slate-700 hover:bg-slate-50">
-                                        <div className="col-span-6 text-left pl-3 truncate border-l-2 border-slate-200 ml-1">{item.name}</div>
+                                        <div className="col-span-6 text-left pl-3 truncate border-l-2 border-slate-200 ml-1">{cleanProductName(item.name)}</div>
                                         <div className="col-span-1 text-center font-mono text-slate-400">{item.stats.qty}</div>
                                         <div className="col-span-2 text-center font-mono text-slate-400">{fmtInt(item.stats.jpy)}</div>
                                         <div className="col-span-1 text-center font-mono text-slate-400">{fmtInt(item.stats.dom)}</div>
@@ -1369,7 +1387,8 @@ const App: React.FC = () => {
               label = item.buyer;
           } else {
               key = `${item.productGroupId}-${item.productItemId}`;
-              label = `${product?.name || '未知商品'} (${key})`;
+              // Update: Label as clean product name
+              label = `${product ? cleanProductName(product.name) : '未知商品'}`;
           }
 
           if (!map.has(key)) {
@@ -1477,14 +1496,16 @@ const App: React.FC = () => {
                                         <div className="flex-1 pr-2">
                                             {detailSortMode === 'buyer' ? (
                                                 <div className="flex flex-col">
+                                                    {/* Mode Buyer: Show Product Name : Description */}
                                                     <div className="font-bold text-slate-800 text-lg">
-                                                       {item.product?.name} <span className="text-slate-400 mx-1">:</span> <span className="text-slate-600">{item.description}</span>
+                                                       {item.product ? cleanProductName(item.product.name) : ''} <span className="text-slate-400 mx-1">:</span> <span className="text-slate-600">{item.description}</span>
                                                     </div>
                                                 </div>
                                             ) : (
                                                 <div className="flex flex-col">
+                                                    {/* Mode Product: Show Buyer (Description if any) */}
                                                     <div className="font-bold text-slate-800 text-lg">
-                                                       {item.buyer} <span className="text-slate-400 mx-1">:</span> <span className="text-slate-600">{item.description || '-'}</span>
+                                                       {item.buyer} 
                                                     </div>
                                                 </div>
                                             )}

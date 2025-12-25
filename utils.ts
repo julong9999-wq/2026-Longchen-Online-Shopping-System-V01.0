@@ -13,13 +13,14 @@ export const generateUUID = (): string => {
   });
 };
 
+// Update: Format currency as integer (no decimals)
 export const formatCurrency = (value: number) => {
-  return value.toLocaleString('zh-TW', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return Math.round(value).toLocaleString('zh-TW');
 };
 
-// Helper for rounding to 2 decimal places to ensure precision
-const roundTwoDecimals = (num: number) => {
-  return Math.round((num + Number.EPSILON) * 100) / 100;
+// Helper for cleaning product names (removing "1.", "01 ", etc.)
+export const cleanProductName = (name: string): string => {
+  return name.replace(/^\d+[\.\s]*/, '');
 };
 
 // Calculation Logic
@@ -27,20 +28,22 @@ export const calculateProductStats = (item: ProductItem) => {
   // Base Sum = 日幣單價 + 境內運費 + 手續費
   const baseSum = item.jpyPrice + item.domesticShip + item.handlingFee;
   
+  // Update: Round to integers for TWD values
+  
   // "台幣售價"= ( "日幣單價" + "境內運費" + "手續費" ) * "售價匯率"
-  const twdPrice = roundTwoDecimals(baseSum * item.rateSale);
+  const twdPrice = Math.round(baseSum * item.rateSale);
   
   // "台幣成本"= ( "日幣單價" + "境內運費" + "手續費" ) * "成本匯率"
-  const twdCost = roundTwoDecimals(baseSum * item.rateCost);
+  const twdCost = Math.round(baseSum * item.rateCost);
   
   // "成本+運費" = "台幣成本" + "國際運費"
-  const costPlusShip = roundTwoDecimals(twdCost + item.intlShip);
+  const costPlusShip = Math.round(twdCost + item.intlShip);
   
   // "售價+運費" = "台幣售價" + "國際運費"
-  const pricePlusShip = roundTwoDecimals(twdPrice + item.intlShip);
+  const pricePlusShip = Math.round(twdPrice + item.intlShip);
   
   // "單件利潤" = "台幣售價" - "成本+運費"
-  const profit = roundTwoDecimals(twdPrice - costPlusShip);
+  const profit = Math.round(twdPrice - costPlusShip);
 
   return {
     twdPrice,      // 台幣售價
