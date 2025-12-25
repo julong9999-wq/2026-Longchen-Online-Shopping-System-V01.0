@@ -17,6 +17,10 @@ const App: React.FC = () => {
   const [newGroupInput, setNewGroupInput] = useState<string>('');
   const [showNewGroupInput, setShowNewGroupInput] = useState(false);
 
+  // Inline Renaming State
+  const [renamingId, setRenamingId] = useState<{ type: 'group' | 'item', groupId: string, itemId?: string } | null>(null);
+  const [tempName, setTempName] = useState('');
+
   // Orders
   const [orderGroups, setOrderGroups] = useState<OrderGroup[]>(INITIAL_ORDER_GROUPS);
   const [orderItems, setOrderItems] = useState<OrderItem[]>(INITIAL_ORDER_ITEMS);
@@ -278,6 +282,41 @@ const App: React.FC = () => {
     }
   };
 
+  // --- Renaming Handlers ---
+  const handleStartRename = (type: 'group' | 'item', groupId: string, itemId: string | undefined, currentName: string) => {
+    setRenamingId({ type, groupId, itemId });
+    setTempName(currentName);
+  };
+
+  const handleSaveRename = () => {
+    if (!renamingId) return;
+    const nameToSave = tempName.trim();
+    
+    if (!nameToSave) {
+        handleCancelRename();
+        return;
+    }
+
+    if (renamingId.type === 'group') {
+        setProductGroups(prev => prev.map(g => 
+            g.id === renamingId.groupId ? { ...g, name: nameToSave } : g
+        ));
+    } else {
+        setProductItems(prev => prev.map(i => 
+            (i.groupId === renamingId.groupId && i.id === renamingId.itemId) 
+                ? { ...i, name: nameToSave } 
+                : i
+        ));
+    }
+    setRenamingId(null);
+    setTempName('');
+  };
+
+  const handleCancelRename = () => {
+    setRenamingId(null);
+    setTempName('');
+  };
+
   const handleSaveProduct = (item: ProductItem) => {
     setProductItems(prev => {
       const exists = prev.find(p => p.groupId === item.groupId && p.id === item.id);
@@ -505,16 +544,40 @@ const App: React.FC = () => {
               className="p-3 flex justify-between items-center cursor-pointer hover:bg-slate-50 transition-colors"
               onClick={() => setExpandedGroup(expandedGroup === group.id ? null : group.id)}
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-1">
                 <span className="font-mono font-bold text-blue-700 bg-blue-50 px-2 py-1 rounded text-sm border border-blue-100">{group.id}</span>
-                <span className="font-bold text-slate-800 text-lg">{group.name}</span>
+                
+                {/* Inline Editing for Group Name */}
+                {renamingId?.type === 'group' && renamingId.groupId === group.id ? (
+                    <input 
+                        autoFocus
+                        type="text"
+                        className="font-bold text-slate-800 text-lg border-b-2 border-blue-500 outline-none bg-white/50 w-full max-w-[200px] rounded px-1"
+                        value={tempName}
+                        onChange={e => setTempName(e.target.value)}
+                        onBlur={handleSaveRename}
+                        onKeyDown={e => {
+                            if (e.key === 'Enter') handleSaveRename();
+                            if (e.key === 'Escape') handleCancelRename();
+                        }}
+                        onClick={e => e.stopPropagation()}
+                    />
+                ) : (
+                    <span 
+                        className="font-bold text-slate-800 text-lg hover:text-blue-600 hover:underline decoration-dashed underline-offset-4 decoration-2"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            handleStartRename('group', group.id, undefined, group.name);
+                        }}
+                        title="點擊修改類別名稱"
+                    >
+                        {group.name}
+                    </span>
+                )}
+
                 <span className="text-sm font-medium text-slate-500">({items.length})</span>
               </div>
               <div className="flex items-center gap-3 relative z-10">
-                {/* 
-                     MOVED: Delete Group button is now inside the expanded area to avoid click conflicts.
-                     Header only handles Expand/Collapse.
-                 */}
                 {expandedGroup === group.id ? <ChevronDown size={24} className="text-blue-500 pointer-events-none"/> : <ChevronRight size={24} className="text-slate-400 pointer-events-none"/>}
               </div>
             </div>
@@ -547,18 +610,44 @@ const App: React.FC = () => {
                             return (
                                 <div key={item.id} className="bg-white border border-slate-200 rounded-lg p-2 text-base relative hover:border-blue-300 transition-colors shadow-sm">
                                     <div className="flex justify-between items-start mb-1">
-                                        <div className="flex items-center">
-                                            <span className="font-mono bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded text-xs font-bold mr-2">{item.id}</span>
-                                            <span className="font-bold text-slate-800 text-lg">{item.name}</span>
+                                        <div className="flex items-center flex-1 mr-2">
+                                            <span className="font-mono bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded text-xs font-bold mr-2 shrink-0">{item.id}</span>
+                                            
+                                            {/* Inline Editing for Product Item Name */}
+                                            {renamingId?.type === 'item' && renamingId.groupId === group.id && renamingId.itemId === item.id ? (
+                                                <input 
+                                                    autoFocus
+                                                    type="text"
+                                                    className="font-bold text-slate-800 text-lg border-b-2 border-blue-500 outline-none bg-white w-full rounded px-1 min-w-0"
+                                                    value={tempName}
+                                                    onChange={e => setTempName(e.target.value)}
+                                                    onBlur={handleSaveRename}
+                                                    onKeyDown={e => {
+                                                        if (e.key === 'Enter') handleSaveRename();
+                                                        if (e.key === 'Escape') handleCancelRename();
+                                                    }}
+                                                    onClick={e => e.stopPropagation()}
+                                                />
+                                            ) : (
+                                                <span 
+                                                    className="font-bold text-slate-800 text-lg cursor-text hover:text-blue-600 hover:underline decoration-dashed underline-offset-4 decoration-2 break-all"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleStartRename('item', group.id, item.id, item.name);
+                                                    }}
+                                                    title="點擊修改商品名稱"
+                                                >
+                                                    {item.name}
+                                                </span>
+                                            )}
                                         </div>
-                                        <div className="flex space-x-3 relative z-10">
+                                        <div className="flex space-x-3 relative z-10 shrink-0">
                                             <button 
                                                 onClick={() => setEditingProduct({ group, item, nextId: item.id })} 
                                                 className="text-blue-500 hover:text-blue-700 p-2 rounded-lg bg-blue-50 border border-blue-100 relative z-20"
                                             >
                                                 <Edit size={20} className="pointer-events-none" />
                                             </button>
-                                            {/* ENHANCED: Item Delete Button */}
                                             <button 
                                               onClick={(e) => handleDeleteProduct(e, group.id, item.id)} 
                                               className="text-rose-500 hover:text-rose-700 p-2 rounded-lg bg-white border border-rose-200 shadow-sm hover:bg-rose-50 relative z-20"
