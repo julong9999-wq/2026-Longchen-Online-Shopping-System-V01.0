@@ -3,15 +3,32 @@ import { ProductGroup, ProductItem, OrderGroup, OrderItem, ViewState } from './t
 import { INITIAL_PRODUCT_GROUPS, INITIAL_PRODUCT_ITEMS, INITIAL_ORDER_GROUPS, INITIAL_ORDER_ITEMS } from './constants';
 import { getNextGroupId, getNextItemId, getNextOrderGroupId, calculateProductStats, formatCurrency, generateUUID } from './utils';
 import ProductForm from './components/ProductForm';
-import { Trash2, Edit, Plus, Package, ShoppingCart, List, BarChart2, ChevronRight, ChevronDown, User, Box, X, Calculator, Download } from 'lucide-react';
+import { Trash2, Edit, Plus, Package, ShoppingCart, List, BarChart2, ChevronRight, ChevronDown, User, Box, X, Calculator, Download, Save } from 'lucide-react';
+
+// --- LocalStorage Helper ---
+const loadFromStorage = <T,>(key: string, defaultValue: T): T => {
+  if (typeof window === 'undefined') return defaultValue;
+  try {
+    const saved = localStorage.getItem(key);
+    return saved ? JSON.parse(saved) : defaultValue;
+  } catch (error) {
+    console.warn(`Failed to load ${key} from storage:`, error);
+    return defaultValue;
+  }
+};
 
 const App: React.FC = () => {
   // --- State ---
   const [view, setView] = useState<ViewState>('products');
   
-  // Products
-  const [productGroups, setProductGroups] = useState<ProductGroup[]>(INITIAL_PRODUCT_GROUPS);
-  const [productItems, setProductItems] = useState<ProductItem[]>(INITIAL_PRODUCT_ITEMS);
+  // Products - Initialize from LocalStorage or Fallback to Constants
+  const [productGroups, setProductGroups] = useState<ProductGroup[]>(() => 
+    loadFromStorage('productGroups', INITIAL_PRODUCT_GROUPS)
+  );
+  const [productItems, setProductItems] = useState<ProductItem[]>(() => 
+    loadFromStorage('productItems', INITIAL_PRODUCT_ITEMS)
+  );
+  
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
   const [editingProduct, setEditingProduct] = useState<{ group: ProductGroup, item?: ProductItem, nextId: string } | null>(null);
   const [newGroupInput, setNewGroupInput] = useState<string>('');
@@ -21,13 +38,20 @@ const App: React.FC = () => {
   const [renamingId, setRenamingId] = useState<{ type: 'group' | 'item', groupId: string, itemId?: string } | null>(null);
   const [tempName, setTempName] = useState('');
 
-  // Orders
-  const [orderGroups, setOrderGroups] = useState<OrderGroup[]>(INITIAL_ORDER_GROUPS);
-  const [orderItems, setOrderItems] = useState<OrderItem[]>(INITIAL_ORDER_ITEMS);
-  // Default to the last (latest) group instead of null
+  // Orders - Initialize from LocalStorage or Fallback to Constants
+  const [orderGroups, setOrderGroups] = useState<OrderGroup[]>(() => 
+    loadFromStorage('orderGroups', INITIAL_ORDER_GROUPS)
+  );
+  const [orderItems, setOrderItems] = useState<OrderItem[]>(() => 
+    loadFromStorage('orderItems', INITIAL_ORDER_ITEMS)
+  );
+
+  // Default to the last (latest) group based on current state (which might be loaded from LS)
   const [selectedOrderGroup, setSelectedOrderGroup] = useState<string | null>(() => {
-      return INITIAL_ORDER_GROUPS.length > 0 ? INITIAL_ORDER_GROUPS[INITIAL_ORDER_GROUPS.length - 1].id : null;
+    const currentGroups = loadFromStorage('orderGroups', INITIAL_ORDER_GROUPS);
+    return currentGroups.length > 0 ? currentGroups[currentGroups.length - 1].id : null;
   });
+
   const [showNewOrderModal, setShowNewOrderModal] = useState(false);
   const [newOrderDate, setNewOrderDate] = useState({ year: 2025, month: new Date().getMonth() + 1 });
 
@@ -38,15 +62,40 @@ const App: React.FC = () => {
   // Details View Mode
   const [detailSortMode, setDetailSortMode] = useState<'buyer' | 'product'>('buyer');
 
-  // --- Income View State ---
-  const [incomeData, setIncomeData] = useState({
-    packagingRevenue: 0,
-    cardCharge: 0,
-    cardFee: 0,
-    intlShipping: 0,
-    dadReceivable: 0,
-    paymentNote: ''
-  });
+  // --- Income View State - Initialize from LocalStorage ---
+  const [incomeData, setIncomeData] = useState(() => 
+    loadFromStorage('incomeData', {
+      packagingRevenue: 0,
+      cardCharge: 0,
+      cardFee: 0,
+      intlShipping: 0,
+      dadReceivable: 0,
+      paymentNote: ''
+    })
+  );
+
+  // --- Persistence Effects ---
+  // Save to LocalStorage whenever state changes
+  useEffect(() => {
+    localStorage.setItem('productGroups', JSON.stringify(productGroups));
+  }, [productGroups]);
+
+  useEffect(() => {
+    localStorage.setItem('productItems', JSON.stringify(productItems));
+  }, [productItems]);
+
+  useEffect(() => {
+    localStorage.setItem('orderGroups', JSON.stringify(orderGroups));
+  }, [orderGroups]);
+
+  useEffect(() => {
+    localStorage.setItem('orderItems', JSON.stringify(orderItems));
+  }, [orderItems]);
+
+  useEffect(() => {
+    localStorage.setItem('incomeData', JSON.stringify(incomeData));
+  }, [incomeData]);
+
 
   // --- Computed ---
   const filteredProducts = useMemo(() => {
@@ -138,8 +187,26 @@ const App: React.FC = () => {
           group.totalPrice += total;
           group.items.push({ ...item, product, total });
     });
-    const groupedData = Array.from(map.values()).sort((a, b) => b.totalPrice - a.totalPrice);
     
+    // Original Export Sort logic (keeping it consistent with previous export logic, or update if desired)
+    // Let's use the new sorting logic for consistency
+    const groupedData = Array.from(map.values());
+    if (detailSortMode === 'buyer') {
+        groupedData.sort((a, b) => a.label.localeCompare(b.label, 'zh-TW'));
+        groupedData.forEach(g => {
+            g.items.sort((a: any, b: any) => {
+                const idA = `${a.productGroupId}-${a.productItemId}`;
+                const idB = `${b.productGroupId}-${b.productItemId}`;
+                return idA.localeCompare(idB);
+            });
+        });
+    } else {
+        groupedData.sort((a, b) => a.key.localeCompare(b.key));
+        groupedData.forEach(g => {
+            g.items.sort((a: any, b: any) => a.buyer.localeCompare(b.buyer, 'zh-TW'));
+        });
+    }
+
     // Prepare CSV
     const headers = detailSortMode === 'buyer' 
         ? ['買家', '商品描述', '商品原名', '數量', '單項總價', '買家總計']
@@ -1195,7 +1262,30 @@ const App: React.FC = () => {
           group.items.push({ ...item, product, total });
       });
 
-      const groupedData = Array.from(map.values()).sort((a, b) => b.totalPrice - a.totalPrice);
+      const groupedData = Array.from(map.values());
+
+      // --- Sorting Logic ---
+      if (detailSortMode === 'buyer') {
+          // 1. Sort Buyers Alphabetically (Highest Category)
+          groupedData.sort((a, b) => a.label.localeCompare(b.label, 'zh-TW'));
+          
+          // 2. Sort Items by Product ID (Sub-category)
+          groupedData.forEach(g => {
+              g.items.sort((a: any, b: any) => {
+                  const idA = `${a.productGroupId}-${a.productItemId}`;
+                  const idB = `${b.productGroupId}-${b.productItemId}`;
+                  return idA.localeCompare(idB);
+              });
+          });
+      } else {
+          // 1. Sort Products by ID (Highest Category)
+          groupedData.sort((a, b) => a.key.localeCompare(b.key));
+          
+          // 2. Sort Items by Buyer Name (Sub-category)
+          groupedData.forEach(g => {
+              g.items.sort((a: any, b: any) => a.buyer.localeCompare(b.buyer, 'zh-TW'));
+          });
+      }
 
       return (
         <div className="flex flex-col h-full overflow-hidden">
@@ -1253,37 +1343,39 @@ const App: React.FC = () => {
                     groupedData.map(group => (
                         <div key={group.key} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                             <div className="bg-slate-50 p-3 flex justify-between items-center border-b border-slate-100">
-                                <div className="font-bold text-slate-800 text-lg flex items-center">
-                                    {detailSortMode === 'buyer' ? <User size={20} className="text-blue-500 mr-2"/> : <Box size={20} className="text-emerald-500 mr-2"/>}
+                                <div className="font-bold text-slate-800 text-xl flex items-center">
+                                    {detailSortMode === 'buyer' ? <User size={24} className="text-blue-500 mr-2"/> : <Box size={24} className="text-emerald-500 mr-2"/>}
                                     {group.label}
                                 </div>
                                 <div className="text-right">
-                                    <div className="text-xs text-slate-400 font-bold uppercase">Total</div>
-                                    <div className="font-mono text-emerald-600 font-bold">{formatCurrency(group.totalPrice)}</div>
+                                    <div className="text-sm text-slate-400 font-bold uppercase">Total</div>
+                                    <div className="font-mono text-emerald-600 font-bold text-lg">{formatCurrency(group.totalPrice)}</div>
                                 </div>
                             </div>
                             <div className="divide-y divide-slate-100">
                                 {group.items.map((item: any) => (
-                                    <div key={item.id} className="p-3 flex justify-between items-center text-sm hover:bg-slate-50">
-                                        <div className="flex-1">
+                                    <div key={item.id} className="p-3 flex justify-between items-center hover:bg-slate-50">
+                                        <div className="flex-1 pr-2">
                                             {detailSortMode === 'buyer' ? (
-                                                <>
-                                                    <div className="font-bold text-slate-700">{item.description}</div>
-                                                    <div className="text-slate-400 text-xs">{item.product?.name}</div>
-                                                </>
+                                                <div className="flex flex-col">
+                                                    <div className="font-bold text-slate-800 text-lg">
+                                                       {item.product?.name} <span className="text-slate-400 mx-1">:</span> <span className="text-slate-600">{item.description}</span>
+                                                    </div>
+                                                </div>
                                             ) : (
-                                                <>
-                                                    <div className="font-bold text-slate-700">{item.buyer}</div>
-                                                    <div className="text-slate-400 text-xs">{item.description || '-'}</div>
-                                                </>
+                                                <div className="flex flex-col">
+                                                    <div className="font-bold text-slate-800 text-lg">
+                                                       {item.buyer} <span className="text-slate-400 mx-1">:</span> <span className="text-slate-600">{item.description || '-'}</span>
+                                                    </div>
+                                                </div>
                                             )}
                                         </div>
-                                        <div className="flex gap-4 text-right">
-                                            <div>
-                                                <span className="text-slate-400 text-xs mr-1">x</span>
-                                                <span className="font-bold text-slate-800 text-base">{item.quantity}</span>
+                                        <div className="flex flex-col items-end gap-0.5 min-w-[80px]">
+                                            <div className="text-lg">
+                                                <span className="text-slate-400 text-sm mr-1">x</span>
+                                                <span className="font-bold text-slate-800">{item.quantity}</span>
                                             </div>
-                                            <div className="w-20 font-mono text-slate-600">{formatCurrency(item.total)}</div>
+                                            <div className="font-mono text-slate-600 font-medium text-lg">{formatCurrency(item.total)}</div>
                                         </div>
                                     </div>
                                 ))}
