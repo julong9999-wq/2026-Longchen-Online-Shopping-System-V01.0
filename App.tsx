@@ -103,6 +103,9 @@ const App: React.FC = () => {
 
   // Details View Mode
   const [detailSortMode, setDetailSortMode] = useState<'buyer' | 'product'>('buyer');
+  
+  // Analysis View Mode
+  const [analysisMode, setAnalysisMode] = useState<'income' | 'expense'>('income');
 
   // Income View State
   const [incomeData, setIncomeData] = useState(DEFAULT_INCOME_DATA);
@@ -598,6 +601,23 @@ const App: React.FC = () => {
         }
     }, [localItem.productGroupId, localItem.productItemId, editingOrderItem]);
 
+    const handleDeleteCurrentItem = async () => {
+        if (!editingOrderItem) return;
+        if (window.confirm("確定刪除此訂單項目？")) {
+            try {
+                const q = query(collection(db, 'orderItems'), where('id', '==', editingOrderItem.id));
+                const snaps = await getDocs(q);
+                const batch = writeBatch(db);
+                snaps.forEach(doc => batch.delete(doc.ref));
+                await batch.commit();
+                setIsOrderEntryOpen(false);
+            } catch (e) {
+                console.error(e);
+                alert("刪除失敗");
+            }
+        }
+    };
+
     const balancedInputClass = "w-full border border-slate-300 bg-white text-slate-900 py-2.5 px-3 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm text-base font-medium";
     const balancedLabelClass = "block text-xs font-bold text-slate-500 mb-1";
 
@@ -678,18 +698,32 @@ const App: React.FC = () => {
 
                 </div>
 
-                <div className="p-4 border-t border-slate-200 flex gap-4 bg-white shrink-0 pb-6">
-                     <button onClick={() => setIsOrderEntryOpen(false)} className="flex-1 py-3 border-2 border-slate-200 rounded-xl text-slate-500 hover:bg-slate-50 font-bold text-lg">取消</button>
-                    <button 
-                        disabled={!localItem.productItemId || !localItem.buyer}
-                        onClick={() => handleSaveOrderItem({
-                            ...localItem, 
-                            orderGroupId: selectedOrderGroup!
-                        } as OrderItem)}
-                        className="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-xl shadow-blue-200 text-lg"
-                    >
-                        儲存
-                    </button>
+                <div className="p-4 border-t border-slate-200 flex items-center gap-3 bg-white shrink-0 pb-6">
+                     {/* Left: Delete Button (Edit Mode Only) */}
+                     {editingOrderItem && (
+                         <button 
+                            onClick={handleDeleteCurrentItem}
+                            className="p-3 bg-rose-50 text-rose-600 border border-rose-200 rounded-xl hover:bg-rose-100 transition-colors shrink-0 flex items-center justify-center"
+                            title="刪除此項目"
+                         >
+                            <Trash2 size={24} />
+                         </button>
+                     )}
+                     
+                     {/* Right: Action Buttons */}
+                     <div className="flex-1 flex gap-3">
+                        <button onClick={() => setIsOrderEntryOpen(false)} className="flex-1 py-3 border-2 border-slate-200 rounded-xl text-slate-500 hover:bg-slate-50 font-bold text-lg">取消</button>
+                        <button 
+                            disabled={!localItem.productItemId || !localItem.buyer}
+                            onClick={() => handleSaveOrderItem({
+                                ...localItem, 
+                                orderGroupId: selectedOrderGroup!
+                            } as OrderItem)}
+                            className="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-xl shadow-blue-200 text-lg"
+                        >
+                            儲存
+                        </button>
+                     </div>
                 </div>
             </div>
         </div>
@@ -958,36 +992,37 @@ const App: React.FC = () => {
                       ) : (
                           activeOrderItems.map(item => {
                               const product = productItems.find(p => p.groupId === item.productGroupId && p.id === item.productItemId);
-                              const total = (product?.inputPrice || 0) * item.quantity;
+                              const group = productGroups.find(g => g.id === item.productGroupId);
+                              const unitPrice = product?.inputPrice || 0;
+                              const total = unitPrice * item.quantity;
+
                               return (
                                   <div key={item.id} className="bg-white p-3 rounded-xl shadow-sm border border-slate-200 text-base hover:border-blue-300 transition-colors relative">
                                       
-                                      {/* Row 1: Date & Actions (No Code Badge) */}
-                                      <div className="flex justify-between items-start mb-2 border-b border-slate-100 pb-2">
-                                          {/* Hided code per user request "不顯示代碼", kept date */}
-                                          <div className="flex items-center gap-2 text-sm text-slate-500 font-mono">
-                                              {/* Removed the ID badge */}
-                                              <span className="text-xs bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-bold">{item.date}</span>
+                                      {/* Row 1: Group Name (Left) & Actions (Right) */}
+                                      <div className="flex justify-between items-center mb-1 pb-1 border-b border-slate-50">
+                                          <div className="font-bold text-slate-500 text-sm bg-slate-100 px-2 py-0.5 rounded">
+                                              {group ? group.name : '未知類別'}
                                           </div>
                                           <div className="flex gap-2">
                                               <button 
                                                 onClick={() => { setEditingOrderItem(item); setIsOrderEntryOpen(true); }} 
-                                                className="text-blue-500 hover:text-blue-700 p-1.5 rounded-lg bg-blue-50 border border-blue-100"
+                                                className="text-blue-500 hover:text-blue-700 p-1 rounded hover:bg-blue-50"
                                               >
-                                                <Edit size={16} />
+                                                <Edit size={18} />
                                               </button>
                                               <button 
                                                 onClick={(e) => handleDeleteOrderItem(e, item.id)} 
-                                                className="text-rose-500 hover:text-rose-700 p-1.5 rounded-lg bg-white border border-rose-200 shadow-sm hover:bg-rose-50"
+                                                className="text-rose-500 hover:text-rose-700 p-1 rounded hover:bg-rose-50"
                                               >
-                                                <Trash2 size={16} />
+                                                <Trash2 size={18} />
                                               </button>
                                           </div>
                                       </div>
 
-                                      {/* Row 2: Product Name (Stripped of leading numbers) : Description */}
-                                      <div className="mb-3">
-                                           <div className="text-lg leading-tight">
+                                      {/* Row 2: Product Name : Description | Date */}
+                                      <div className="flex justify-between items-start mb-2">
+                                           <div className="text-lg leading-tight flex-1 pr-2">
                                                {/* Remove leading number and dot (e.g., "1.Product" -> "Product") */}
                                                <span className="font-bold text-slate-800">{product ? cleanProductName(product.name) : ''}</span>
                                                {item.description && (
@@ -997,16 +1032,20 @@ const App: React.FC = () => {
                                                 </>
                                                )}
                                            </div>
+                                           <div className="text-xs text-slate-400 font-mono whitespace-nowrap pt-1">
+                                               {item.date}
+                                           </div>
                                       </div>
 
-                                      {/* Row 3: Buyer | Qty | Price */}
-                                      <div className="flex justify-between items-center bg-slate-50 p-2 rounded-lg">
-                                          <div className="font-bold text-blue-700 flex items-center gap-1">
+                                      {/* Row 3: Buyer | Qty | Unit | Total */}
+                                      <div className="bg-slate-50 p-2 rounded-lg flex flex-wrap justify-between items-center">
+                                          <div className="font-bold text-blue-700 flex items-center gap-1 w-full sm:w-auto mb-1 sm:mb-0">
                                              <User size={16} /> {item.buyer}
                                           </div>
-                                          <div className="flex items-center gap-4">
-                                             <div className="font-bold text-slate-600 text-sm">x<span className="text-lg ml-0.5">{item.quantity}</span></div>
-                                             <div className="font-mono font-bold text-emerald-600 text-xl">{formatCurrency(total)}</div>
+                                          <div className="flex items-center gap-3 ml-auto">
+                                             <div className="font-bold text-slate-600 text-sm bg-white px-1.5 rounded border border-slate-200 shadow-sm">x{item.quantity}</div>
+                                             <div className="text-slate-500 font-medium text-sm">${formatCurrency(unitPrice)}</div>
+                                             <div className="font-mono font-bold text-emerald-600 text-lg">{formatCurrency(total)}</div>
                                           </div>
                                       </div>
 
@@ -1299,14 +1338,38 @@ const App: React.FC = () => {
         <div className="flex flex-col h-full overflow-hidden bg-slate-50">
             <div className="bg-blue-950 p-3 shadow-lg border-b border-blue-900 shrink-0">
                  <div className="flex justify-between items-center mb-2">
-                     <h2 className="text-xl font-bold text-cyan-400 tracking-wide">分析資料</h2>
-                     <button 
-                        onClick={handleExportAnalysis}
-                        className="flex items-center text-xs font-bold bg-emerald-700 hover:bg-emerald-600 text-emerald-100 px-3 py-1.5 rounded-full transition-colors border border-emerald-600 shadow"
-                        title="匯出分析表"
-                    >
-                        <Download size={16} />
-                    </button>
+                     <div className="flex items-center gap-2">
+                         <h2 className="text-xl font-bold text-cyan-400 tracking-wide">分析資料</h2>
+                         <div className="bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full flex items-center gap-1">
+                             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                             <span className="text-[10px] text-emerald-400 font-bold">雲端連線中</span>
+                        </div>
+                     </div>
+                     <div className="flex gap-2">
+                         {/* Analysis Toggle Buttons */}
+                        <div className="flex bg-blue-900/50 p-1 rounded-lg border border-blue-800 shrink-0">
+                            <button 
+                                onClick={() => setAnalysisMode('income')}
+                                className={`px-2 py-1 rounded-md text-xs font-bold transition-all ${analysisMode === 'income' ? 'bg-cyan-500 text-white shadow-sm' : 'text-blue-300 hover:text-white'}`}
+                            >
+                                收入
+                            </button>
+                            <button 
+                                onClick={() => setAnalysisMode('expense')}
+                                className={`px-2 py-1 rounded-md text-xs font-bold transition-all ${analysisMode === 'expense' ? 'bg-cyan-500 text-white shadow-sm' : 'text-blue-300 hover:text-white'}`}
+                            >
+                                支出
+                            </button>
+                        </div>
+
+                        <button 
+                            onClick={handleExportAnalysis}
+                            className="flex items-center text-xs font-bold bg-emerald-700 hover:bg-emerald-600 text-emerald-100 px-3 py-1.5 rounded-full transition-colors border border-emerald-600 shadow"
+                            title="匯出分析表"
+                        >
+                            <Download size={16} />
+                        </button>
+                     </div>
                  </div>
                  <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
                      {orderGroups.slice().reverse().map(group => (
@@ -1323,11 +1386,20 @@ const App: React.FC = () => {
             
             {/* Table Header */}
             <div className="grid grid-cols-12 gap-1 px-2 py-2 bg-blue-100 border-b border-blue-200 text-sm font-bold text-blue-800 shrink-0 text-center tracking-tighter">
-                <div className="col-span-6 text-left pl-1">商品項目/名稱</div>
-                <div className="col-span-1">數量</div>
-                <div className="col-span-2">日幣總</div>
-                <div className="col-span-1">境運</div>
-                <div className="col-span-2 text-right pr-1">台幣總</div>
+                {analysisMode === 'income' ? (
+                   <>
+                        <div className="col-span-8 text-left pl-1">商品項目/名稱</div>
+                        <div className="col-span-2">數量</div>
+                        <div className="col-span-2 text-right pr-1">台幣總價</div>
+                   </>
+                ) : (
+                   <>
+                        <div className="col-span-6 text-left pl-1">商品項目/名稱</div>
+                        <div className="col-span-2">數量</div>
+                        <div className="col-span-2">日幣總價</div>
+                        <div className="col-span-2">境內運費</div>
+                   </>
+                )}
             </div>
 
             <div className="flex-1 overflow-y-auto p-2 pb-24 space-y-2">
@@ -1341,11 +1413,20 @@ const App: React.FC = () => {
                         <div key={group.id} className="border border-slate-300 rounded-lg overflow-hidden shadow-sm">
                             {/* Group Header (Main Form) */}
                             <div className="grid grid-cols-12 gap-1 px-2 py-2 bg-blue-50 border-b border-slate-200 items-center text-sm font-bold text-slate-800">
-                                <div className="col-span-6 text-left truncate text-blue-800">{group.id} {group.name}</div>
-                                <div className="col-span-1 text-center font-mono">{group.stats.qty}</div>
-                                <div className="col-span-2 text-center font-mono">{fmtInt(group.stats.jpy)}</div>
-                                <div className="col-span-1 text-center font-mono">{fmtInt(group.stats.dom)}</div>
-                                <div className="col-span-2 text-right font-mono text-blue-700">{fmtInt(group.stats.twd)}</div>
+                                {analysisMode === 'income' ? (
+                                    <>
+                                        <div className="col-span-8 text-left truncate text-blue-800">{group.id} {group.name}</div>
+                                        <div className="col-span-2 text-center font-mono">{group.stats.qty}</div>
+                                        <div className="col-span-2 text-right font-mono text-blue-700">{fmtInt(group.stats.twd)}</div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="col-span-6 text-left truncate text-blue-800">{group.id} {group.name}</div>
+                                        <div className="col-span-2 text-center font-mono">{group.stats.qty}</div>
+                                        <div className="col-span-2 text-center font-mono">{fmtInt(group.stats.jpy)}</div>
+                                        <div className="col-span-2 text-center font-mono">{fmtInt(group.stats.dom)}</div>
+                                    </>
+                                )}
                             </div>
                             
                             {/* Items List (Sub Form) */}
@@ -1354,11 +1435,20 @@ const App: React.FC = () => {
                                     .sort((a, b) => a.id.localeCompare(b.id))
                                     .map(item => (
                                     <div key={item.id} className="grid grid-cols-12 gap-1 px-2 py-2 items-center text-sm font-bold text-slate-700 hover:bg-slate-50">
-                                        <div className="col-span-6 text-left pl-3 truncate border-l-2 border-slate-200 ml-1">{cleanProductName(item.name)}</div>
-                                        <div className="col-span-1 text-center font-mono text-slate-400">{item.stats.qty}</div>
-                                        <div className="col-span-2 text-center font-mono text-slate-400">{fmtInt(item.stats.jpy)}</div>
-                                        <div className="col-span-1 text-center font-mono text-slate-400">{fmtInt(item.stats.dom)}</div>
-                                        <div className="col-span-2 text-right font-mono font-medium text-slate-600">{fmtInt(item.stats.twd)}</div>
+                                        {analysisMode === 'income' ? (
+                                            <>
+                                                <div className="col-span-8 text-left pl-3 truncate border-l-2 border-slate-200 ml-1">{cleanProductName(item.name)}</div>
+                                                <div className="col-span-2 text-center font-mono text-slate-400">{item.stats.qty}</div>
+                                                <div className="col-span-2 text-right font-mono font-medium text-slate-600">{fmtInt(item.stats.twd)}</div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div className="col-span-6 text-left pl-3 truncate border-l-2 border-slate-200 ml-1">{cleanProductName(item.name)}</div>
+                                                <div className="col-span-2 text-center font-mono text-slate-400">{item.stats.qty}</div>
+                                                <div className="col-span-2 text-center font-mono text-slate-400">{fmtInt(item.stats.jpy)}</div>
+                                                <div className="col-span-2 text-center font-mono text-slate-400">{fmtInt(item.stats.dom)}</div>
+                                            </>
+                                        )}
                                     </div>
                                 ))}
                             </div>
@@ -1369,11 +1459,20 @@ const App: React.FC = () => {
 
             {/* Footer Summary */}
              <div className="bg-slate-800 border-t border-slate-700 p-3 shrink-0 grid grid-cols-12 gap-1 text-sm font-bold text-white items-center pb-safe shadow-inner">
-                 <div className="col-span-6 text-center text-yellow-400">總計</div>
-                 <div className="col-span-1 text-center font-mono">{grandTotal.qty}</div>
-                 <div className="col-span-2 text-center font-mono text-slate-300">{fmtInt(grandTotal.jpy)}</div>
-                 <div className="col-span-1 text-center font-mono text-slate-300">{fmtInt(grandTotal.dom)}</div>
-                 <div className="col-span-2 text-right font-mono text-emerald-400">{fmtInt(grandTotal.twd)}</div>
+                 {analysisMode === 'income' ? (
+                    <>
+                        <div className="col-span-8 text-center text-yellow-400">總計</div>
+                        <div className="col-span-2 text-center font-mono">{grandTotal.qty}</div>
+                        <div className="col-span-2 text-right font-mono text-emerald-400">{fmtInt(grandTotal.twd)}</div>
+                    </>
+                 ) : (
+                    <>
+                        <div className="col-span-6 text-center text-yellow-400">總計</div>
+                        <div className="col-span-2 text-center font-mono">{grandTotal.qty}</div>
+                        <div className="col-span-2 text-center font-mono text-slate-300">{fmtInt(grandTotal.jpy)}</div>
+                        <div className="col-span-2 text-center font-mono text-slate-300">{fmtInt(grandTotal.dom)}</div>
+                    </>
+                 )}
             </div>
         </div>
       );
@@ -1383,24 +1482,39 @@ const App: React.FC = () => {
     // Logic for grouping
     const map = new Map<string, { key: string, label: string, totalQty: number, totalPrice: number, items: any[] }>();
     
+    // Helper to get group name
+    const getGroupName = (id: string) => productGroups.find(g => g.id === id)?.name || '';
+
     activeOrderItems.forEach(item => {
           const product = productItems.find(p => p.groupId === item.productGroupId && p.id === item.productItemId);
           const total = (product?.inputPrice || 0) * item.quantity;
           let key, label;
           
+          const groupName = getGroupName(item.productGroupId);
+          const itemName = product ? cleanProductName(product.name) : '未知商品';
+
           if (detailSortMode === 'buyer') {
               key = item.buyer;
               label = item.buyer || '(未填寫買家)';
           } else {
               key = `${item.productGroupId}-${item.productItemId}`;
-              label = product ? cleanProductName(product.name) : `未知商品 (${key})`;
+              // Label for Product Mode: Group Name + Item Name (No ID)
+              label = `${groupName} ${itemName}`;
           }
           
           if (!map.has(key)) map.set(key, { key, label, totalQty: 0, totalPrice: 0, items: [] });
           const group = map.get(key)!;
           group.totalQty += item.quantity;
           group.totalPrice += total;
-          group.items.push({ ...item, product, total });
+          
+          // Store extra display data in the item
+          group.items.push({ 
+              ...item, 
+              product, 
+              total,
+              displayGroupName: groupName,
+              displayItemName: itemName
+          });
     });
     
     const groupedData = Array.from(map.values());
@@ -1433,43 +1547,43 @@ const App: React.FC = () => {
                              <span className="text-[10px] text-emerald-400 font-bold">雲端連線中</span>
                         </div>
                      </div>
-                     <button 
-                        onClick={handleExportDetails}
-                        className="flex items-center text-xs font-bold bg-emerald-700 hover:bg-emerald-600 text-emerald-100 px-3 py-1.5 rounded-full transition-colors border border-emerald-600 shadow"
-                        title="匯出明細"
-                    >
-                        <Download size={16} />
-                    </button>
+                     <div className="flex gap-2">
+                        {/* Sort Toggle - Moved Here */}
+                        <div className="flex bg-blue-900/50 p-1 rounded-lg border border-blue-800 shrink-0">
+                            <button 
+                                onClick={() => setDetailSortMode('buyer')}
+                                className={`px-2 py-1 rounded-md text-xs font-bold transition-all ${detailSortMode === 'buyer' ? 'bg-cyan-500 text-white shadow-sm' : 'text-blue-300 hover:text-white'}`}
+                            >
+                                依買家
+                            </button>
+                            <button 
+                                onClick={() => setDetailSortMode('product')}
+                                className={`px-2 py-1 rounded-md text-xs font-bold transition-all ${detailSortMode === 'product' ? 'bg-cyan-500 text-white shadow-sm' : 'text-blue-300 hover:text-white'}`}
+                            >
+                                依商品
+                            </button>
+                        </div>
+                        <button 
+                            onClick={handleExportDetails}
+                            className="flex items-center text-xs font-bold bg-emerald-700 hover:bg-emerald-600 text-emerald-100 px-3 py-1.5 rounded-full transition-colors border border-emerald-600 shadow"
+                            title="匯出明細"
+                        >
+                            <Download size={16} />
+                        </button>
+                     </div>
                  </div>
-                 <div className="flex justify-between items-center gap-2">
-                     {/* Order Group Selector */}
-                     <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar flex-1">
-                         {orderGroups.slice().reverse().map(group => (
-                             <button
-                                key={group.id}
-                                onClick={() => setSelectedOrderGroup(group.id)}
-                                className={`flex-shrink-0 px-4 py-1.5 rounded-lg font-mono text-sm font-bold border transition-all ${selectedOrderGroup === group.id ? 'bg-cyan-600 text-white border-cyan-500 shadow-md shadow-cyan-900/50' : 'bg-blue-900/50 text-blue-200 border-blue-800 hover:bg-blue-800'}`}
-                             >
-                                 {group.id}
-                             </button>
-                         ))}
-                     </div>
-                     
-                     {/* Sort Toggle */}
-                     <div className="flex bg-blue-900 p-0.5 rounded-lg border border-blue-800 shrink-0">
-                        <button 
-                            onClick={() => setDetailSortMode('buyer')}
-                            className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${detailSortMode === 'buyer' ? 'bg-cyan-500 text-white shadow-sm' : 'text-blue-300 hover:text-white'}`}
-                        >
-                            依買家
-                        </button>
-                        <button 
-                            onClick={() => setDetailSortMode('product')}
-                            className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${detailSortMode === 'product' ? 'bg-cyan-500 text-white shadow-sm' : 'text-blue-300 hover:text-white'}`}
-                        >
-                            依商品
-                        </button>
-                     </div>
+                 
+                 {/* Order Group Selector - Full Width */}
+                 <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+                     {orderGroups.slice().reverse().map(group => (
+                         <button
+                            key={group.id}
+                            onClick={() => setSelectedOrderGroup(group.id)}
+                            className={`flex-shrink-0 px-4 py-1.5 rounded-lg font-mono text-sm font-bold border transition-all ${selectedOrderGroup === group.id ? 'bg-cyan-600 text-white border-cyan-500 shadow-md shadow-cyan-900/50' : 'bg-blue-900/50 text-blue-200 border-blue-800 hover:bg-blue-800'}`}
+                         >
+                             {group.id}
+                         </button>
+                     ))}
                  </div>
              </div>
 
@@ -1495,21 +1609,36 @@ const App: React.FC = () => {
                                 </div>
                             </div>
                             
-                            {/* Items */}
+                            {/* Items List */}
                             <div className="divide-y divide-slate-50">
                                 {group.items.map((item: any, idx: number) => (
                                     <div key={idx} className="p-3 flex justify-between items-center hover:bg-slate-50 transition-colors">
                                         <div className="flex-1 mr-3 min-w-0">
                                             {detailSortMode === 'buyer' ? (
-                                                <>
-                                                    <div className="font-bold text-slate-700 text-sm mb-0.5 truncate">{item.product?.name ? cleanProductName(item.product.name) : '未知商品'}</div>
-                                                    <div className="text-xs text-slate-400">{item.description}</div>
-                                                </>
+                                                // Mode Buyer: Show Product Hierarchy
+                                                <div className="flex flex-col">
+                                                    {/* Row 1: [Group] [Name] */}
+                                                    <div className="font-bold text-slate-800 text-base mb-0.5 truncate">
+                                                        <span className="text-slate-500 mr-1.5 text-xs bg-slate-100 px-1.5 py-0.5 rounded font-bold align-middle">{item.displayGroupName}</span>
+                                                        {item.displayItemName}
+                                                    </div>
+                                                    {/* Row 2: Description */}
+                                                    <div className="text-sm text-slate-500 pl-1 border-l-2 border-slate-200 ml-1">
+                                                        {item.description || '-'}
+                                                    </div>
+                                                </div>
                                             ) : (
-                                                <>
-                                                    <div className="font-bold text-slate-700 text-sm mb-0.5 truncate">{item.buyer}</div>
-                                                    <div className="text-xs text-slate-400">{item.description}</div>
-                                                </>
+                                                // Mode Product: Show Buyer Info
+                                                <div className="flex flex-col">
+                                                    {/* Row 1: Buyer */}
+                                                    <div className="font-bold text-slate-800 text-base mb-0.5 truncate">
+                                                        {item.buyer}
+                                                    </div>
+                                                    {/* Row 2: Description */}
+                                                    <div className="text-sm text-slate-500 pl-1 border-l-2 border-slate-200 ml-1">
+                                                        {item.description || '-'}
+                                                    </div>
+                                                </div>
                                             )}
                                         </div>
                                         <div className="flex items-center gap-3 shrink-0">
