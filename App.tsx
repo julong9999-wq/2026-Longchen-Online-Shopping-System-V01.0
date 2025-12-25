@@ -3,31 +3,67 @@ import { ProductGroup, ProductItem, OrderGroup, OrderItem, ViewState } from './t
 import { INITIAL_PRODUCT_GROUPS, INITIAL_PRODUCT_ITEMS, INITIAL_ORDER_GROUPS, INITIAL_ORDER_ITEMS } from './constants';
 import { getNextGroupId, getNextItemId, getNextOrderGroupId, calculateProductStats, formatCurrency, generateUUID } from './utils';
 import ProductForm from './components/ProductForm';
-import { Trash2, Edit, Plus, Package, ShoppingCart, List, BarChart2, ChevronRight, ChevronDown, User, Box, X, Calculator, Download } from 'lucide-react';
+import { Trash2, Edit, Plus, Package, ShoppingCart, List, BarChart2, ChevronRight, ChevronDown, User, Box, X, Calculator, Download, Save, Cloud, Wifi } from 'lucide-react';
+import { db } from './firebase';
+import { 
+  collection, 
+  onSnapshot, 
+  addDoc, 
+  deleteDoc, 
+  updateDoc, 
+  doc, 
+  query, 
+  where, 
+  writeBatch,
+  setDoc,
+  getDocs
+} from 'firebase/firestore';
 
-// --- LocalStorage Helper ---
-const loadFromStorage = <T,>(key: string, defaultValue: T): T => {
-  if (typeof window === 'undefined') return defaultValue;
-  try {
-    const saved = localStorage.getItem(key);
-    return saved ? JSON.parse(saved) : defaultValue;
-  } catch (error) {
-    console.warn(`Failed to load ${key} from storage:`, error);
-    return defaultValue;
-  }
+// --- Helper Components for Income View (Defined outside to prevent re-renders) ---
+const IncomeStatBox = ({ label, value, type = 'currency', subColor = "text-slate-800" }: any) => {
+    const fmtInt = (n: number) => Math.round(n).toLocaleString('zh-TW');
+    const fmtPct = (n: number) => n.toFixed(2) + '%';
+    const fmtRate = (n: number) => n.toFixed(3);
+    
+    let displayVal = '';
+    if (type === 'currency') displayVal = fmtInt(value);
+    else if (type === 'percent') displayVal = fmtPct(value);
+    else if (type === 'rate') displayVal = fmtRate(value);
+    else displayVal = value;
+
+    return (
+        <div className={`p-2 rounded-xl border border-slate-200 bg-slate-100 flex flex-col justify-center h-full`}>
+            <div className="block text-xs font-bold text-slate-500 mb-0.5">{label}</div>
+            <div className={`text-xl font-bold text-slate-800 font-mono ${subColor} truncate`}>
+                {displayVal}
+            </div>
+        </div>
+    );
 };
+
+const IncomeInputBox = ({ label, value, onChange, type = 'number', placeholder = "0" }: any) => (
+    <div className="h-full flex flex-col">
+            <label className="block text-xs font-bold text-slate-500 mb-0.5 ml-1">{label}</label>
+            <input 
+            type={type}
+            className="w-full flex-1 rounded-xl px-3 py-1 text-lg font-bold text-slate-900 shadow-sm outline-none transition-all bg-white border-2 border-blue-100 focus:border-blue-400 focus:ring-blue-400"
+            value={value}
+            onChange={e => onChange(type === 'text' ? e.target.value : (parseFloat(e.target.value) || 0))}
+            placeholder={placeholder}
+            onFocus={(e) => e.target.select()} 
+            />
+    </div>
+);
 
 const App: React.FC = () => {
   // --- State ---
   const [view, setView] = useState<ViewState>('products');
   
-  // Products - Initialize from LocalStorage or Fallback to Constants
-  const [productGroups, setProductGroups] = useState<ProductGroup[]>(() => 
-    loadFromStorage('productGroups', INITIAL_PRODUCT_GROUPS)
-  );
-  const [productItems, setProductItems] = useState<ProductItem[]>(() => 
-    loadFromStorage('productItems', INITIAL_PRODUCT_ITEMS)
-  );
+  // Data State - Now managed by Firestore Listeners
+  const [productGroups, setProductGroups] = useState<ProductGroup[]>([]);
+  const [productItems, setProductItems] = useState<ProductItem[]>([]);
+  const [orderGroups, setOrderGroups] = useState<OrderGroup[]>([]);
+  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
   const [editingProduct, setEditingProduct] = useState<{ group: ProductGroup, item?: ProductItem, nextId: string } | null>(null);
@@ -38,19 +74,17 @@ const App: React.FC = () => {
   const [renamingId, setRenamingId] = useState<{ type: 'group' | 'item', groupId: string, itemId?: string } | null>(null);
   const [tempName, setTempName] = useState('');
 
-  // Orders - Initialize from LocalStorage or Fallback to Constants
-  const [orderGroups, setOrderGroups] = useState<OrderGroup[]>(() => 
-    loadFromStorage('orderGroups', INITIAL_ORDER_GROUPS)
-  );
-  const [orderItems, setOrderItems] = useState<OrderItem[]>(() => 
-    loadFromStorage('orderItems', INITIAL_ORDER_ITEMS)
-  );
+  // Default to the last (latest) group based on current state
+  const [selectedOrderGroup, setSelectedOrderGroup] = useState<string | null>(null);
 
-  // Default to the last (latest) group based on current state (which might be loaded from LS)
-  const [selectedOrderGroup, setSelectedOrderGroup] = useState<string | null>(() => {
-    const currentGroups = loadFromStorage('orderGroups', INITIAL_ORDER_GROUPS);
-    return currentGroups.length > 0 ? currentGroups[currentGroups.length - 1].id : null;
-  });
+  // Effect to select the latest order group once loaded
+  useEffect(() => {
+    if (!selectedOrderGroup && orderGroups.length > 0) {
+        // Sort by ID (YYYYMMA) roughly works for chronological order if format is consistent
+        const sorted = [...orderGroups].sort((a, b) => a.id.localeCompare(b.id));
+        setSelectedOrderGroup(sorted[sorted.length - 1].id);
+    }
+  }, [orderGroups, selectedOrderGroup]);
 
   const [showNewOrderModal, setShowNewOrderModal] = useState(false);
   const [newOrderDate, setNewOrderDate] = useState({ year: 2025, month: new Date().getMonth() + 1 });
@@ -62,39 +96,107 @@ const App: React.FC = () => {
   // Details View Mode
   const [detailSortMode, setDetailSortMode] = useState<'buyer' | 'product'>('buyer');
 
-  // --- Income View State - Initialize from LocalStorage ---
-  const [incomeData, setIncomeData] = useState(() => 
-    loadFromStorage('incomeData', {
+  // Income View State
+  const [incomeData, setIncomeData] = useState({
       packagingRevenue: 0,
       cardCharge: 0,
       cardFee: 0,
       intlShipping: 0,
       dadReceivable: 0,
       paymentNote: ''
-    })
-  );
+  });
 
-  // --- Persistence Effects ---
-  // Save to LocalStorage whenever state changes
+  // --- Firestore Real-time Listeners ---
   useEffect(() => {
-    localStorage.setItem('productGroups', JSON.stringify(productGroups));
-  }, [productGroups]);
+    // 1. Product Groups
+    const unsubGroups = onSnapshot(collection(db, 'productGroups'), (snapshot) => {
+        const groups = snapshot.docs.map(d => d.data() as ProductGroup).sort((a, b) => a.id.localeCompare(b.id));
+        setProductGroups(groups);
+        
+        // --- DATA MIGRATION CHECK ---
+        // If DB is empty, initialize with Constants
+        if (snapshot.empty) {
+            console.log("Empty DB detected. Initializing data...");
+            const batch = writeBatch(db);
+            INITIAL_PRODUCT_GROUPS.forEach(g => {
+                const ref = doc(collection(db, 'productGroups'));
+                batch.set(ref, g);
+            });
+            // We'll commit batch later or separately for safety, 
+            // but here we trigger items load too
+            batch.commit();
+        }
+    });
 
-  useEffect(() => {
-    localStorage.setItem('productItems', JSON.stringify(productItems));
-  }, [productItems]);
+    // 2. Product Items
+    const unsubItems = onSnapshot(collection(db, 'productItems'), (snapshot) => {
+        const items = snapshot.docs.map(d => d.data() as ProductItem);
+        setProductItems(items);
+        if (snapshot.empty) {
+             const batch = writeBatch(db);
+             INITIAL_PRODUCT_ITEMS.forEach(i => {
+                 const ref = doc(collection(db, 'productItems'));
+                 batch.set(ref, i);
+             });
+             batch.commit();
+        }
+    });
 
-  useEffect(() => {
-    localStorage.setItem('orderGroups', JSON.stringify(orderGroups));
-  }, [orderGroups]);
+    // 3. Order Groups
+    const unsubOrderGroups = onSnapshot(collection(db, 'orderGroups'), (snapshot) => {
+        const groups = snapshot.docs.map(d => d.data() as OrderGroup).sort((a, b) => a.id.localeCompare(b.id));
+        setOrderGroups(groups);
+        if (snapshot.empty) {
+             const batch = writeBatch(db);
+             INITIAL_ORDER_GROUPS.forEach(g => {
+                 const ref = doc(collection(db, 'orderGroups'));
+                 batch.set(ref, g);
+             });
+             batch.commit();
+        }
+    });
 
-  useEffect(() => {
-    localStorage.setItem('orderItems', JSON.stringify(orderItems));
-  }, [orderItems]);
+    // 4. Order Items
+    const unsubOrderItems = onSnapshot(collection(db, 'orderItems'), (snapshot) => {
+        const items = snapshot.docs.map(d => d.data() as OrderItem);
+        setOrderItems(items);
+        if (snapshot.empty) {
+             const batch = writeBatch(db);
+             INITIAL_ORDER_ITEMS.forEach(i => {
+                 // Use the item.id as document ID to ensure uniqueness and easier updates if we used it
+                 // But for now, simple add
+                 const ref = doc(collection(db, 'orderItems'));
+                 batch.set(ref, i);
+             });
+             batch.commit();
+        }
+    });
 
-  useEffect(() => {
-    localStorage.setItem('incomeData', JSON.stringify(incomeData));
-  }, [incomeData]);
+    // 5. Settings (Income Data)
+    const unsubIncome = onSnapshot(doc(db, 'settings', 'income'), (docSnap) => {
+        if (docSnap.exists()) {
+            setIncomeData(docSnap.data() as any);
+        } else {
+             // Initialize income if missing
+             setDoc(doc(db, 'settings', 'income'), {
+                packagingRevenue: 0,
+                cardCharge: 0,
+                cardFee: 0,
+                intlShipping: 0,
+                dadReceivable: 0,
+                paymentNote: ''
+             });
+        }
+    });
+
+    return () => {
+        unsubGroups();
+        unsubItems();
+        unsubOrderGroups();
+        unsubOrderItems();
+        unsubIncome();
+    };
+  }, []);
 
 
   // --- Computed ---
@@ -115,11 +217,9 @@ const App: React.FC = () => {
 
   // --- Export Helper ---
   const downloadCSV = (filename: string, headers: string[], rows: (string | number)[][]) => {
-    // Add BOM for Excel UTF-8 compatibility
     const csvContent = '\uFEFF' + [
       headers.join(','),
       ...rows.map(r => r.map(c => {
-        // Escape quotes and wrap in quotes
         const str = String(c ?? '').replace(/"/g, '""');
         return `"${str}"`;
       }).join(','))
@@ -135,9 +235,7 @@ const App: React.FC = () => {
     document.body.removeChild(link);
   };
 
-  // --- Specific Export Handlers ---
-  
-  // 1. Products: All Data
+  // --- Specific Export Handlers (Unchanged logic, just using state) ---
   const handleExportProducts = () => {
     const headers = ['類別ID', '類別名稱', '商品ID', '商品名稱', '日幣價格', '境內運', '手續費', '國際運', '售價匯率', '成本匯率', '輸入價格'];
     const rows = productItems.map(item => {
@@ -151,7 +249,6 @@ const App: React.FC = () => {
     downloadCSV(`產品資料_${new Date().toISOString().split('T')[0]}`, headers, rows);
   };
 
-  // 2. Orders: Selected Group
   const handleExportOrders = () => {
     if (!selectedOrderGroup) return;
     const headers = ['訂單批次', '商品類別', '商品ID', '商品名稱', '描述', '買家', '數量', '備註', '說明', '日期'];
@@ -165,10 +262,8 @@ const App: React.FC = () => {
     downloadCSV(`訂單_${selectedOrderGroup}`, headers, rows);
   };
 
-  // 3. Details: Selected Group + View Mode
   const handleExportDetails = () => {
     if (!selectedOrderGroup) return;
-    // Re-calculate logic (same as renderDetailsView)
     const map = new Map<string, { key: string, label: string, totalQty: number, totalPrice: number, items: any[] }>();
     activeOrderItems.forEach(item => {
           const product = productItems.find(p => p.groupId === item.productGroupId && p.id === item.productItemId);
@@ -188,8 +283,6 @@ const App: React.FC = () => {
           group.items.push({ ...item, product, total });
     });
     
-    // Original Export Sort logic (keeping it consistent with previous export logic, or update if desired)
-    // Let's use the new sorting logic for consistency
     const groupedData = Array.from(map.values());
     if (detailSortMode === 'buyer') {
         groupedData.sort((a, b) => a.label.localeCompare(b.label, 'zh-TW'));
@@ -207,7 +300,6 @@ const App: React.FC = () => {
         });
     }
 
-    // Prepare CSV
     const headers = detailSortMode === 'buyer' 
         ? ['買家', '商品描述', '商品原名', '數量', '單項總價', '買家總計']
         : ['商品', '買家', '描述', '數量', '單項總價', '商品總計'];
@@ -225,90 +317,45 @@ const App: React.FC = () => {
     downloadCSV(`購買明細_${detailSortMode}_${selectedOrderGroup}`, headers, rows);
   };
 
-  // 4. Analysis: Selected Group (Grouped by ProductGroup > Item)
   const handleExportAnalysis = () => {
     if (!selectedOrderGroup) return;
-
-    // --- Logic Mirroring renderAnalysisView ---
     type Stats = { qty: number; jpy: number; dom: number; hand: number; twd: number };
     const createStats = (): Stats => ({ qty: 0, jpy: 0, dom: 0, hand: 0, twd: 0 });
-    
-    const groupMap = new Map<string, { 
-        id: string; name: string; stats: Stats; 
-        items: Map<string, { id: string; name: string; stats: Stats }> 
-    }>();
+    const groupMap = new Map<string, { id: string; name: string; stats: Stats; items: Map<string, { id: string; name: string; stats: Stats }> }>();
 
     activeOrderItems.forEach(order => {
         const product = productItems.find(p => p.groupId === order.productGroupId && p.id === order.productItemId);
         const group = productGroups.find(g => g.id === order.productGroupId);
-        
         if (product && group) {
-            if (!groupMap.has(group.id)) {
-                groupMap.set(group.id, { id: group.id, name: group.name, stats: createStats(), items: new Map() });
-            }
+            if (!groupMap.has(group.id)) groupMap.set(group.id, { id: group.id, name: group.name, stats: createStats(), items: new Map() });
             const groupNode = groupMap.get(group.id)!;
-
-            if (!groupNode.items.has(product.id)) {
-                groupNode.items.set(product.id, { id: product.id, name: product.name, stats: createStats() });
-            }
+            if (!groupNode.items.has(product.id)) groupNode.items.set(product.id, { id: product.id, name: product.name, stats: createStats() });
             const itemNode = groupNode.items.get(product.id)!;
-
-            // Calc Values
             const vQty = order.quantity;
             const vJpy = product.jpyPrice * vQty;
             const vDom = product.domesticShip * vQty;
             const vHand = product.handlingFee * vQty;
             const vTwd = product.inputPrice * vQty;
-
-            // Aggregation - Item
-            itemNode.stats.qty += vQty;
-            itemNode.stats.jpy += vJpy;
-            itemNode.stats.dom += vDom;
-            itemNode.stats.hand += vHand;
-            itemNode.stats.twd += vTwd;
-
-            // Aggregation - Group
-            groupNode.stats.qty += vQty;
-            groupNode.stats.jpy += vJpy;
-            groupNode.stats.dom += vDom;
-            groupNode.stats.hand += vHand;
-            groupNode.stats.twd += vTwd;
+            itemNode.stats.qty += vQty; itemNode.stats.jpy += vJpy; itemNode.stats.dom += vDom; itemNode.stats.hand += vHand; itemNode.stats.twd += vTwd;
+            groupNode.stats.qty += vQty; groupNode.stats.jpy += vJpy; groupNode.stats.dom += vDom; groupNode.stats.hand += vHand; groupNode.stats.twd += vTwd;
         }
     });
 
     const sortedGroups = Array.from(groupMap.values()).sort((a, b) => a.id.localeCompare(b.id));
-    
-    // --- CSV Generation ---
     const headers = ['商品項目/名稱', '數量', '日幣總價', '境內運總價', '台幣總價'];
     const rows: (string | number)[][] = [];
-
     let grandTotal = createStats();
 
     sortedGroups.forEach(g => {
-        // Group Header Row
         rows.push([`[${g.id} ${g.name}] 總計`, g.stats.qty, g.stats.jpy, g.stats.dom, g.stats.twd]);
-        
-        // Add to Grand Total
-        grandTotal.qty += g.stats.qty;
-        grandTotal.jpy += g.stats.jpy;
-        grandTotal.dom += g.stats.dom;
-        grandTotal.hand += g.stats.hand;
-        grandTotal.twd += g.stats.twd;
-
-        // Item Rows
+        grandTotal.qty += g.stats.qty; grandTotal.jpy += g.stats.jpy; grandTotal.dom += g.stats.dom; grandTotal.hand += g.stats.hand; grandTotal.twd += g.stats.twd;
         const sortedItems = Array.from(g.items.values()).sort((a, b) => a.id.localeCompare(b.id));
-        sortedItems.forEach(i => {
-            rows.push([`  ${i.name}`, i.stats.qty, i.stats.jpy, i.stats.dom, i.stats.twd]);
-        });
+        sortedItems.forEach(i => rows.push([`  ${i.name}`, i.stats.qty, i.stats.jpy, i.stats.dom, i.stats.twd]));
     });
-
-    // Grand Total Row
     rows.push(['=== 合計 ===', grandTotal.qty, grandTotal.jpy, grandTotal.dom, grandTotal.twd]);
-
     downloadCSV(`分析資料_${selectedOrderGroup}`, headers, rows);
   };
 
-  // 5. Income: All Order Data (Backup)
   const handleExportAllOrders = () => {
       const headers = ['訂單批次', '商品類別', '商品ID', '商品名稱', '描述', '買家', '數量', '備註', '說明', '日期'];
       const rows = orderItems.map(item => {
@@ -320,61 +367,99 @@ const App: React.FC = () => {
       });
       downloadCSV(`所有訂單備份_${new Date().toISOString().split('T')[0]}`, headers, rows);
   };
+  
+  // --- Firebase Actions ---
 
-  // --- Handlers: Products ---
-  const handleAddGroup = () => {
-    if (!newGroupInput.trim()) return;
-    const nextId = getNextGroupId(productGroups.map(p => p.id));
-    setProductGroups([...productGroups, { id: nextId, name: newGroupInput }]);
-    setNewGroupInput('');
-    setShowNewGroupInput(false);
+  const handleManualSaveIncome = async () => {
+      try {
+        await setDoc(doc(db, 'settings', 'income'), incomeData);
+        alert("儲存成功！");
+      } catch (e) {
+        console.error(e);
+        alert("儲存失敗，請檢查網路");
+      }
   };
 
-  const handleDeleteGroup = (e: React.MouseEvent, groupId: string) => {
-    e.stopPropagation(); // FORCE STOP bubbling
+  const handleAddGroup = async () => {
+    if (!newGroupInput.trim()) return;
+    const nextId = getNextGroupId(productGroups.map(p => p.id));
+    try {
+        await addDoc(collection(db, 'productGroups'), { id: nextId, name: newGroupInput });
+        setNewGroupInput('');
+        setShowNewGroupInput(false);
+    } catch (e) {
+        alert("新增失敗");
+    }
+  };
+
+  const handleDeleteGroup = async (e: React.MouseEvent, groupId: string) => {
+    e.stopPropagation();
     
+    // Find documents to delete
+    // Note: We need the Firestore Document ID, not the 'id' field
     const hasItems = productItems.some(i => i.groupId === groupId);
+    
     if (hasItems) {
       if (!window.confirm(`警告：此類別內尚有 ${productItems.filter(i => i.groupId === groupId).length} 個商品。\n\n確定要刪除此類別嗎？這將會連同刪除所有該類別下的商品！`)) {
         return;
       }
-      // Delete all items in this group
-      setProductItems(prev => prev.filter(i => i.groupId !== groupId));
-      // Delete group
-      setProductGroups(prev => prev.filter(g => g.id !== groupId));
     } else {
-      if (window.confirm("確定刪除此商品類別？")) {
-        setProductGroups(prev => prev.filter(g => g.id !== groupId));
-      }
+      if (!window.confirm("確定刪除此商品類別？")) return;
+    }
+
+    try {
+        // 1. Delete Group
+        const groupQuery = query(collection(db, 'productGroups'), where('id', '==', groupId));
+        const groupSnap = await getDocs(groupQuery);
+        const batch = writeBatch(db);
+        
+        groupSnap.forEach((doc) => {
+            batch.delete(doc.ref);
+        });
+
+        // 2. Delete Items
+        const itemsQuery = query(collection(db, 'productItems'), where('groupId', '==', groupId));
+        const itemsSnap = await getDocs(itemsQuery);
+        itemsSnap.forEach((doc) => {
+            batch.delete(doc.ref);
+        });
+
+        await batch.commit();
+
+    } catch(e) {
+        console.error(e);
+        alert("刪除失敗");
     }
   };
 
-  // --- Renaming Handlers ---
   const handleStartRename = (type: 'group' | 'item', groupId: string, itemId: string | undefined, currentName: string) => {
     setRenamingId({ type, groupId, itemId });
     setTempName(currentName);
   };
 
-  const handleSaveRename = () => {
+  const handleSaveRename = async () => {
     if (!renamingId) return;
     const nameToSave = tempName.trim();
-    
-    if (!nameToSave) {
-        handleCancelRename();
-        return;
+    if (!nameToSave) { handleCancelRename(); return; }
+
+    try {
+        if (renamingId.type === 'group') {
+             const q = query(collection(db, 'productGroups'), where('id', '==', renamingId.groupId));
+             const snaps = await getDocs(q);
+             if (!snaps.empty) {
+                 await updateDoc(snaps.docs[0].ref, { name: nameToSave });
+             }
+        } else {
+             const q = query(collection(db, 'productItems'), where('groupId', '==', renamingId.groupId), where('id', '==', renamingId.itemId));
+             const snaps = await getDocs(q);
+             if (!snaps.empty) {
+                 await updateDoc(snaps.docs[0].ref, { name: nameToSave });
+             }
+        }
+    } catch(e) {
+        console.error(e);
     }
 
-    if (renamingId.type === 'group') {
-        setProductGroups(prev => prev.map(g => 
-            g.id === renamingId.groupId ? { ...g, name: nameToSave } : g
-        ));
-    } else {
-        setProductItems(prev => prev.map(i => 
-            (i.groupId === renamingId.groupId && i.id === renamingId.itemId) 
-                ? { ...i, name: nameToSave } 
-                : i
-        ));
-    }
     setRenamingId(null);
     setTempName('');
   };
@@ -384,56 +469,87 @@ const App: React.FC = () => {
     setTempName('');
   };
 
-  const handleSaveProduct = (item: ProductItem) => {
-    setProductItems(prev => {
-      const exists = prev.find(p => p.groupId === item.groupId && p.id === item.id);
-      if (exists) {
-        return prev.map(p => (p.groupId === item.groupId && p.id === item.id) ? item : p);
-      }
-      return [...prev, item];
-    });
-    setEditingProduct(null);
-  };
-
-  const handleDeleteProduct = (e: React.MouseEvent, groupId: string, itemId: string) => {
-    e.stopPropagation(); // FORCE STOP bubbling
-    if (window.confirm("確定刪除此商品？")) {
-      setProductItems(prev => prev.filter(p => !(p.groupId === groupId && p.id === itemId)));
+  const handleSaveProduct = async (item: ProductItem) => {
+    try {
+        // Check if exists
+        const q = query(collection(db, 'productItems'), where('groupId', '==', item.groupId), where('id', '==', item.id));
+        const snaps = await getDocs(q);
+        
+        if (!snaps.empty) {
+            // Update
+            await updateDoc(snaps.docs[0].ref, { ...item });
+        } else {
+            // Create
+            await addDoc(collection(db, 'productItems'), item);
+        }
+        setEditingProduct(null);
+    } catch (e) {
+        alert("儲存商品失敗");
     }
   };
 
-  // --- Handlers: Orders ---
-  const handleCreateOrderGroup = () => {
+  const handleDeleteProduct = async (e: React.MouseEvent, groupId: string, itemId: string) => {
+    e.stopPropagation();
+    if (window.confirm("確定刪除此商品？")) {
+        const q = query(collection(db, 'productItems'), where('groupId', '==', groupId), where('id', '==', itemId));
+        const snaps = await getDocs(q);
+        const batch = writeBatch(db);
+        snaps.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+    }
+  };
+
+  const handleCreateOrderGroup = async () => {
     const existingInMonth = orderGroups
       .filter(g => g.year === newOrderDate.year && g.month === newOrderDate.month)
       .map(g => g.id);
     const newId = getNextOrderGroupId(newOrderDate.year, newOrderDate.month, existingInMonth);
     
-    setOrderGroups([...orderGroups, { 
-      id: newId, 
-      year: newOrderDate.year, 
-      month: newOrderDate.month, 
-      suffix: newId.slice(-1) 
-    }]);
-    setShowNewOrderModal(false);
-    setSelectedOrderGroup(newId);
+    try {
+        await addDoc(collection(db, 'orderGroups'), { 
+            id: newId, 
+            year: newOrderDate.year, 
+            month: newOrderDate.month, 
+            suffix: newId.slice(-1) 
+        });
+        setShowNewOrderModal(false);
+        setSelectedOrderGroup(newId);
+    } catch (e) {
+        alert("建立失敗");
+    }
   };
 
-  const handleSaveOrderItem = (item: OrderItem) => {
-    setOrderItems(prev => {
-        if(editingOrderItem?.id) {
-             return prev.map(i => i.id === item.id ? item : i);
+  const handleSaveOrderItem = async (item: OrderItem) => {
+    try {
+        // We use UUID in the item.id field. We can query by that.
+        // If editingOrderItem is set, we are updating.
+        if (editingOrderItem) {
+             const q = query(collection(db, 'orderItems'), where('id', '==', item.id));
+             const snaps = await getDocs(q);
+             if (!snaps.empty) {
+                 await updateDoc(snaps.docs[0].ref, { ...item });
+             }
+        } else {
+            // New item
+            const newItem = { ...item, id: generateUUID() };
+            await addDoc(collection(db, 'orderItems'), newItem);
         }
-        return [...prev, { ...item, id: generateUUID() }];
-    });
-    setIsOrderEntryOpen(false);
-    setEditingOrderItem(null);
+        setIsOrderEntryOpen(false);
+        setEditingOrderItem(null);
+    } catch (e) {
+        console.error(e);
+        alert("儲存訂單項目失敗");
+    }
   };
   
-  const handleDeleteOrderItem = (e: React.MouseEvent, id: string) => {
-      e.stopPropagation(); // FORCE STOP bubbling
+  const handleDeleteOrderItem = async (e: React.MouseEvent, id: string) => {
+      e.stopPropagation();
       if(window.confirm("確定刪除此訂單項目？")) {
-          setOrderItems(prev => prev.filter(i => i.id !== id));
+          const q = query(collection(db, 'orderItems'), where('id', '==', id));
+          const snaps = await getDocs(q);
+          const batch = writeBatch(db);
+          snaps.forEach(doc => batch.delete(doc.ref));
+          await batch.commit();
       }
   }
 
@@ -463,7 +579,6 @@ const App: React.FC = () => {
         }
     }, [localItem.productGroupId, localItem.productItemId, editingOrderItem]);
 
-    // Balanced Layout Classes (Single Screen Optimized)
     const balancedInputClass = "w-full border border-slate-300 bg-white text-slate-900 py-2.5 px-3 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm text-base font-medium";
     const balancedLabelClass = "block text-xs font-bold text-slate-500 mb-1";
 
@@ -477,7 +592,6 @@ const App: React.FC = () => {
                     </button>
                 </div>
                 
-                {/* Optimized Content Area: Stacked vertically, only Qty/Date side-by-side */}
                 <div className="flex-1 p-4 overflow-y-auto bg-slate-50 flex flex-col gap-4">
                     
                     {/* 1. Product Group */}
@@ -571,7 +685,13 @@ const App: React.FC = () => {
       <div className="p-3 bg-blue-950 shadow-lg sticky top-0 z-30 border-b border-blue-900 shrink-0">
         <div className="flex justify-between items-center mb-2">
           {/* Renamed to 產品管理 */}
-          <h2 className="text-xl font-bold text-cyan-400 tracking-wide">產品管理</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-xl font-bold text-cyan-400 tracking-wide">產品管理</h2>
+            <div className="bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full flex items-center gap-1">
+                 <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                 <span className="text-[10px] text-emerald-400 font-bold">雲端連線中</span>
+            </div>
+          </div>
           <div className="flex gap-2">
             <button 
                 onClick={() => setShowNewGroupInput(!showNewGroupInput)}
@@ -758,7 +878,13 @@ const App: React.FC = () => {
       {/* Header Area */}
       <div className="p-3 bg-blue-950 shadow-lg z-10 border-b border-blue-900 shrink-0">
          <div className="flex justify-between items-center mb-2">
-             <h2 className="text-xl font-bold text-cyan-400 tracking-wide">訂單管理</h2>
+             <div className="flex items-center gap-2">
+                 <h2 className="text-xl font-bold text-cyan-400 tracking-wide">訂單管理</h2>
+                 <div className="bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full flex items-center gap-1">
+                     <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                     <span className="text-[10px] text-emerald-400 font-bold">雲端連線中</span>
+                </div>
+             </div>
              <div className="flex gap-2">
                 <button onClick={() => setShowNewOrderModal(true)} className="flex items-center text-xs font-bold bg-blue-800 hover:bg-blue-700 text-white px-3 py-1.5 rounded-full transition-colors border border-blue-700 shadow">
                     <Plus size={16} className="mr-1"/> 建立訂單
@@ -812,36 +938,53 @@ const App: React.FC = () => {
                       ) : (
                           activeOrderItems.map(item => {
                               const product = productItems.find(p => p.groupId === item.productGroupId && p.id === item.productItemId);
+                              const total = (product?.inputPrice || 0) * item.quantity;
                               return (
-                                  <div key={item.id} className="bg-white p-2 rounded-xl shadow-sm border border-slate-200 text-base hover:border-blue-300 transition-colors">
-                                      <div className="flex justify-between items-start mb-1">
-                                          <div>
-                                            <div className="font-bold text-slate-800 text-lg">{item.description}</div>
-                                            <div className="text-slate-500 text-sm mt-1">{product?.name || '未知商品'}</div>
+                                  <div key={item.id} className="bg-white p-3 rounded-xl shadow-sm border border-slate-200 text-base hover:border-blue-300 transition-colors relative">
+                                      
+                                      {/* Row 1: ID & Date */}
+                                      <div className="flex justify-between items-center text-sm text-slate-500 font-mono border-b border-slate-100 pb-1 mb-2">
+                                          <span className="bg-slate-100 px-1.5 rounded">{item.productGroupId}-{item.productItemId}</span>
+                                          <span>{item.date}</span>
+                                      </div>
+
+                                      {/* Row 2: Product Name : Description */}
+                                      <div className="mb-3 pr-20">
+                                           <div className="text-lg leading-tight">
+                                               <span className="font-bold text-slate-800">{product?.name}</span>
+                                               <span className="mx-1 text-slate-400 font-bold">:</span>
+                                               <span className="text-slate-600 font-medium">{item.description}</span>
+                                           </div>
+                                      </div>
+
+                                      {/* Row 3: Buyer | Qty | Price */}
+                                      <div className="flex justify-between items-center bg-slate-50 p-2 rounded-lg">
+                                          <div className="font-bold text-blue-700 flex items-center gap-1">
+                                             <User size={16} /> {item.buyer}
                                           </div>
-                                          <div className="flex space-x-3 relative z-10">
-                                              <button 
-                                                onClick={() => { setEditingOrderItem(item); setIsOrderEntryOpen(true); }} 
-                                                className="text-blue-500 hover:text-blue-700 p-2 rounded-lg bg-blue-50 border border-blue-100 relative z-20"
-                                              >
-                                                <Edit size={20} className="pointer-events-none"/>
-                                              </button>
-                                              {/* ENHANCED: Order Item Delete Button */}
-                                              <button 
-                                                onClick={(e) => handleDeleteOrderItem(e, item.id)} 
-                                                className="text-rose-500 hover:text-rose-700 p-2 rounded-lg bg-white border border-rose-200 shadow-sm hover:bg-rose-50 relative z-20"
-                                              >
-                                                <Trash2 size={20} className="pointer-events-none"/>
-                                              </button>
+                                          <div className="flex items-center gap-4">
+                                             <div className="font-bold text-slate-600 text-sm">x<span className="text-lg ml-0.5">{item.quantity}</span></div>
+                                             <div className="font-mono font-bold text-emerald-600 text-xl">{formatCurrency(total)}</div>
                                           </div>
                                       </div>
-                                      <div className="bg-slate-50 rounded p-2 grid grid-cols-2 gap-2 text-sm border border-slate-100">
-                                          <div className="flex items-center text-slate-700"><span className="text-slate-400 w-14 font-bold mr-1">訂購者</span> <span className="font-medium">{item.buyer}</span></div>
-                                          <div className="flex items-center text-slate-700"><span className="text-slate-400 w-14 font-bold mr-1">數量</span> <span className="font-medium">{item.quantity}</span></div>
-                                          <div className="flex items-center text-slate-700"><span className="text-slate-400 w-14 font-bold mr-1">編號</span> <span className="font-medium">{item.productGroupId}-{item.productItemId}</span></div>
-                                          <div className="flex items-center text-slate-700"><span className="text-slate-400 w-14 font-bold mr-1">日期</span> <span className="font-medium">{item.date}</span></div>
-                                          {item.remarks && <div className="col-span-2 text-amber-600 mt-1 pt-1 border-t border-slate-200"><span className="text-slate-400 font-bold mr-1">備註:</span> {item.remarks}</div>}
+                                      
+                                      {/* Actions Positioned Absolute Top-Right */}
+                                      <div className="absolute top-3 right-3 flex gap-2">
+                                          <button 
+                                            onClick={() => { setEditingOrderItem(item); setIsOrderEntryOpen(true); }} 
+                                            className="text-blue-500 hover:text-blue-700 p-1.5 rounded-lg bg-blue-50 border border-blue-100"
+                                          >
+                                            <Edit size={18} />
+                                          </button>
+                                          <button 
+                                            onClick={(e) => handleDeleteOrderItem(e, item.id)} 
+                                            className="text-rose-500 hover:text-rose-700 p-1.5 rounded-lg bg-white border border-rose-200 shadow-sm hover:bg-rose-50"
+                                          >
+                                            <Trash2 size={18} />
+                                          </button>
                                       </div>
+
+                                      {item.remarks && <div className="mt-2 text-amber-600 text-sm border-t border-slate-100 pt-1"><span className="text-slate-400 font-bold mr-1">備註:</span> {item.remarks}</div>}
                                   </div>
                               )
                           })
@@ -940,61 +1083,34 @@ const App: React.FC = () => {
     const profitDad = profit * 0.2;
     const profitSis = profit * 0.8;
 
-    // Local Formatters
-    const fmtInt = (n: number) => Math.round(n).toLocaleString('zh-TW');
-    const fmtPct = (n: number) => n.toFixed(2) + '%';
-    const fmtRate = (n: number) => n.toFixed(3);
-
-    // Styles
-    const calcBg = "bg-slate-100";
-    const inputBg = "bg-white border-2 border-blue-100 focus:border-blue-400 focus:ring-blue-400";
-    const labelStyle = "block text-xs font-bold text-slate-500 mb-0.5";
-    const valStyle = "text-xl font-bold text-slate-800 font-mono";
-
-    // Helper for rows
-    const StatBox = ({ label, value, type = 'currency', subColor = "text-slate-800" }: any) => {
-        let displayVal = '';
-        if (type === 'currency') displayVal = fmtInt(value);
-        else if (type === 'percent') displayVal = fmtPct(value);
-        else if (type === 'rate') displayVal = fmtRate(value);
-        else displayVal = value;
-
-        return (
-            <div className={`p-2 rounded-xl border border-slate-200 ${calcBg} flex flex-col justify-center h-full`}>
-                <div className={labelStyle}>{label}</div>
-                <div className={`${valStyle} ${subColor} truncate`}>
-                    {displayVal}
-                </div>
-            </div>
-        );
-    };
-
-    const InputBox = ({ label, field, placeholder = "0" }: any) => (
-        <div className="h-full flex flex-col">
-             <label className={labelStyle + " ml-1"}>{label}</label>
-             <input 
-                type={field === 'paymentNote' ? "text" : "number"}
-                className={`w-full flex-1 rounded-xl px-3 py-1 text-lg font-bold text-slate-900 shadow-sm outline-none transition-all ${inputBg}`}
-                value={(incomeData as any)[field]}
-                onChange={e => setIncomeData({...incomeData, [field]: field === 'paymentNote' ? e.target.value : parseFloat(e.target.value) || 0})}
-                placeholder={placeholder}
-             />
-        </div>
-    );
-
     return (
         <div className="flex flex-col h-full overflow-hidden bg-slate-50">
              {/* Header */}
              <div className="bg-blue-950 p-3 shadow-lg border-b border-blue-900 shrink-0">
                  <div className="flex justify-between items-center mb-2">
-                     <h2 className="text-xl font-bold text-cyan-400 tracking-wide">收支計算</h2>
-                     <button 
-                        onClick={handleExportAllOrders}
-                        className="flex items-center text-xs font-bold bg-emerald-700 hover:bg-emerald-600 text-emerald-100 px-3 py-1.5 rounded-full transition-colors border border-emerald-600 shadow"
-                        title="匯出所有歷史訂單"
-                    >
-                        <Download size={16} />
-                    </button>
+                     <div className="flex items-center gap-2">
+                         <h2 className="text-xl font-bold text-cyan-400 tracking-wide">收支計算</h2>
+                         <div className="bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full flex items-center gap-1">
+                             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                             <span className="text-[10px] text-emerald-400 font-bold">雲端連線中</span>
+                        </div>
+                     </div>
+                     <div className="flex gap-2">
+                        <button 
+                            onClick={handleManualSaveIncome}
+                            className="flex items-center text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-full transition-colors border border-blue-500 shadow"
+                            title="儲存設定"
+                        >
+                            <Save size={16} className="mr-1"/> 儲存
+                        </button>
+                        <button 
+                            onClick={handleExportAllOrders}
+                            className="flex items-center text-xs font-bold bg-emerald-700 hover:bg-emerald-600 text-emerald-100 px-3 py-1.5 rounded-full transition-colors border border-emerald-600 shadow"
+                            title="匯出所有歷史訂單"
+                        >
+                            <Download size={16} />
+                        </button>
+                     </div>
                  </div>
                  {/* Selector - Copied from Order Management */}
                  <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
@@ -1015,46 +1131,50 @@ const App: React.FC = () => {
                 
                 {/* Row 1: Costs (Calculated) - Flex grow to fill space evenly */}
                 <div className="grid grid-cols-3 gap-2 flex-1 min-h-0">
-                    <StatBox label="日幣總計" value={totalJpy} />
-                    <StatBox label="境內運總計" value={totalDomesticShip} />
-                    <StatBox label="手續費總計" value={totalHandling} />
+                    <IncomeStatBox label="日幣總計" value={totalJpy} />
+                    <IncomeStatBox label="境內運總計" value={totalDomesticShip} />
+                    <IncomeStatBox label="手續費總計" value={totalHandling} />
                 </div>
 
                 {/* Row 2: Revenue (Mixed) */}
                 <div className="grid grid-cols-2 gap-3 items-center bg-white p-2 rounded-2xl shadow-sm border border-slate-200 flex-1 min-h-0">
-                    <StatBox label="收入金額 (商品)" value={totalRevenue} subColor="text-blue-600"/>
-                    <InputBox label="包材收入 (輸入)" field="packagingRevenue" />
+                    <IncomeStatBox label="收入金額 (商品)" value={totalRevenue} subColor="text-blue-600"/>
+                    <IncomeInputBox 
+                        label="包材收入 (輸入)" 
+                        value={incomeData.packagingRevenue}
+                        onChange={(val: number) => setIncomeData({...incomeData, packagingRevenue: val})}
+                    />
                 </div>
 
                 {/* Row 3: Expenses (Input) */}
                 <div className="grid grid-cols-3 gap-2 bg-white p-2 rounded-2xl shadow-sm border border-slate-200 flex-1 min-h-0">
-                    <InputBox label="刷卡費" field="cardCharge" />
-                    <InputBox label="刷卡手續費" field="cardFee" />
-                    <InputBox label="國際運費" field="intlShipping" />
+                    <IncomeInputBox label="刷卡費" value={incomeData.cardCharge} onChange={(val: number) => setIncomeData({...incomeData, cardCharge: val})} />
+                    <IncomeInputBox label="刷卡手續費" value={incomeData.cardFee} onChange={(val: number) => setIncomeData({...incomeData, cardFee: val})} />
+                    <IncomeInputBox label="國際運費" value={incomeData.intlShipping} onChange={(val: number) => setIncomeData({...incomeData, intlShipping: val})} />
                 </div>
 
                 {/* Row 4: Rates (Calculated) */}
                 <div className="grid grid-cols-2 gap-3 flex-1 min-h-0">
-                    <StatBox label="刷卡匯率" value={cardExchangeRate} type="rate" subColor="text-purple-600"/>
-                    <StatBox label="手續費 %" value={feePercent} type="percent" subColor="text-purple-600"/>
+                    <IncomeStatBox label="刷卡匯率" value={cardExchangeRate} type="rate" subColor="text-purple-600"/>
+                    <IncomeStatBox label="手續費 %" value={feePercent} type="percent" subColor="text-purple-600"/>
                 </div>
 
                 {/* Row 5: Profit (Calculated) */}
                 <div className="grid grid-cols-2 gap-3 flex-1 min-h-0">
-                    <StatBox label="總利潤" value={profit} subColor={profit >= 0 ? "text-emerald-600" : "text-rose-600"}/>
-                    <StatBox label="利潤率 (ROI)" value={profitMargin} type="percent" subColor={profitMargin >= 0 ? "text-emerald-600" : "text-rose-600"}/>
+                    <IncomeStatBox label="總利潤" value={profit} subColor={profit >= 0 ? "text-emerald-600" : "text-rose-600"}/>
+                    <IncomeStatBox label="利潤率 (ROI)" value={profitMargin} type="percent" subColor={profitMargin >= 0 ? "text-emerald-600" : "text-rose-600"}/>
                 </div>
 
                 {/* Row 6: Split (Calculated) */}
                 <div className="grid grid-cols-2 gap-3 flex-1 min-h-0">
-                    <StatBox label="利潤 (爸 20%)" value={profitDad} subColor="text-indigo-600"/>
-                    <StatBox label="利潤 (妹 80%)" value={profitSis} subColor="text-pink-600"/>
+                    <IncomeStatBox label="利潤 (爸 20%)" value={profitDad} subColor="text-indigo-600"/>
+                    <IncomeStatBox label="利潤 (妹 80%)" value={profitSis} subColor="text-pink-600"/>
                 </div>
 
                 {/* Row 7: Final (Input) */}
                 <div className="grid grid-cols-2 gap-3 bg-white p-2 rounded-2xl shadow-lg border-2 border-blue-100 flex-1 min-h-0">
-                    <InputBox label="爸爸應收" field="dadReceivable" />
-                    <InputBox label="收款說明" field="paymentNote" />
+                    <IncomeInputBox label="爸爸應收" value={incomeData.dadReceivable} onChange={(val: number) => setIncomeData({...incomeData, dadReceivable: val})} />
+                    <IncomeInputBox label="收款說明" type="text" value={incomeData.paymentNote} onChange={(val: string) => setIncomeData({...incomeData, paymentNote: val})} />
                 </div>
 
              </div>
