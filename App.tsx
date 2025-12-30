@@ -113,8 +113,8 @@ const App: React.FC = () => {
   // Updated: Analysis mode tracks 'expenditure' or 'income'
   const [analysisMode, setAnalysisMode] = useState<'expenditure' | 'income'>('income');
   
-  // Current Batch Manual Data
-  const [incomeData, setIncomeData] = useState(DEFAULT_INCOME_DATA);
+  // Current Batch Manual Data (allow any type to support string input during editing)
+  const [incomeData, setIncomeData] = useState<any>(DEFAULT_INCOME_DATA);
   // All Batches Manual Data (for Global Analysis)
   const [allIncomeSettings, setAllIncomeSettings] = useState<Record<string, typeof DEFAULT_INCOME_DATA>>({});
 
@@ -226,20 +226,17 @@ const App: React.FC = () => {
 
     const avgRateCost = rateCount > 0 ? rateSum / rateCount : 0.205;
     
-    // Manual inputs from global state for the active group
-    const currentSettings = selectedOrderGroup ? (allIncomeSettings[selectedOrderGroup] || DEFAULT_INCOME_DATA) : DEFAULT_INCOME_DATA;
-    
-    const packaging = currentSettings.packagingRevenue || 0;
-    const cardCharge = currentSettings.cardCharge || 0;
-    const cardFeeInput = currentSettings.cardFee || 0;
-    const actualIntlShip = currentSettings.intlShipping || 0; // Manual override/addition
+    // Use local incomeData state for real-time updates, parse safely
+    const packaging = parseFloat(String(incomeData.packagingRevenue || 0)) || 0;
+    const cardCharge = parseFloat(String(incomeData.cardCharge || 0)) || 0;
+    const cardFeeInput = parseFloat(String(incomeData.cardFee || 0)) || 0;
+    const actualIntlShip = parseFloat(String(incomeData.intlShipping || 0)) || 0;
     
     // Logic updated to match user request:
     // Revenue = Sales + Packaging
     const totalRevenue = totalSales + packaging;
     
     // Expense = Card Charge (Cost) + Card Fee + Intl Ship
-    // Note: User formula says "支出總計" = "刷卡費"+"刷卡手續費"+"國際運費"
     const totalExpenses = cardCharge + cardFeeInput + actualIntlShip;
     
     const netProfit = totalRevenue - totalExpenses;
@@ -251,7 +248,7 @@ const App: React.FC = () => {
         avgRateCost, packaging, cardFeeInput, actualIntlShip, cardCharge,
         totalRevenue, totalExpenses, netProfit, profitRate, cardFeeRate
     };
-  }, [activeOrderItems, productItems, allIncomeSettings, selectedOrderGroup]);
+  }, [activeOrderItems, productItems, incomeData]); // Depend on local incomeData
 
   // --- Actions ---
   const downloadCSV = (filename: string, headers: string[], rows: (string | number)[][]) => {
@@ -374,8 +371,16 @@ const App: React.FC = () => {
 
   const handleManualSaveIncome = async () => {
     if (!selectedOrderGroup) return;
-    // Update local state is handled by input, but we save to Firestore here
-    await setDoc(doc(db, 'incomeSettings', selectedOrderGroup), incomeData);
+    // Ensure we save parsed numbers
+    const dataToSave = {
+        packagingRevenue: parseFloat(String(incomeData.packagingRevenue)) || 0,
+        cardCharge: parseFloat(String(incomeData.cardCharge)) || 0,
+        cardFee: parseFloat(String(incomeData.cardFee)) || 0,
+        intlShipping: parseFloat(String(incomeData.intlShipping)) || 0,
+        dadReceivable: parseFloat(String(incomeData.dadReceivable)) || 0,
+        paymentNote: incomeData.paymentNote || ''
+    };
+    await setDoc(doc(db, 'incomeSettings', selectedOrderGroup), dataToSave);
     alert('儲存成功');
   };
 
@@ -1076,7 +1081,15 @@ const App: React.FC = () => {
         <span className="text-sm font-bold text-slate-500 ml-1 mb-0.5">{label}</span>
         <div className={`relative flex items-center px-2 h-10 rounded-lg border-2 ${isInput ? 'bg-white border-blue-300' : 'bg-slate-50 border-slate-200'} overflow-hidden w-full`}>
            {isInput ? (
-             <input type={typeof value === 'number' ? 'number' : 'text'} className={`w-full bg-transparent outline-none font-mono font-bold text-xl text-right ${colorClass}`} value={value} onChange={onChange} />
+             <input 
+                type="number" // Force number type for inputs in this view
+                inputMode="decimal" // Better mobile keyboard
+                step="any" // Allow decimals
+                className={`w-full bg-transparent outline-none font-mono font-bold text-xl text-right ${colorClass}`} 
+                value={value} 
+                onChange={onChange} 
+                onFocus={(e) => e.target.select()} // QoL: Select all on focus
+             />
            ) : (
              <div className={`w-full font-mono font-bold text-xl text-right truncate ${colorClass}`}>{prefix}{value}</div>
            )}
@@ -1106,12 +1119,12 @@ const App: React.FC = () => {
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                         <Field label="商品收入" value={formatCurrency(totalSales)} colorClass="text-blue-600" />
-                        <Field label="包材收入 (輸入)" value={incomeData.packagingRevenue} isInput onChange={(e:any) => setIncomeData({...incomeData, packagingRevenue: parseFloat(e.target.value) || 0})} colorClass="text-blue-600" />
+                        <Field label="包材收入 (輸入)" value={incomeData.packagingRevenue} isInput onChange={(e:any) => setIncomeData({...incomeData, packagingRevenue: e.target.value})} colorClass="text-blue-600" />
                     </div>
                     <div className="grid grid-cols-3 gap-2">
-                        <Field label="刷卡費 (成本)" value={incomeData.cardCharge} isInput onChange={(e:any) => setIncomeData({...incomeData, cardCharge: parseFloat(e.target.value) || 0})} />
-                        <Field label="刷卡手續費" value={incomeData.cardFee} isInput onChange={(e:any) => setIncomeData({...incomeData, cardFee: parseFloat(e.target.value) || 0})} />
-                        <Field label="國際運費" value={incomeData.intlShipping} isInput onChange={(e:any) => setIncomeData({...incomeData, intlShipping: parseFloat(e.target.value) || 0})} />
+                        <Field label="刷卡費 (成本)" value={incomeData.cardCharge} isInput onChange={(e:any) => setIncomeData({...incomeData, cardCharge: e.target.value})} />
+                        <Field label="刷卡手續費" value={incomeData.cardFee} isInput onChange={(e:any) => setIncomeData({...incomeData, cardFee: e.target.value})} />
+                        <Field label="國際運費" value={incomeData.intlShipping} isInput onChange={(e:any) => setIncomeData({...incomeData, intlShipping: e.target.value})} />
                     </div>
                 </div>
 
@@ -1134,7 +1147,7 @@ const App: React.FC = () => {
                 {/* Card 3: Receivables & Notes */}
                 <div className="bg-white p-2.5 rounded-xl border border-slate-300 shadow-sm flex flex-col justify-center shrink-0">
                     <div className="grid grid-cols-12 gap-2">
-                        <div className="col-span-4"><Field label="爸爸應收" value={incomeData.dadReceivable} isInput onChange={(e:any) => setIncomeData({...incomeData, dadReceivable: parseFloat(e.target.value) || 0})} /></div>
+                        <div className="col-span-4"><Field label="爸爸應收" value={incomeData.dadReceivable} isInput onChange={(e:any) => setIncomeData({...incomeData, dadReceivable: e.target.value})} /></div>
                         <div className="col-span-8"><Field label="收款說明" value={incomeData.paymentNote || ''} isInput onChange={(e:any) => setIncomeData({...incomeData, paymentNote: e.target.value})} /></div>
                     </div>
                 </div>
