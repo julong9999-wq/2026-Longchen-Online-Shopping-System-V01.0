@@ -3,7 +3,7 @@ import { ProductGroup, ProductItem, OrderGroup, OrderItem, ViewState } from './t
 import { INITIAL_PRODUCT_GROUPS, INITIAL_PRODUCT_ITEMS, INITIAL_ORDER_GROUPS, INITIAL_ORDER_ITEMS } from './constants';
 import { getNextGroupId, getNextItemId, getNextOrderGroupId, calculateProductStats, formatCurrency, generateUUID, cleanProductName } from './utils';
 import ProductForm from './components/ProductForm';
-import { Trash2, Edit, Plus, Package, ShoppingCart, List, BarChart2, ChevronRight, ChevronDown, User, Box, X, Calculator, Download, Save, Wallet, ArrowUpCircle, ArrowDownCircle, Grid, PieChart, Check } from 'lucide-react';
+import { Trash2, Edit, Plus, Package, ShoppingCart, List, BarChart2, ChevronRight, ChevronDown, User, Box, X, Calculator, Download, Save, Wallet, ArrowUpCircle, ArrowDownCircle, Grid, PieChart, Check, Circle } from 'lucide-react';
 import { db } from './firebase';
 import { 
   collection, 
@@ -26,7 +26,7 @@ const DEFAULT_INCOME_DATA = {
     intlShipping: 0,
     dadReceivable: 0,
     paymentNote: '',
-    status: 'processing' // Default changed to 'processing' (Green) as requested
+    status: 'processing' // Default 'processing' (Green)
 };
 
 // --- UI Components ---
@@ -76,26 +76,26 @@ const OrderBatchButton = ({ id, active, onClick }: any) => (
     </button>
 );
 
-// 3. Income Field Component (Optimized for 10px label / 14px thin content)
+// 3. Income Field Component (Optimized Typography: 12px thin label, 16px bold content)
 const IncomeField = ({ label, value, isInput = false, onChange, colorClass = "text-slate-700", prefix = "" }: any) => (
   <div className="flex flex-col w-full">
-    {/* Label: 10px gray thin */}
-    <span className="text-[10px] font-light text-slate-400 ml-1 mb-0.5">{label}</span>
-    <div className={`relative flex items-center px-2 h-9 rounded-lg border ${isInput ? 'bg-white border-blue-200' : 'bg-slate-50 border-slate-100'} overflow-hidden w-full`}>
+    {/* Label: 12px gray thin */}
+    <span className="text-[12px] font-light text-slate-500 ml-1 mb-0.5">{label}</span>
+    <div className={`relative flex items-center px-2 h-10 rounded-lg border ${isInput ? 'bg-white border-blue-200' : 'bg-slate-50 border-slate-100'} overflow-hidden w-full`}>
        {isInput ? (
          <input 
             type={typeof value === 'number' ? 'number' : 'text'}
             inputMode={typeof value === 'number' ? 'decimal' : 'text'} 
             step="any" 
-            // Input: 14px (text-sm) font-light
-            className={`w-full bg-transparent outline-none font-mono font-light text-sm text-right ${colorClass}`} 
+            // Input: 16px (text-base) font-bold
+            className={`w-full bg-transparent outline-none font-mono font-bold text-base text-right ${colorClass}`} 
             value={value} 
             onChange={onChange} 
             onFocus={(e) => e.target.select()} 
          />
        ) : (
-         // Display: 14px (text-sm) font-light
-         <div className={`w-full font-mono font-light text-sm text-right truncate ${colorClass}`}>{prefix}{value}</div>
+         // Display: 16px (text-base) font-bold
+         <div className={`w-full font-mono font-bold text-base text-right truncate ${colorClass}`}>{prefix}{value}</div>
        )}
     </div>
   </div>
@@ -999,6 +999,20 @@ const App: React.FC = () => {
     const { totalJpy, totalDomestic, totalHandling, totalSales, avgRateCost, netProfit, profitRate, cardFeeRate } = incomeStats;
     const currentStatus = incomeData.status || 'processing';
 
+    const getStatusLabel = (s: string) => {
+        switch(s) {
+            case 'preorder': return '預購';
+            case 'closed': return '結案';
+            default: return '進行';
+        }
+    };
+
+    const statusOptions = [
+        { value: 'processing', label: '進行', color: 'text-emerald-600', activeBg: 'bg-emerald-50 border-emerald-300' },
+        { value: 'preorder', label: '預購', color: 'text-rose-600', activeBg: 'bg-rose-50 border-rose-300' },
+        { value: 'closed', label: '結案', color: 'text-yellow-700', activeBg: 'bg-yellow-50 border-yellow-300' },
+    ];
+
     return (
         <div className="flex flex-col h-full bg-slate-50 overflow-hidden">
              <Header title="收支計算" showOrderSelector={true} actions={
@@ -1010,28 +1024,28 @@ const App: React.FC = () => {
              }/>
              <div className="flex-1 p-2 flex flex-col gap-2 overflow-hidden justify-start">
                 
-                {/* Status Selector */}
-                <div className="bg-white p-2 rounded-xl border border-slate-300 shadow-sm flex items-center gap-3 shrink-0">
-                    <span className="text-[10px] font-light text-slate-400 ml-1">狀態</span>
-                    <div className="flex gap-2 flex-1">
-                        <button 
-                            onClick={() => setIncomeData({...incomeData, status: 'processing'})}
-                            className={`flex-1 h-8 rounded-lg text-sm font-light transition-all flex items-center justify-center gap-1 ${currentStatus === 'processing' ? 'bg-emerald-500 text-white shadow-sm font-normal' : 'text-slate-500 hover:bg-slate-50 border border-slate-200'}`}
-                        >
-                            {currentStatus === 'processing' && <Check size={14} />} 進行
-                        </button>
-                        <button 
-                            onClick={() => setIncomeData({...incomeData, status: 'preorder'})}
-                            className={`flex-1 h-8 rounded-lg text-sm font-light transition-all flex items-center justify-center gap-1 ${currentStatus === 'preorder' ? 'bg-rose-500 text-white shadow-sm font-normal' : 'text-slate-500 hover:bg-slate-50 border border-slate-200'}`}
-                        >
-                            {currentStatus === 'preorder' && <Check size={14} />} 預購
-                        </button>
-                        <button 
-                            onClick={() => setIncomeData({...incomeData, status: 'closed'})}
-                            className={`flex-1 h-8 rounded-lg text-sm font-light transition-all flex items-center justify-center gap-1 ${currentStatus === 'closed' ? 'bg-yellow-400 text-blue-900 shadow-sm font-normal' : 'text-slate-500 hover:bg-slate-50 border border-slate-200'}`}
-                        >
-                             {currentStatus === 'closed' && <Check size={14} />} 結案
-                        </button>
+                {/* Status Selector - Custom Radio Look */}
+                <div className="bg-white p-2.5 rounded-xl border border-slate-300 shadow-sm flex flex-col gap-1 shrink-0">
+                    <span className="text-[12px] font-light text-slate-500 ml-1">狀態</span>
+                    <div className="flex gap-2">
+                        {statusOptions.map(opt => (
+                            <button 
+                                key={opt.value}
+                                onClick={() => setIncomeData({...incomeData, status: opt.value})}
+                                className={`flex-1 h-10 rounded-lg border flex items-center justify-center gap-2 transition-all
+                                    ${currentStatus === opt.value ? `${opt.activeBg} border-2 shadow-sm` : 'bg-slate-50 border-slate-200 hover:bg-white'}
+                                `}
+                            >
+                                {/* Radio Circle */}
+                                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${currentStatus === opt.value ? opt.color.replace('text', 'border') : 'border-slate-300'}`}>
+                                    {currentStatus === opt.value && <div className={`w-2 h-2 rounded-full ${opt.color.replace('text', 'bg')}`} />}
+                                </div>
+                                {/* Text 16px Bold */}
+                                <span className={`text-base font-bold ${currentStatus === opt.value ? opt.color : 'text-slate-400'}`}>
+                                    {opt.label}
+                                </span>
+                            </button>
+                        ))}
                     </div>
                 </div>
 
