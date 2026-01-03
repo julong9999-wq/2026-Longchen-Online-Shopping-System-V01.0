@@ -67,7 +67,6 @@ const ProductForm: React.FC<Props> = ({ group, onSave, onCancel, initialData, ne
   // 統一字體設定 (以購買明細為標準)
   // Input: text-lg (18px) - 清楚好讀
   // Label: text-sm (14px) - 輔助說明
-  // Layout: Compact spacing
   const labelClass = "block text-sm font-bold text-slate-600 mb-1"; 
   const inputClass = "block w-full rounded-lg border border-slate-300 bg-white text-slate-900 px-3 h-10 text-lg font-bold focus:border-blue-500 focus:ring-blue-500"; 
 
@@ -80,7 +79,7 @@ const ProductForm: React.FC<Props> = ({ group, onSave, onCancel, initialData, ne
             <h3 className="text-xl font-bold text-white">
               {initialData ? '修改商品' : '新增商品'}
             </h3>
-            <div className="text-blue-200 text-xs font-mono mt-0.5 font-bold">{group.name} ({group.id}-{initialData?.id || nextId})</div>
+            <div className="text-blue-200 text-sm font-mono mt-0.5 font-bold">{group.name} ({group.id}-{initialData?.id || nextId})</div>
           </div>
           <button onClick={onCancel} className="text-blue-300 hover:text-white p-1">
              <X size={28} />
@@ -88,7 +87,6 @@ const ProductForm: React.FC<Props> = ({ group, onSave, onCancel, initialData, ne
         </div>
 
         {/* Body - Optimized Spacing - Compact */}
-        {/* Removed justify-between, using gap-3 for consistent, compact spacing */}
         <div className="flex-1 p-4 flex flex-col gap-3 overflow-hidden">
             
             {/* 1. Name */}
@@ -159,26 +157,25 @@ const ProductForm: React.FC<Props> = ({ group, onSave, onCancel, initialData, ne
             </div>
 
             {/* 5. Stats Preview (Box) */}
-            {/* Added mt-1 to give just a tiny bit more separation from inputs */}
-            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 shadow-sm text-sm mt-1">
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 shadow-sm text-base mt-1">
                  <div className="grid grid-cols-2 gap-2 mb-2">
                     <div className="flex justify-between">
                         <span className="text-slate-500 font-bold">台幣成本:</span>
-                        <span className="font-mono font-bold text-base">{formatCurrency(currentStats.twdCost)}</span>
+                        <span className="font-mono font-bold text-lg">{formatCurrency(currentStats.twdCost)}</span>
                     </div>
                     <div className="flex justify-between">
                         <span className="text-slate-500 font-bold">成本+運:</span>
-                        <span className="font-mono font-bold text-base">{formatCurrency(currentStats.costPlusShip)}</span>
+                        <span className="font-mono font-bold text-lg">{formatCurrency(currentStats.costPlusShip)}</span>
                     </div>
                  </div>
                  <div className="border-t border-slate-200 pt-2 grid grid-cols-2 gap-2">
                     <div className="flex justify-between text-blue-700">
                         <span className="font-bold">售價+運:</span>
-                        <span className="font-mono font-bold text-base">{formatCurrency(currentStats.pricePlusShip)}</span>
+                        <span className="font-mono font-bold text-lg">{formatCurrency(currentStats.pricePlusShip)}</span>
                     </div>
                     <div className="flex justify-between text-emerald-600">
                         <span className="font-bold">預估利潤:</span>
-                        <span className="font-mono font-bold text-base">{formatCurrency(currentStats.profit)}</span>
+                        <span className="font-mono font-bold text-lg">{formatCurrency(currentStats.profit)}</span>
                     </div>
                  </div>
             </div>

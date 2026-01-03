@@ -30,25 +30,25 @@ const DEFAULT_INCOME_DATA = {
 
 // --- UI Components ---
 
-// 1. Standard Action Button (Compact for 3 buttons in a row)
+// 1. Standard Action Button
 const ActionButton = ({ icon: Icon, label, onClick, active = false, variant = 'primary' }: any) => {
     let bgClass = "bg-blue-700 hover:bg-blue-600 border-blue-600"; // Primary
     if (variant === 'success') bgClass = "bg-emerald-600 hover:bg-emerald-500 border-emerald-500";
     if (variant === 'danger') bgClass = "bg-rose-600 hover:bg-rose-500 border-rose-500";
-    if (variant === 'warning') bgClass = "bg-amber-600 hover:bg-amber-500 border-amber-500"; // Added warning variant
+    if (variant === 'warning') bgClass = "bg-amber-600 hover:bg-amber-500 border-amber-500";
     if (active) bgClass = "bg-yellow-500 text-blue-900 border-yellow-400 font-bold hover:bg-yellow-400";
     
     return (
         <button 
             onClick={onClick}
             className={`
-                h-9 px-3 min-w-[80px] rounded-lg border shadow-sm transition-all active:scale-95
+                h-10 px-3 min-w-[80px] rounded-lg border shadow-sm transition-all active:scale-95
                 flex items-center justify-center gap-1.5
-                text-sm font-bold tracking-wide text-white
+                text-base font-bold tracking-wide text-white
                 ${bgClass}
             `}
         >
-            <Icon size={16} strokeWidth={2.5} />
+            <Icon size={18} strokeWidth={2.5} />
             <span>{label}</span>
         </button>
     );
@@ -59,7 +59,7 @@ const OrderBatchButton = ({ id, active, onClick }: any) => (
     <button 
         onClick={onClick}
         className={`
-            h-8 min-w-[85px] px-2 rounded-lg border font-mono font-bold text-sm tracking-tight transition-all
+            h-9 min-w-[90px] px-2 rounded-lg border font-mono font-bold text-base tracking-tight transition-all
             flex items-center justify-center shrink-0 shadow-sm
             ${active 
                 ? 'bg-yellow-400 text-blue-900 border-yellow-300 shadow-md scale-105' 
@@ -71,23 +71,23 @@ const OrderBatchButton = ({ id, active, onClick }: any) => (
     </button>
 );
 
-// 3. Income Field Component (Extracted to prevent re-render focus loss)
+// 3. Income Field Component
 const IncomeField = ({ label, value, isInput = false, onChange, colorClass = "text-slate-700", prefix = "" }: any) => (
   <div className="flex flex-col w-full">
-    <span className="text-sm font-bold text-slate-500 ml-1 mb-0.5">{label}</span>
-    <div className={`relative flex items-center px-2 h-10 rounded-lg border-2 ${isInput ? 'bg-white border-blue-300' : 'bg-slate-50 border-slate-200'} overflow-hidden w-full`}>
+    <span className="text-sm font-bold text-slate-500 ml-1 mb-1">{label}</span>
+    <div className={`relative flex items-center px-2 h-11 rounded-lg border-2 ${isInput ? 'bg-white border-blue-300' : 'bg-slate-50 border-slate-200'} overflow-hidden w-full`}>
        {isInput ? (
          <input 
             type={typeof value === 'number' ? 'number' : 'text'}
             inputMode={typeof value === 'number' ? 'decimal' : 'text'} 
             step="any" 
-            className={`w-full bg-transparent outline-none font-mono font-bold text-xl text-right ${colorClass}`} 
+            className={`w-full bg-transparent outline-none font-mono font-bold text-lg text-right ${colorClass}`} 
             value={value} 
             onChange={onChange} 
             onFocus={(e) => e.target.select()} 
          />
        ) : (
-         <div className={`w-full font-mono font-bold text-xl text-right truncate ${colorClass}`}>{prefix}{value}</div>
+         <div className={`w-full font-mono font-bold text-lg text-right truncate ${colorClass}`}>{prefix}{value}</div>
        )}
     </div>
   </div>
@@ -612,7 +612,7 @@ const App: React.FC = () => {
                 <div key={i} className="bg-white rounded-lg shadow-sm border border-slate-200">
                     <div className="bg-slate-50 p-2 flex justify-between items-center border-b border-slate-100">
                         <div className="font-bold text-blue-800 text-xl">{g.label || '(未以此分類)'}</div>
-                        <div className="text-sm text-slate-500 font-mono flex items-center gap-3">
+                        <div className="text-base text-slate-500 font-mono flex items-center gap-3">
                             <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-bold">{g.totalQty} 件</span>
                             <span className="text-emerald-600 font-bold text-xl">{formatCurrency(g.totalPrice)}</span>
                         </div>
@@ -637,7 +637,7 @@ const App: React.FC = () => {
                                             return (
                                                 <div key={itemIdx} className="p-2 pl-4 flex justify-between items-center text-sm border-t border-slate-50 first:border-t-0">
                                                     <div className="flex-1 truncate pr-2 text-slate-700 font-medium text-lg">{row2Main}</div>
-                                                    <div className="flex items-center gap-2 font-mono shrink-0 bg-white px-2 py-1 rounded border border-slate-200 shadow-sm"><span className="text-slate-400 scale-90">x</span><span className="font-bold text-slate-800 text-base">{item.quantity}</span><div className="w-px h-4 bg-slate-300 mx-1"></div><span className="text-slate-600 font-bold">${item.product.inputPrice}</span></div>
+                                                    <div className="flex items-center gap-2 font-mono shrink-0 bg-white px-2 py-1 rounded border border-slate-200 shadow-sm"><span className="text-slate-400 scale-90">x</span><span className="font-bold text-slate-800 text-base">{item.quantity}</span><div className="w-px h-4 bg-slate-300 mx-1"></div><span className="text-slate-600 font-bold text-base">${item.product.inputPrice}</span></div>
                                                 </div>
                                             );
                                         })}
@@ -659,7 +659,7 @@ const App: React.FC = () => {
                                         <div key={subIdx} className="border-b border-slate-100 last:border-0">
                                             <div className="bg-slate-50/50 p-2 flex justify-between items-center"><div className="font-bold text-slate-800 text-lg pl-1.5 border-l-4 border-emerald-400 truncate pr-2">{row1Main}</div><div className="font-mono font-bold text-emerald-600 text-lg shrink-0">{formatCurrency(sub.total)}</div></div>
                                             {sub.items.map((item, itemIdx) => (
-                                                <div key={itemIdx} className="p-2 pl-4 flex justify-between items-center text-sm border-t border-slate-50 first:border-t-0"><div className="flex-1 truncate pr-2 text-slate-700 font-medium text-lg">{item.buyer}</div><div className="flex items-center gap-2 font-mono shrink-0 bg-white px-2 py-1 rounded border border-slate-200 shadow-sm"><div className="flex items-center gap-1"><span className="text-slate-400 scale-90 text-xs">數量</span><span className="font-bold text-slate-800 text-base">{item.quantity}</span></div><div className="w-px h-4 bg-slate-300 mx-1"></div><div className="flex items-center gap-1"><span className="text-slate-400 scale-90 text-xs">單價</span><span className="font-bold text-slate-600 text-base">{sub.unitPrice}</span></div></div></div>
+                                                <div key={itemIdx} className="p-2 pl-4 flex justify-between items-center text-sm border-t border-slate-50 first:border-t-0"><div className="flex-1 truncate pr-2 text-slate-700 font-medium text-lg">{item.buyer}</div><div className="flex items-center gap-2 font-mono shrink-0 bg-white px-2 py-1 rounded border border-slate-200 shadow-sm"><div className="flex items-center gap-1"><span className="text-slate-400 scale-90 text-sm">數量</span><span className="font-bold text-slate-800 text-base">{item.quantity}</span></div><div className="w-px h-4 bg-slate-300 mx-1"></div><div className="flex items-center gap-1"><span className="text-slate-400 scale-90 text-sm">單價</span><span className="font-bold text-slate-600 text-base">{sub.unitPrice}</span></div></div></div>
                                             ))}
                                         </div>
                                     );
@@ -669,7 +669,7 @@ const App: React.FC = () => {
                     </div>
                 </div>
             ))}
-            {groupedData.length === 0 && <div className="text-center py-10 text-slate-400">無資料</div>}
+            {groupedData.length === 0 && <div className="text-center py-10 text-slate-400 text-lg">無資料</div>}
         </div>
     );
   };
@@ -758,7 +758,7 @@ const App: React.FC = () => {
                                     <tr className="bg-slate-100/80">
                                         <td colSpan={analysisMode === 'expenditure' ? 4 : 3} className="px-3 py-2">
                                             <span className="font-mono text-sm font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded mr-2">{gid}</span>
-                                            <span className="font-bold text-slate-700 text-base">{groupName}</span>
+                                            <span className="font-bold text-slate-700 text-lg">{groupName}</span>
                                         </td>
                                     </tr>
                                     {/* Items */}
@@ -782,7 +782,7 @@ const App: React.FC = () => {
                                                         </td>
                                                     </>
                                                 ) : (
-                                                    <td className="p-3 text-right text-xl font-bold text-emerald-600 font-mono">
+                                                    <td className="p-3 text-right text-lg font-bold text-emerald-600 font-mono">
                                                         {formatCurrency(stat.twdTotal)}
                                                     </td>
                                                 )}
@@ -793,13 +793,13 @@ const App: React.FC = () => {
                             )
                         })}
                         {sortedGroupIds.length === 0 && (
-                             <tr><td colSpan={5} className="text-center py-10 text-slate-400">無資料</td></tr>
+                             <tr><td colSpan={5} className="text-center py-10 text-slate-400 text-lg">無資料</td></tr>
                         )}
                     </tbody>
                     {/* Light Blue Footer */}
                     <tfoot className="bg-blue-100 text-blue-900 sticky bottom-0 z-10 shadow-lg border-t-2 border-blue-200">
                         <tr>
-                            <td className="p-3 font-bold text-lg text-right">總計</td>
+                            <td className="p-3 font-bold text-xl text-right">總計</td>
                             <td className="p-3 text-right font-bold font-mono text-xl">{totalQty}</td>
                             {analysisMode === 'expenditure' ? (
                                 <>
@@ -834,9 +834,9 @@ const App: React.FC = () => {
                 <table className="w-full text-left border-collapse">
                     <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm border-b border-slate-200">
                         <tr>
-                            <th className="p-3 text-sm font-bold text-slate-600 uppercase tracking-wider w-1/3">訂購者</th>
-                            <th className="p-3 text-sm font-bold text-slate-600 uppercase tracking-wider w-1/3">備註欄</th>
-                            <th className="p-3 text-sm font-bold text-slate-600 uppercase tracking-wider w-1/3">說明</th>
+                            <th className="p-3 text-base font-bold text-slate-600 uppercase tracking-wider w-1/3">訂購者</th>
+                            <th className="p-3 text-base font-bold text-slate-600 uppercase tracking-wider w-1/3">備註欄</th>
+                            <th className="p-3 text-base font-bold text-slate-600 uppercase tracking-wider w-1/3">說明</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -926,15 +926,15 @@ const App: React.FC = () => {
                     <div className="grid grid-cols-3 gap-4">
                         <div className="bg-blue-50 p-3 rounded-xl border border-blue-100">
                             <div className="text-blue-600 text-sm font-bold mb-1">收入總計</div>
-                            <div className="text-2xl font-mono font-bold text-blue-800">{formatCurrency(totalIncome)}</div>
+                            <div className="text-xl font-mono font-bold text-blue-800">{formatCurrency(totalIncome)}</div>
                         </div>
                         <div className="bg-rose-50 p-3 rounded-xl border border-rose-100">
                             <div className="text-rose-600 text-sm font-bold mb-1">支出總計</div>
-                            <div className="text-2xl font-mono font-bold text-rose-800">{formatCurrency(totalExpense)}</div>
+                            <div className="text-xl font-mono font-bold text-rose-800">{formatCurrency(totalExpense)}</div>
                         </div>
                         <div className="bg-emerald-50 p-3 rounded-xl border border-emerald-100">
                             <div className="text-emerald-600 text-sm font-bold mb-1">總利潤</div>
-                            <div className="text-2xl font-mono font-bold text-emerald-700">{formatCurrency(totalProfit)}</div>
+                            <div className="text-xl font-mono font-bold text-emerald-700">{formatCurrency(totalProfit)}</div>
                         </div>
                     </div>
                 </div>
@@ -943,18 +943,18 @@ const App: React.FC = () => {
                     <table className="w-full text-left border-collapse">
                         <thead className="bg-slate-100 sticky top-0 shadow-sm z-10 border-b border-slate-200">
                             <tr>
-                                <th className="p-3 text-sm font-bold text-slate-600">訂單項</th>
-                                <th className="p-3 text-right text-sm font-bold text-blue-600">收入總計</th>
-                                <th className="p-3 text-right text-sm font-bold text-rose-600">支出總計</th>
-                                <th className="p-3 text-right text-sm font-bold text-emerald-600">利潤</th>
+                                <th className="p-3 text-base font-bold text-slate-600">訂單項</th>
+                                <th className="p-3 text-right text-base font-bold text-blue-600">收入總計</th>
+                                <th className="p-3 text-right text-base font-bold text-rose-600">支出總計</th>
+                                <th className="p-3 text-right text-base font-bold text-emerald-600">利潤</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 bg-white">
                             {batchStats.map((batch) => (
                                 <tr key={batch.id} className="hover:bg-slate-50">
                                     <td className="p-3">
-                                        <div className="font-bold text-slate-800 text-xl font-mono">{batch.id}</div>
-                                        <div className="text-xs text-slate-400 font-bold mt-0.5">{batch.itemCount} 筆訂單</div>
+                                        <div className="font-bold text-slate-800 text-lg font-mono">{batch.id}</div>
+                                        <div className="text-sm text-slate-400 font-bold mt-0.5">{batch.itemCount} 筆訂單</div>
                                     </td>
                                     <td className="p-3 text-right font-mono font-bold text-blue-700 text-lg">{formatCurrency(batch.income)}</td>
                                     <td className="p-3 text-right font-mono font-bold text-rose-600 text-lg">{formatCurrency(batch.expense)}</td>
@@ -977,7 +977,7 @@ const App: React.FC = () => {
          {/* Top Bar: Title & Actions */}
          <div className="flex justify-between items-center px-3 pt-3 pb-1">
              <div className="flex flex-col justify-center">
-                 <h2 className="text-2xl font-bold text-white tracking-wide drop-shadow-sm leading-tight">{title}</h2>
+                 <h2 className="text-xl font-bold text-white tracking-wide drop-shadow-sm leading-tight">{title}</h2>
                  <span className="text-blue-300 text-xs font-bold tracking-widest opacity-80 scale-90 origin-left">LONG CHEN</span>
              </div>
              <div className="flex gap-1.5 items-center">
@@ -1183,13 +1183,13 @@ const App: React.FC = () => {
                                 <div className="p-3 flex justify-between items-center cursor-pointer hover:bg-slate-50" onClick={() => setExpandedGroup(expandedGroup === group.id ? null : group.id)}>
                                     <div className="flex items-center gap-3"><span className="font-mono text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded text-base">{group.id}</span>
                                     {renamingId?.type === 'group' && renamingId.groupId === group.id ? 
-                                        <input autoFocus value={tempName} onChange={e => setTempName(e.target.value)} onBlur={handleSaveRename} onClick={e => e.stopPropagation()} className="font-bold text-2xl border-b border-blue-500 w-40"/> : 
+                                        <input autoFocus value={tempName} onChange={e => setTempName(e.target.value)} onBlur={handleSaveRename} onClick={e => e.stopPropagation()} className="font-bold text-xl border-b border-blue-500 w-40"/> : 
                                         <span className="font-bold text-xl" onClick={(e) => { e.stopPropagation(); handleStartRename('group', group.id, undefined, group.name); }}>{group.name}</span>}
                                     <span className="text-sm text-slate-400 font-bold">({items.length})</span></div>
                                     {expandedGroup === group.id ? <ChevronDown size={24} className="text-blue-500"/> : <ChevronRight size={24} className="text-slate-400"/>}
                                 </div>
                                 {expandedGroup === group.id && <div className="p-2 bg-slate-50 border-t border-slate-100 space-y-2">
-                                    <div className="flex justify-between gap-2"><button onClick={(e) => handleDeleteGroup(e, group.id)} className="text-sm text-rose-600 border border-rose-200 bg-white px-3 py-2 rounded-lg flex items-center font-bold"><Trash2 size={16} className="mr-1"/>刪除類別</button><button onClick={() => setEditingProduct({ group, nextId: getNextItemId(items.map(i => i.id)) })} className="text-sm text-white bg-emerald-600 px-4 py-2 rounded-lg flex items-center font-bold"><Plus size={18} className="mr-1"/>新增商品</button></div>
+                                    <div className="flex justify-between gap-2"><button onClick={(e) => handleDeleteGroup(e, group.id)} className="text-base text-rose-600 border border-rose-200 bg-white px-3 py-2 rounded-lg flex items-center font-bold"><Trash2 size={18} className="mr-1"/>刪除類別</button><button onClick={() => setEditingProduct({ group, nextId: getNextItemId(items.map(i => i.id)) })} className="text-base text-white bg-emerald-600 px-4 py-2 rounded-lg flex items-center font-bold"><Plus size={18} className="mr-1"/>新增商品</button></div>
                                     {items.map(item => {
                                         const stats = calculateProductStats(item);
                                         return (
@@ -1198,10 +1198,10 @@ const App: React.FC = () => {
                                                 {renamingId?.type === 'item' && renamingId.itemId === item.id ? <input autoFocus value={tempName} onChange={e => setTempName(e.target.value)} onBlur={handleSaveRename} className="font-bold border-b border-blue-500 w-full text-lg"/> : <span className="font-bold text-lg" onClick={(e) => { e.stopPropagation(); handleStartRename('item', group.id, item.id, item.name); }}>{cleanProductName(item.name)}</span>}
                                                 </div><div className="flex gap-4"><Edit size={20} className="text-blue-500 cursor-pointer" onClick={() => setEditingProduct({ group, item, nextId: item.id })} /><Trash2 size={20} className="text-rose-500 cursor-pointer" onClick={(e) => handleDeleteProduct(e, group.id, item.id)} /></div></div>
                                                 <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-slate-600 bg-slate-50 p-2 rounded-lg font-medium">
-                                                    <div className="flex justify-between"><span>日幣:</span> <span className="font-bold text-sm">¥{item.jpyPrice}</span></div>
-                                                    <div className="flex justify-between text-emerald-600 font-bold"><span>利潤:</span> <span className="text-sm">{formatCurrency(stats.profit)}</span></div>
-                                                    <div className="flex justify-between"><span>成本+運:</span> <span className="text-sm">{formatCurrency(stats.costPlusShip)}</span></div>
-                                                    <div className="flex justify-between text-rose-500 font-bold"><span>售價+運:</span> <span className="text-sm">{formatCurrency(stats.pricePlusShip)}</span></div>
+                                                    <div className="flex justify-between"><span>日幣:</span> <span className="font-bold text-base">¥{item.jpyPrice}</span></div>
+                                                    <div className="flex justify-between text-emerald-600 font-bold"><span>利潤:</span> <span className="text-base">{formatCurrency(stats.profit)}</span></div>
+                                                    <div className="flex justify-between"><span>成本+運:</span> <span className="text-base">{formatCurrency(stats.costPlusShip)}</span></div>
+                                                    <div className="flex justify-between text-rose-500 font-bold"><span>售價+運:</span> <span className="text-base">{formatCurrency(stats.pricePlusShip)}</span></div>
                                                 </div>
                                             </div>
                                         )
@@ -1221,7 +1221,7 @@ const App: React.FC = () => {
                     {activeOrderGroup && (
                         <div className="shrink-0 px-2 pt-2 bg-slate-100 z-10">
                             <div className="bg-white rounded-lg shadow-sm p-3 flex justify-between items-center border-l-4 border-blue-600">
-                                <div><div className="text-sm text-slate-400 font-bold">批次</div><div className="text-3xl font-mono font-bold text-slate-800">{activeOrderGroup.id}</div></div>
+                                <div><div className="text-sm text-slate-400 font-bold">批次</div><div className="text-xl font-mono font-bold text-slate-800">{activeOrderGroup.id}</div></div>
                                 <div className="flex gap-3"><button onClick={(e) => handleDeleteOrderGroup(e, activeOrderGroup.id)} className="p-3 text-slate-300 hover:text-rose-500"><Trash2 size={24}/></button><button onClick={() => { setIsOrderEntryOpen(true); setEditingOrderItem(null); }} className="bg-emerald-600 text-white px-5 py-2 rounded-lg font-bold flex items-center text-lg"><Plus size={20} className="mr-1"/>新增</button></div>
                             </div>
                         </div>
@@ -1249,7 +1249,7 @@ const App: React.FC = () => {
                                             {cleanProductName(product?.name || '')} 
                                             {item.description && <span className="text-slate-500 font-normal"> : {item.description}</span>}
                                         </div>
-                                        <div className="text-xs text-slate-400 font-mono whitespace-nowrap pt-1">{item.date}</div>
+                                        <div className="text-sm text-slate-400 font-mono whitespace-nowrap pt-1">{item.date}</div>
                                     </div>
 
                                     {/* Row 3: Buyer ... Qty ... Price */}
@@ -1258,7 +1258,7 @@ const App: React.FC = () => {
                                             <User size={18}/> {item.buyer}
                                         </div>
                                         <div className="flex items-center gap-3">
-                                            <span className="font-bold text-slate-600 bg-white px-2 rounded shadow-sm">x{item.quantity}</span>
+                                            <span className="font-bold text-slate-600 bg-white px-2 rounded shadow-sm text-lg">x{item.quantity}</span>
                                             <span className="font-mono font-bold text-emerald-600 text-xl">{formatCurrency(total)}</span>
                                         </div>
                                     </div>
@@ -1268,7 +1268,7 @@ const App: React.FC = () => {
                             )
                         })}
                     </div>
-                    {showNewOrderModal && <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"><div className="bg-white p-6 rounded-lg w-full max-w-sm"><h3 className="font-bold mb-4 text-xl">建立批次</h3><div className="flex gap-2 mb-4"><select className="border p-3 rounded-lg flex-1 text-lg" value={newOrderDate.year} onChange={e => setNewOrderDate({...newOrderDate, year: +e.target.value})}><option value="2025">2025</option><option value="2026">2026</option></select><select className="border p-3 rounded-lg flex-1 text-lg" value={newOrderDate.month} onChange={e => setNewOrderDate({...newOrderDate, month: +e.target.value})}>{Array.from({length:12},(_,i)=>i+1).map(m=><option key={m} value={m}>{m}月</option>)}</select></div><div className="flex justify-end gap-3"><button onClick={()=>setShowNewOrderModal(false)} className="px-5 py-3 text-slate-500 font-bold">取消</button><button onClick={handleCreateOrderGroup} className="px-5 py-3 bg-blue-600 text-white rounded-lg font-bold">建立</button></div></div></div>}
+                    {showNewOrderModal && <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"><div className="bg-white p-6 rounded-lg w-full max-w-sm"><h3 className="font-bold mb-4 text-xl">建立批次</h3><div className="flex gap-2 mb-4"><select className="border p-3 rounded-lg flex-1 text-lg" value={newOrderDate.year} onChange={e => setNewOrderDate({...newOrderDate, year: +e.target.value})}><option value="2025">2025</option><option value="2026">2026</option></select><select className="border p-3 rounded-lg flex-1 text-lg" value={newOrderDate.month} onChange={e => setNewOrderDate({...newOrderDate, month: +e.target.value})}>{Array.from({length:12},(_,i)=>i+1).map(m=><option key={m} value={m}>{m}月</option>)}</select></div><div className="flex justify-end gap-3"><button onClick={()=>setShowNewOrderModal(false)} className="px-5 py-3 text-slate-500 font-bold text-lg">取消</button><button onClick={handleCreateOrderGroup} className="px-5 py-3 bg-blue-600 text-white rounded-lg font-bold text-lg">建立</button></div></div></div>}
                     {isOrderEntryOpen && <OrderEntryModal />}
                 </div>
             )}
