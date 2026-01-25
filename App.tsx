@@ -1220,7 +1220,6 @@ const App: React.FC = () => {
         <div className="flex flex-col h-full bg-slate-50 overflow-hidden">
              <Header title="收支計算" showOrderSelector={true} actions={
                 <>
-                  <ActionButton icon={Database} label="資料" onClick={() => setShowBackupModal(true)} variant="dark" />
                   <ActionButton icon={PieChart} label="分析" onClick={() => setShowIncomeAnalysisModal(true)} variant="warning" />
                   <ActionButton icon={Save} label="儲存" onClick={handleManualSaveIncome} />
                   <ActionButton icon={Download} label="匯出" onClick={handleExportIncome} variant="success" />
@@ -1267,7 +1266,6 @@ const App: React.FC = () => {
                 </div>
              </div>
              {showIncomeAnalysisModal && renderIncomeAnalysisModal()}
-             {showBackupModal && renderBackupModal()}
         </div>
     );
   };
@@ -1293,7 +1291,13 @@ const App: React.FC = () => {
         <div className="flex-1 overflow-hidden relative">
             {view === 'products' && (
                 <div className="flex flex-col h-full">
-                    <Header title="產品管理" actions={<><ActionButton icon={Grid} label="新增" onClick={() => setShowNewGroupInput(!showNewGroupInput)} /><ActionButton icon={Download} label="匯出" onClick={handleExportProducts} variant="success" /></>} />
+                    <Header title="產品管理" actions={
+                        <>
+                            <ActionButton icon={Database} label="資料" onClick={() => setShowBackupModal(true)} variant="dark" />
+                            <ActionButton icon={Grid} label="新增" onClick={() => setShowNewGroupInput(!showNewGroupInput)} />
+                            <ActionButton icon={Download} label="匯出" onClick={handleExportProducts} variant="success" />
+                        </>
+                    } />
                     {showNewGroupInput && <div className="p-3 bg-blue-800 flex gap-2"><input autoFocus type="text" className="flex-1 p-2 px-3 text-lg rounded-lg" value={newGroupInput} onChange={e => setNewGroupInput(e.target.value)} placeholder="類別名稱" /><ActionButton icon={Check} label="確定" onClick={handleAddGroup} variant="success" /></div>}
                     <div className="flex-1 overflow-y-auto p-2 pb-24 space-y-2">
                         {filteredProducts.map(({ group, items }) => (
@@ -1329,6 +1333,7 @@ const App: React.FC = () => {
                         ))}
                     </div>
                     {editingProduct && <ProductForm group={editingProduct.group} existingItems={productItems} initialData={editingProduct.item} nextId={editingProduct.nextId} onSave={handleSaveProduct} onCancel={() => setEditingProduct(null)} />}
+                    {showBackupModal && renderBackupModal()}
                 </div>
             )}
             {view === 'orders' && (
