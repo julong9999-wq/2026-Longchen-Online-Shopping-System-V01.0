@@ -1,16 +1,16 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { ProductGroup, ProductItem, OrderGroup, OrderItem, ViewState } from './types';
 import { INITIAL_PRODUCT_GROUPS, INITIAL_PRODUCT_ITEMS, INITIAL_ORDER_GROUPS, INITIAL_ORDER_ITEMS } from './constants';
 import { getNextGroupId, getNextItemId, getNextOrderGroupId, calculateProductStats, formatCurrency, generateUUID, cleanProductName } from './utils';
 import ProductForm from './components/ProductForm';
-import { Trash2, Edit, Plus, Package, ShoppingCart, List, BarChart2, ChevronRight, ChevronDown, User, Box, X, Calculator, Download, Save, Wallet, ArrowUpCircle, ArrowDownCircle, Grid, PieChart, Check } from 'lucide-react';
+import { Trash2, Edit, Plus, Package, ShoppingCart, List, BarChart2, ChevronRight, ChevronDown, User, Box, X, Calculator, Download, Save, Wallet, ArrowUpCircle, ArrowDownCircle, Grid, PieChart, Check, Database, Upload, AlertTriangle } from 'lucide-react';
 import { db } from './firebase';
 import { 
   collection, 
   onSnapshot, 
   addDoc, 
   updateDoc, 
-  deleteDoc,
+  deleteDoc, 
   doc, 
   query, 
   where, 
@@ -32,19 +32,20 @@ const DEFAULT_INCOME_DATA = {
 // --- UI Components ---
 
 // 1. Standard Action Button (Unified Design)
-// Rules: Height h-9 (Small), Text-sm (14px), Font-Bold, Icon (16px) + 2 Chars
-const ActionButton = ({ icon: Icon, label, onClick, active = false, variant = 'primary', className = '' }: any) => {
+const ActionButton = ({ icon: Icon, label, onClick, active = false, variant = 'primary', className = '', disabled = false }: any) => {
     let colorClass = "bg-blue-700 hover:bg-blue-600 border-blue-600 text-white"; // Primary
     if (variant === 'success') colorClass = "bg-emerald-600 hover:bg-emerald-500 border-emerald-500 text-white";
-    // if (variant === 'danger') colorClass = "bg-rose-600 hover:bg-rose-500 border-rose-500 text-white"; // User cancelled Red Delete
-    if (variant === 'danger') colorClass = "bg-white border-slate-300 text-slate-600 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-300"; // Reverted to outline-ish with subtle hover
+    if (variant === 'danger') colorClass = "bg-white border-slate-300 text-slate-600 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-300";
     if (variant === 'warning') colorClass = "bg-amber-600 hover:bg-amber-500 border-amber-500 text-white";
     if (variant === 'outline') colorClass = "bg-white border-slate-300 text-slate-600 hover:bg-slate-50";
+    if (variant === 'dark') colorClass = "bg-slate-800 hover:bg-slate-700 border-slate-700 text-white";
     if (active) colorClass = "bg-yellow-400 text-blue-900 border-yellow-400 font-bold hover:bg-yellow-300";
+    if (disabled) colorClass = "bg-slate-200 border-slate-200 text-slate-400 cursor-not-allowed active:scale-100";
     
     return (
         <button 
             onClick={onClick}
+            disabled={disabled}
             className={`
                 h-9 px-3 min-w-[80px] rounded-lg border shadow-sm transition-all active:scale-95
                 flex items-center justify-center gap-1.5
@@ -76,12 +77,12 @@ const OrderBatchButton = ({ id, active, onClick }: any) => (
     </button>
 );
 
-// 3. Income Field Component (Optimized Typography: 12px black thin label, 16px bold content)
+// 3. Income Field Component (Optimized Typography: 12px black thin label, 16px bold content, h-9 height)
 const IncomeField = ({ label, value, isInput = false, onChange, colorClass = "text-slate-700", prefix = "" }: any) => (
   <div className="flex flex-col w-full">
     {/* Label: 12px BLACK thin */}
     <span className="text-[12px] font-light text-black ml-1 mb-0.5">{label}</span>
-    <div className={`relative flex items-center px-2 h-10 rounded-lg border ${isInput ? 'bg-white border-blue-200' : 'bg-slate-50 border-slate-100'} overflow-hidden w-full`}>
+    <div className={`relative flex items-center px-2 h-9 rounded-lg border ${isInput ? 'bg-white border-blue-200' : 'bg-slate-50 border-slate-100'} overflow-hidden w-full`}>
        {isInput ? (
          <input 
             type={typeof value === 'number' ? 'number' : 'text'}
@@ -104,6 +105,7 @@ const IncomeField = ({ label, value, isInput = false, onChange, colorClass = "te
 const App: React.FC = () => {
   // --- State ---
   const [view, setView] = useState<ViewState>('products');
+  const [dbError, setDbError] = useState<string | null>(null);
   
   // Data State
   const [productGroups, setProductGroups] = useState<ProductGroup[]>([]);
@@ -136,6 +138,11 @@ const App: React.FC = () => {
   
   // State for Income Analysis Modal
   const [showIncomeAnalysisModal, setShowIncomeAnalysisModal] = useState(false);
+  
+  // State for Backup/Restore Modal
+  const [showBackupModal, setShowBackupModal] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // View Specific States
   const [detailSortMode, setDetailSortMode] = useState<'buyer' | 'product'>('buyer');
@@ -150,45 +157,67 @@ const App: React.FC = () => {
 
   // --- Firestore Listeners ---
   useEffect(() => {
+    // Error handler for snapshots
+    const handleSnapshotError = (error: any) => {
+        console.error("Firestore listener error:", error);
+        if (error.code === 'permission-denied') {
+             setDbError("無法讀取資料庫：權限不足。請至 Firebase Console > Firestore Database > Rules 檢查規則 (可能 Test Mode 已過期)。");
+        } else {
+             setDbError(`資料庫連線錯誤: ${error.message}`);
+        }
+    };
+
     const unsubGroups = onSnapshot(collection(db, 'productGroups'), (snapshot) => {
+        setDbError(null);
         const groups = snapshot.docs.map(d => d.data() as ProductGroup).sort((a, b) => a.id.localeCompare(b.id));
         setProductGroups(groups);
         if (snapshot.empty) {
-            const batch = writeBatch(db);
-            INITIAL_PRODUCT_GROUPS.forEach(g => batch.set(doc(collection(db, 'productGroups')), g));
-            batch.commit();
+            // Only attempt to write initial data if we successfully got an empty snapshot (meaning read permission is OK)
+            try {
+                const batch = writeBatch(db);
+                INITIAL_PRODUCT_GROUPS.forEach(g => batch.set(doc(collection(db, 'productGroups')), g));
+                batch.commit().catch(e => console.error("Initial write failed", e));
+            } catch (e) {
+                console.error("Write setup failed", e);
+            }
         }
-    });
+    }, handleSnapshotError);
 
     const unsubItems = onSnapshot(collection(db, 'productItems'), (snapshot) => {
         const items = snapshot.docs.map(d => d.data() as ProductItem);
         setProductItems(items);
         if (snapshot.empty) {
-             const batch = writeBatch(db);
-             INITIAL_PRODUCT_ITEMS.forEach(i => batch.set(doc(collection(db, 'productItems')), i));
-             batch.commit();
+             try {
+                 const batch = writeBatch(db);
+                 INITIAL_PRODUCT_ITEMS.forEach(i => batch.set(doc(collection(db, 'productItems')), i));
+                 batch.commit().catch(e => console.error("Initial write failed", e));
+             } catch (e) {}
         }
-    });
+    }, handleSnapshotError);
 
     const unsubOrderGroups = onSnapshot(collection(db, 'orderGroups'), (snapshot) => {
         const groups = snapshot.docs.map(d => d.data() as OrderGroup).sort((a, b) => a.id.localeCompare(b.id));
         setOrderGroups(groups);
         if (snapshot.empty) {
-             const batch = writeBatch(db);
-             INITIAL_ORDER_GROUPS.forEach(g => batch.set(doc(collection(db, 'orderGroups')), g));
-             batch.commit();
+             try {
+                 const batch = writeBatch(db);
+                 INITIAL_ORDER_GROUPS.forEach(g => batch.set(doc(collection(db, 'orderGroups')), g));
+                 batch.commit().catch(e => console.error("Initial write failed", e));
+             } catch (e) {}
         }
-    });
+    }, handleSnapshotError);
 
     const unsubOrderItems = onSnapshot(collection(db, 'orderItems'), (snapshot) => {
         const items = snapshot.docs.map(d => d.data() as OrderItem);
         setOrderItems(items);
         if (snapshot.empty) {
-             const batch = writeBatch(db);
-             INITIAL_ORDER_ITEMS.forEach(i => batch.set(doc(collection(db, 'orderItems')), i));
-             batch.commit();
+             try {
+                const batch = writeBatch(db);
+                INITIAL_ORDER_ITEMS.forEach(i => batch.set(doc(collection(db, 'orderItems')), i));
+                batch.commit().catch(e => console.error("Initial write failed", e));
+             } catch (e) {}
         }
-    });
+    }, handleSnapshotError);
 
     // NEW: Listen to all income settings for global analysis
     const unsubAllIncome = onSnapshot(collection(db, 'incomeSettings'), (snapshot) => {
@@ -197,7 +226,7 @@ const App: React.FC = () => {
             settingsMap[doc.id] = doc.data() as typeof DEFAULT_INCOME_DATA;
         });
         setAllIncomeSettings(settingsMap);
-    });
+    }, handleSnapshotError);
 
     return () => { unsubGroups(); unsubItems(); unsubOrderGroups(); unsubOrderItems(); unsubAllIncome(); };
   }, []);
@@ -408,6 +437,111 @@ const App: React.FC = () => {
     };
     await setDoc(doc(db, 'incomeSettings', selectedOrderGroup), dataToSave);
     alert('儲存成功');
+  };
+
+  // --- Backup & Restore Functions ---
+  const handleFullBackup = async () => {
+    try {
+        const backupData = {
+            timestamp: new Date().toISOString(),
+            productGroups: productGroups,
+            productItems: productItems,
+            orderGroups: orderGroups,
+            orderItems: orderItems,
+            incomeSettings: allIncomeSettings,
+            version: '1.0'
+        };
+        const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `backup_longchen_${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    } catch (e) {
+        console.error(e);
+        alert('備份失敗');
+    }
+  };
+
+  const handleRestore = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!confirm('警告：還原操作會覆蓋現有資料庫中相同的 ID 資料。\n確定要繼續嗎？')) {
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        return;
+    }
+
+    setIsRestoring(true);
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+        try {
+            const data = JSON.parse(event.target?.result as string);
+            
+            // Validate basic structure
+            if (!data.productGroups || !data.orderItems) {
+                throw new Error("無效的備份檔案格式");
+            }
+
+            const batchLimit = 400; // Safety limit
+            let operations: Promise<any>[] = [];
+            let batch = writeBatch(db);
+            let count = 0;
+
+            const commitBatch = async () => {
+                await batch.commit();
+                batch = writeBatch(db);
+                count = 0;
+            };
+
+            const addToBatch = async (collectionName: string, items: any[], idField: string = 'id') => {
+                for (const item of items) {
+                    // For incomeSettings, the ID is the key in the object map if it's stored as map
+                    // But here we need to handle array vs map
+                    let docRef;
+                    let docData = item;
+                    
+                    if (collectionName === 'incomeSettings') {
+                         // Special case: incomeSettings is stored as object map in state, but collection in DB
+                         // We iterate the map entries
+                    } else {
+                         docRef = doc(db, collectionName, item[idField]);
+                         batch.set(docRef, docData);
+                         count++;
+                         if (count >= batchLimit) await commitBatch();
+                    }
+                }
+            };
+
+            await addToBatch('productGroups', data.productGroups);
+            await addToBatch('productItems', data.productItems);
+            await addToBatch('orderGroups', data.orderGroups);
+            await addToBatch('orderItems', data.orderItems);
+
+            // Handle Income Settings (Map to Collection)
+            if (data.incomeSettings) {
+                for (const [key, value] of Object.entries(data.incomeSettings)) {
+                    batch.set(doc(db, 'incomeSettings', key), value as any);
+                    count++;
+                    if (count >= batchLimit) await commitBatch();
+                }
+            }
+
+            if (count > 0) await commitBatch();
+
+            alert('系統還原成功！');
+            setShowBackupModal(false);
+        } catch (err) {
+            console.error(err);
+            alert('還原失敗：檔案格式錯誤或網路問題');
+        } finally {
+            setIsRestoring(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
+    reader.readAsText(file);
   };
 
   const handleExportProducts = () => {
@@ -798,42 +932,6 @@ const App: React.FC = () => {
     )
   };
 
-  const renderDepositsView = () => {
-    const itemsWithRemarks = activeOrderItems.filter(i => i.remarks && i.remarks.trim().length > 0);
-    const displayList = itemsWithRemarks.sort((a, b) => a.buyer.localeCompare(b.buyer, 'zh-TW'));
-
-    return (
-        <div className="flex-1 overflow-hidden flex flex-col bg-white">
-            <div className="flex-1 overflow-auto">
-                <table className="w-full text-left border-collapse">
-                    <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm border-b border-slate-200">
-                        <tr>
-                            <th className="p-3 text-base font-bold text-slate-600 uppercase tracking-wider w-1/3">訂購者</th>
-                            <th className="p-3 text-base font-bold text-slate-600 uppercase tracking-wider w-1/3">備註欄</th>
-                            <th className="p-3 text-base font-bold text-slate-600 uppercase tracking-wider w-1/3">說明</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                        {displayList.length === 0 ? (
-                            <tr><td colSpan={3} className="text-center py-10 text-slate-400 text-lg">無符合資料</td></tr>
-                        ) : (
-                            displayList.map((item, idx) => {
-                                return (
-                                    <tr key={idx} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'} hover:bg-blue-50/50 transition-colors`}>
-                                        <td className="p-3 text-lg font-bold text-blue-800 align-top">{item.buyer}</td>
-                                        <td className="p-3 align-top"><span className={`px-3 py-1 rounded-lg text-lg font-bold border whitespace-nowrap block text-center bg-yellow-50 text-yellow-800 border-yellow-200 shadow-sm`}>{item.remarks}</span></td>
-                                        <td className="p-3 text-lg text-slate-700 font-bold align-top">{item.note || '-'}</td>
-                                    </tr>
-                                );
-                            })
-                        )}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    );
-  };
-  
   const renderIncomeAnalysisModal = () => {
     const batchStats = orderGroups.map(group => {
         const itemsInBatch = orderItems.filter(i => i.orderGroupId === group.id);
@@ -928,6 +1026,73 @@ const App: React.FC = () => {
     );
   };
 
+  const renderBackupModal = () => (
+    <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4 animate-in fade-in duration-200">
+        <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="bg-blue-900 p-4 border-b border-blue-800 flex justify-between items-center">
+                <h3 className="text-white font-bold text-lg flex items-center gap-2">
+                    <Database size={20} />
+                    系統備份與還原
+                </h3>
+                <button onClick={() => setShowBackupModal(false)} className="text-blue-300 hover:text-white"><X size={24} /></button>
+            </div>
+            
+            <div className="p-5 space-y-6">
+                
+                {/* Backup Section */}
+                <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-blue-800 font-bold border-b border-blue-100 pb-1">
+                        <Download size={18} />
+                        <span>資料備份 (下載)</span>
+                    </div>
+                    <p className="text-sm text-slate-500 leading-relaxed">
+                        將所有商品、訂單及收支設定打包成一個檔案下載。
+                        <br/>
+                        <span className="text-rose-500 font-bold">建議定期執行此操作以防資料遺失。</span>
+                    </p>
+                    <ActionButton 
+                        icon={Download} 
+                        label="下載完整備份檔 (.json)" 
+                        onClick={handleFullBackup} 
+                        className="w-full h-12 text-base"
+                    />
+                </div>
+
+                {/* Restore Section */}
+                <div className="space-y-3 pt-2">
+                    <div className="flex items-center gap-2 text-rose-700 font-bold border-b border-rose-100 pb-1">
+                        <Upload size={18} />
+                        <span>系統還原 (上傳)</span>
+                    </div>
+                    <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg flex gap-3 items-start">
+                        <AlertTriangle className="text-amber-600 shrink-0 mt-0.5" size={18} />
+                        <p className="text-xs text-amber-800 font-medium leading-relaxed">
+                            警告：還原操作將會<span className="font-bold underline">覆蓋</span>資料庫中現有的相同 ID 資料。
+                            請確認您上傳的是正確的備份檔案。
+                        </p>
+                    </div>
+                    <input 
+                        type="file" 
+                        ref={fileInputRef}
+                        accept=".json"
+                        className="hidden" 
+                        onChange={handleRestore}
+                    />
+                    <ActionButton 
+                        icon={isRestoring ? Database : Upload} 
+                        label={isRestoring ? "資料還原中..." : "選取備份檔並還原"} 
+                        onClick={() => fileInputRef.current?.click()} 
+                        variant="danger"
+                        disabled={isRestoring}
+                        className="w-full h-12 text-base"
+                    />
+                </div>
+
+            </div>
+        </div>
+    </div>
+  );
+
   const Header = ({ title, actions, showOrderSelector = false }: any) => (
       <div className="bg-blue-900 shadow-lg border-b border-blue-800 shrink-0 z-10 flex flex-col relative pb-2">
          <div className="flex justify-between items-center px-3 pt-3 pb-1">
@@ -995,6 +1160,53 @@ const App: React.FC = () => {
     )
   }
 
+  const renderDepositsView = () => {
+    if (!selectedOrderGroup) return;
+    
+    // Filter items with remarks
+    const list = activeOrderItems.filter(i => {
+         return i.remarks && i.remarks.trim().length > 0;
+    }).sort((a, b) => {
+         if (a.productGroupId !== b.productGroupId) return a.productGroupId.localeCompare(b.productGroupId);
+         if (a.productItemId !== b.productItemId) return a.productItemId.localeCompare(b.productItemId);
+         return a.buyer.localeCompare(b.buyer, 'zh-TW');
+    });
+
+    return (
+        <div className="flex-1 overflow-y-auto p-2 pb-24 space-y-2">
+            {list.map(item => {
+                 const product = productItems.find(p => p.groupId === item.productGroupId && p.id === item.productItemId);
+                 const group = productGroups.find(g => g.id === item.productGroupId);
+                 const productName = product ? cleanProductName(product.name) : '未知商品';
+
+                 return (
+                    <div key={item.id} className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden text-base">
+                         <div className="bg-amber-50 p-2 border-b border-amber-100 flex justify-between items-center">
+                            <div className="font-bold text-slate-800 flex items-center gap-2">
+                                 <User size={18} className="text-amber-700" />
+                                 <span className="text-lg">{item.buyer}</span>
+                            </div>
+                            <div className="text-sm font-mono text-slate-400">{item.date}</div>
+                         </div>
+                         <div className="p-3">
+                             <div className="mb-2 text-slate-800 font-medium leading-tight">
+                                <span className="bg-slate-100 text-slate-500 text-xs px-1.5 py-0.5 rounded mr-1.5 align-middle">{group?.name}</span>
+                                <span className="font-bold">{productName}</span>
+                                {item.description && <span className="text-slate-500 text-sm"> : {item.description}</span>}
+                             </div>
+                             <div className="bg-amber-100/50 p-2 rounded text-amber-900 font-bold border border-amber-200">
+                                備註: {item.remarks}
+                             </div>
+                             {item.note && <div className="mt-1 text-slate-400 text-sm">說明: {item.note}</div>}
+                         </div>
+                    </div>
+                 );
+            })}
+            {list.length === 0 && <div className="text-center py-10 text-slate-400 text-lg">無預收資料</div>}
+        </div>
+    );
+  };
+
   const renderIncomeView = () => {
     const { totalJpy, totalDomestic, totalHandling, totalSales, avgRateCost, netProfit, profitRate, cardFeeRate } = incomeStats;
     const currentStatus = incomeData.status || 'processing';
@@ -1009,21 +1221,22 @@ const App: React.FC = () => {
         <div className="flex flex-col h-full bg-slate-50 overflow-hidden">
              <Header title="收支計算" showOrderSelector={true} actions={
                 <>
+                  <ActionButton icon={Database} label="資料" onClick={() => setShowBackupModal(true)} variant="dark" />
                   <ActionButton icon={PieChart} label="分析" onClick={() => setShowIncomeAnalysisModal(true)} variant="warning" />
                   <ActionButton icon={Save} label="儲存" onClick={handleManualSaveIncome} />
                   <ActionButton icon={Download} label="匯出" onClick={handleExportIncome} variant="success" />
                 </>
              }/>
-             <div className="flex-1 p-2 flex flex-col gap-2 overflow-y-auto justify-start">
+             <div className="flex-1 p-2 flex flex-col gap-1.5 overflow-y-auto justify-start">
                 
-                {/* Status Selector - Custom Radio Look */}
-                <div className="bg-white p-2.5 rounded-xl border border-slate-300 shadow-sm flex flex-col gap-1 shrink-0">
+                {/* Status Selector - Custom Radio Look - h-9 */}
+                <div className="bg-white p-2 rounded-xl border border-slate-300 shadow-sm flex flex-col gap-1 shrink-0">
                     <div className="flex gap-2">
                         {statusOptions.map(opt => (
                             <button 
                                 key={opt.value}
                                 onClick={() => setIncomeData({...incomeData, status: opt.value})}
-                                className={`flex-1 h-10 rounded-lg border flex items-center justify-center gap-2 transition-all
+                                className={`flex-1 h-9 rounded-lg border flex items-center justify-center gap-2 transition-all
                                     ${currentStatus === opt.value ? `${opt.activeBg} border-2 shadow-sm` : 'bg-slate-50 border-slate-200 hover:bg-white'}
                                 `}
                             >
@@ -1040,21 +1253,22 @@ const App: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="bg-white p-2.5 rounded-xl border border-slate-300 shadow-sm flex flex-col gap-2 shrink-0">
-                    <div className="grid grid-cols-3 gap-2"><IncomeField label="日幣總計" value={formatCurrency(totalJpy)} /><IncomeField label="境內運總計" value={formatCurrency(totalDomestic)} /><IncomeField label="手續費總計" value={formatCurrency(totalHandling)} /></div>
-                    <div className="grid grid-cols-2 gap-2"><IncomeField label="商品收入" value={formatCurrency(totalSales)} colorClass="text-blue-600" /><IncomeField label="包材收入 (輸入)" value={incomeData.packagingRevenue} isInput onChange={(e:any) => setIncomeData({...incomeData, packagingRevenue: e.target.value})} colorClass="text-blue-600" /></div>
-                    <div className="grid grid-cols-3 gap-2"><IncomeField label="刷卡費 (成本)" value={incomeData.cardCharge} isInput onChange={(e:any) => setIncomeData({...incomeData, cardCharge: e.target.value})} /><IncomeField label="刷卡手續費" value={incomeData.cardFee} isInput onChange={(e:any) => setIncomeData({...incomeData, cardFee: e.target.value})} /><IncomeField label="國際運費" value={incomeData.intlShipping} isInput onChange={(e:any) => setIncomeData({...incomeData, intlShipping: e.target.value})} /></div>
+                <div className="bg-white p-2 rounded-xl border border-slate-300 shadow-sm flex flex-col gap-1.5 shrink-0">
+                    <div className="grid grid-cols-3 gap-1.5"><IncomeField label="日幣總計" value={formatCurrency(totalJpy)} /><IncomeField label="境內運總計" value={formatCurrency(totalDomestic)} /><IncomeField label="手續費總計" value={formatCurrency(totalHandling)} /></div>
+                    <div className="grid grid-cols-2 gap-1.5"><IncomeField label="商品收入" value={formatCurrency(totalSales)} colorClass="text-blue-600" /><IncomeField label="包材收入 (輸入)" value={incomeData.packagingRevenue} isInput onChange={(e:any) => setIncomeData({...incomeData, packagingRevenue: e.target.value})} colorClass="text-blue-600" /></div>
+                    <div className="grid grid-cols-3 gap-1.5"><IncomeField label="刷卡費 (成本)" value={incomeData.cardCharge} isInput onChange={(e:any) => setIncomeData({...incomeData, cardCharge: e.target.value})} /><IncomeField label="刷卡手續費" value={incomeData.cardFee} isInput onChange={(e:any) => setIncomeData({...incomeData, cardFee: e.target.value})} /><IncomeField label="國際運費" value={incomeData.intlShipping} isInput onChange={(e:any) => setIncomeData({...incomeData, intlShipping: e.target.value})} /></div>
                 </div>
-                <div className="bg-white p-2.5 rounded-xl border border-slate-300 shadow-sm flex flex-col gap-2 shrink-0">
-                    <div className="grid grid-cols-2 gap-2"><IncomeField label="平均匯率" value={avgRateCost.toFixed(3)} colorClass="text-purple-600" /><IncomeField label="手續費佔比" value={`${cardFeeRate.toFixed(2)}%`} colorClass="text-purple-600" /></div>
-                    <div className="grid grid-cols-2 gap-2"><IncomeField label="總利潤" value={formatCurrency(netProfit)} colorClass="text-emerald-600" /><IncomeField label="利潤率 ROI" value={`${profitRate.toFixed(2)}%`} colorClass="text-emerald-600" /></div>
-                    <div className="grid grid-cols-2 gap-2"><IncomeField label="爸爸 (20%)" value={formatCurrency(Math.round(netProfit * 0.2))} colorClass="text-indigo-600" /><IncomeField label="妹妹 (80%)" value={formatCurrency(Math.round(netProfit * 0.8))} colorClass="text-rose-500" /></div>
+                <div className="bg-white p-2 rounded-xl border border-slate-300 shadow-sm flex flex-col gap-1.5 shrink-0">
+                    <div className="grid grid-cols-2 gap-1.5"><IncomeField label="平均匯率" value={avgRateCost.toFixed(3)} colorClass="text-purple-600" /><IncomeField label="手續費佔比" value={`${cardFeeRate.toFixed(2)}%`} colorClass="text-purple-600" /></div>
+                    <div className="grid grid-cols-2 gap-1.5"><IncomeField label="總利潤" value={formatCurrency(netProfit)} colorClass="text-emerald-600" /><IncomeField label="利潤率 ROI" value={`${profitRate.toFixed(2)}%`} colorClass="text-emerald-600" /></div>
+                    <div className="grid grid-cols-2 gap-1.5"><IncomeField label="爸爸 (20%)" value={formatCurrency(Math.round(netProfit * 0.2))} colorClass="text-indigo-600" /><IncomeField label="妹妹 (80%)" value={formatCurrency(Math.round(netProfit * 0.8))} colorClass="text-rose-500" /></div>
                 </div>
-                <div className="bg-white p-2.5 rounded-xl border border-slate-300 shadow-sm flex flex-col justify-center shrink-0">
-                    <div className="grid grid-cols-12 gap-2"><div className="col-span-4"><IncomeField label="爸爸應收" value={incomeData.dadReceivable} isInput onChange={(e:any) => setIncomeData({...incomeData, dadReceivable: e.target.value})} /></div><div className="col-span-8"><IncomeField label="收款說明" value={incomeData.paymentNote || ''} isInput onChange={(e:any) => setIncomeData({...incomeData, paymentNote: e.target.value})} /></div></div>
+                <div className="bg-white p-2 rounded-xl border border-slate-300 shadow-sm flex flex-col justify-center shrink-0">
+                    <div className="grid grid-cols-12 gap-1.5"><div className="col-span-4"><IncomeField label="爸爸應收" value={incomeData.dadReceivable} isInput onChange={(e:any) => setIncomeData({...incomeData, dadReceivable: e.target.value})} /></div><div className="col-span-8"><IncomeField label="收款說明" value={incomeData.paymentNote || ''} isInput onChange={(e:any) => setIncomeData({...incomeData, paymentNote: e.target.value})} /></div></div>
                 </div>
              </div>
              {showIncomeAnalysisModal && renderIncomeAnalysisModal()}
+             {showBackupModal && renderBackupModal()}
         </div>
     );
   };
@@ -1071,6 +1285,12 @@ const App: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen bg-slate-100 font-sans text-slate-900 overflow-hidden">
+        {dbError && (
+            <div className="bg-rose-600 text-white px-4 py-3 text-center font-bold text-sm shadow-md shrink-0 z-[100] flex justify-between items-center animate-in slide-in-from-top duration-300">
+                <span className="flex-1">{dbError}</span>
+                <button onClick={() => setDbError(null)} className="ml-4 p-1 hover:bg-white/20 rounded transition-colors"><X size={16} /></button>
+            </div>
+        )}
         <div className="flex-1 overflow-hidden relative">
             {view === 'products' && (
                 <div className="flex flex-col h-full">
