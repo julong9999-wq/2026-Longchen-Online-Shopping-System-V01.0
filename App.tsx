@@ -486,7 +486,6 @@ const App: React.FC = () => {
             }
 
             const batchLimit = 400; // Safety limit
-            let operations: Promise<any>[] = [];
             let batch = writeBatch(db);
             let count = 0;
 
