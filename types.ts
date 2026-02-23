@@ -34,6 +34,7 @@ export interface OrderItem {
   remarks: string; // 備註欄
   note: string; // 說明
   date: string; // 訂單日期
+  createdAt: number; // Timestamp for sorting
   isSelfAbsorbed?: boolean; // For "自己吸收" logic if needed, inferred from buyer name in OCR
 }
 

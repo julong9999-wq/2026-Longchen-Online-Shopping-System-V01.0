@@ -257,11 +257,7 @@ const App: React.FC = () => {
   const activeOrderItems = useMemo(() => {
     return orderItems
         .filter(i => i.orderGroupId === selectedOrderGroup)
-        .sort((a, b) => {
-            if (a.productGroupId !== b.productGroupId) return a.productGroupId.localeCompare(b.productGroupId);
-            if (a.productItemId !== b.productItemId) return a.productItemId.localeCompare(b.productItemId);
-            return a.buyer.localeCompare(b.buyer, 'zh-TW');
-        });
+        .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
   }, [orderItems, selectedOrderGroup]);
 
   // --- Income Stats Calculation (Main View) ---
@@ -408,7 +404,7 @@ const App: React.FC = () => {
         const ref = await getDocRef('orderItems', 'id', item.id);
         if(ref) await updateDoc(ref, { ...item });
     } else {
-        const newItem = { ...item, id: generateUUID() };
+        const newItem = { ...item, id: generateUUID(), createdAt: Date.now() };
         await addDoc(collection(db, 'orderItems'), newItem);
     }
     setIsOrderEntryOpen(false);
