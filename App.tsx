@@ -1123,7 +1123,7 @@ const App: React.FC = () => {
   // Single Page Order Entry Modal
   const OrderEntryModal = () => {
     const [localItem, setLocalItem] = useState<Partial<OrderItem>>(editingOrderItem || { quantity: 1, date: new Date().toISOString().split('T')[0], description: '', buyer: '', remarks: '', note: '', productGroupId: '', productItemId: '' });
-    const currentGroupItems = productItems.filter(i => i.groupId === localItem.productGroupId);
+    const currentGroupItems = productItems.filter(i => i.groupId === localItem.productGroupId).sort((a, b) => a.name.localeCompare(b.name, 'zh-TW'));
     
 
 
