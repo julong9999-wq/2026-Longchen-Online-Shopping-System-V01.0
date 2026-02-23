@@ -1125,12 +1125,7 @@ const App: React.FC = () => {
     const [localItem, setLocalItem] = useState<Partial<OrderItem>>(editingOrderItem || { quantity: 1, date: new Date().toISOString().split('T')[0], description: '', buyer: '', remarks: '', note: '', productGroupId: '', productItemId: '' });
     const currentGroupItems = productItems.filter(i => i.groupId === localItem.productGroupId);
     
-    useEffect(() => {
-        if (localItem.productGroupId && localItem.productItemId && !editingOrderItem) {
-            const p = productItems.find(i => i.groupId === localItem.productGroupId && i.id === localItem.productItemId);
-            if (p) setLocalItem(prev => ({ ...prev, description: p.name }));
-        }
-    }, [localItem.productGroupId, localItem.productItemId]);
+
 
     const inputClass = "block w-full rounded-lg border border-slate-300 bg-white text-slate-900 px-3 h-10 text-lg font-bold focus:border-blue-500 focus:ring-blue-500";
     const labelClass = "block text-sm font-bold text-slate-600 mb-0.5";
