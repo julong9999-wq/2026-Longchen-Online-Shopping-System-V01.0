@@ -560,7 +560,7 @@ const App: React.FC = () => {
 
   const handleExportDetails = () => {
     if (!selectedOrderGroup) return;
-    const headers = ['分類', '商品/買家', '數量', '金額'];
+    const headers = ['分類', '商品/買家', '數量', '金額', '備註'];
     const rows: (string | number)[][] = [];
     
     // Logic similar to view but for CSV
@@ -584,10 +584,10 @@ const App: React.FC = () => {
     });
 
     groupedData.forEach(g => {
-        rows.push([g.label, '總計', g.totalQty, g.totalPrice]);
+        rows.push([g.label, '總計', g.totalQty, g.totalPrice, '']);
         g.items.forEach(item => {
             const desc = item.description || cleanProductName(item.product.name);
-            rows.push(['', desc, item.quantity, item.total]);
+            rows.push(['', desc, item.quantity, item.total, item.remarks || '']);
         });
     });
 
@@ -769,6 +769,7 @@ const App: React.FC = () => {
                                         {p.items.map((item, itemIdx) => (
                                             <div key={itemIdx} className={`flex justify-between items-center py-1 ${subTableStyle} border-t border-dashed border-slate-100 first:border-t-0`}>
                                                 <div className="flex-1 truncate pr-2">{item.description || '單一款式'}</div>
+                                                <div className="flex-1 truncate text-amber-600 text-sm pr-2">{item.remarks}</div>
                                                 <div className="flex gap-4 font-mono shrink-0"><span>x{item.quantity}</span><span>${p.product.inputPrice}</span></div>
                                             </div>
                                         ))}
@@ -820,6 +821,7 @@ const App: React.FC = () => {
                                 {p.buyers.map((item, itemIdx) => (
                                     <div key={itemIdx} className={`flex justify-between items-center py-1.5 ${subTableStyle} border-b border-slate-50 last:border-0`}>
                                         <div className="flex-1 truncate font-medium">{item.buyer}</div>
+                                        <div className="flex-1 truncate text-amber-600 text-sm px-2">{item.remarks}</div>
                                         <div className="flex gap-4 font-mono shrink-0"><span>x{item.quantity}</span><span>${p.product.inputPrice}</span></div>
                                     </div>
                                 ))}
