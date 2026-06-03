@@ -310,3 +310,21 @@ export const INITIAL_ORDER_ITEMS: OrderItem[] = [
   { id: generateUUID(), orderGroupId: '202512F', date: '2025-12-28', productGroupId: 'A21', productItemId: '02', quantity: 1, description: '七草款', buyer: 'XuanYu Chen', remarks: '', note: '', createdAt: Date.now() },
   { id: generateUUID(), orderGroupId: '202512F', date: '2025-12-28', productGroupId: 'A21', productItemId: '03', quantity: 1, description: '七草夜守款', buyer: 'XuanYu Chen', remarks: '', note: '', createdAt: Date.now() },
 ];
+
+import { BankVocabulary, BankTransaction } from './types';
+
+export const INITIAL_BANK_VOCABULARY: BankVocabulary[] = [
+  { id: generateUUID(), type: '收入', word: '股息收益' },
+  { id: generateUUID(), type: '收入', word: '轉帳匯入' },
+  { id: generateUUID(), type: '收入', word: '其他收入' },
+  { id: generateUUID(), type: '支出', word: '現金領用' },
+  { id: generateUUID(), type: '支出', word: '轉帳匯出' },
+  { id: generateUUID(), type: '支出', word: '信用卡費' },
+  { id: generateUUID(), type: '支出', word: '電信費用' },
+  { id: generateUUID(), type: '支出', word: '定期定額' },
+  { id: generateUUID(), type: '支出', word: '其他支出' },
+  { id: generateUUID(), type: '股票', word: '買入金額' },
+  { id: generateUUID(), type: '股票', word: '賣出金額' },
+];
+
+export const INITIAL_BANK_TRANSACTIONS: BankTransaction[] = [];

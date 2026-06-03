@@ -39,3 +39,23 @@ export interface OrderItem {
 }
 
 export type ViewState = 'products' | 'orders' | 'details' | 'analysis' | 'deposits' | 'income';
+
+export type BankAccount = '禹君' | '禹辰';
+export type BankTransactionType = '收入' | '支出' | '股票';
+
+export interface BankTransaction {
+  id: string;
+  account: BankAccount;
+  type: BankTransactionType;
+  date: string; // YYYY-MM-DD
+  category: string;
+  amount: number;
+  remarks: string;
+  createdAt: number;
+}
+
+export interface BankVocabulary {
+  id: string;
+  type: BankTransactionType;
+  word: string;
+}

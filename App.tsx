@@ -3,6 +3,7 @@ import { ProductGroup, ProductItem, OrderGroup, OrderItem, ViewState } from './t
 import { INITIAL_PRODUCT_GROUPS, INITIAL_PRODUCT_ITEMS, INITIAL_ORDER_GROUPS, INITIAL_ORDER_ITEMS } from './constants';
 import { getNextGroupId, getNextItemId, getNextOrderGroupId, calculateProductStats, formatCurrency, generateUUID, cleanProductName } from './utils';
 import ProductForm from './components/ProductForm';
+import BankSystem from './components/BankSystem';
 import { Trash2, Edit, Plus, Package, ShoppingCart, List, BarChart2, ChevronRight, ChevronDown, User, Box, X, Calculator, Download, Save, Wallet, ArrowUpCircle, ArrowDownCircle, Grid, PieChart, Check, Database, Upload, AlertTriangle, Home } from 'lucide-react';
 import { db } from './firebase';
 import { 
@@ -104,7 +105,7 @@ const IncomeField = ({ label, value, isInput = false, onChange, colorClass = "te
 
 const App: React.FC = () => {
   // --- State ---
-  const [appMode, setAppMode] = useState<'home' | 'ecommerce'>('home');
+  const [appMode, setAppMode] = useState<'home' | 'ecommerce' | 'bank'>('home');
   const [view, setView] = useState<ViewState>('products');
   const [dbError, setDbError] = useState<string | null>(null);
   
@@ -1291,19 +1292,22 @@ const App: React.FC = () => {
                   </button>
 
                   <button 
-                      onClick={() => {}} // "銀行明細"按鈕先不作動
-                      className="w-full bg-white text-slate-700 hover:bg-slate-100 font-bold py-5 px-6 rounded-2xl shadow border border-slate-200 transition-all active:scale-95 flex items-center justify-between opacity-80 cursor-not-allowed"
-                      disabled
+                      onClick={() => setAppMode('bank')}
+                      className="w-full bg-white text-slate-700 hover:bg-slate-100 font-bold py-5 px-6 rounded-2xl shadow border border-slate-200 transition-all active:scale-95 flex items-center justify-between"
                   >
                       <div className="flex items-center gap-4">
                           <Database size={28} className="text-emerald-600" />
                           <span className="text-2xl mt-1 tracking-wider">銀行明細</span>
                       </div>
-                      <span className="text-xs bg-slate-200 text-slate-500 px-2 py-1.5 rounded font-normal shrink-0">建置中</span>
+                      <ChevronRight size={28} className="opacity-70" />
                   </button>
               </div>
           </div>
       );
+  }
+
+  if (appMode === 'bank') {
+      return <BankSystem onNavigateHome={() => setAppMode('home')} />;
   }
 
   return (
