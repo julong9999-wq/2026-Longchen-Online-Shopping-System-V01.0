@@ -3,7 +3,7 @@ import { ProductGroup, ProductItem, OrderGroup, OrderItem, ViewState } from './t
 import { INITIAL_PRODUCT_GROUPS, INITIAL_PRODUCT_ITEMS, INITIAL_ORDER_GROUPS, INITIAL_ORDER_ITEMS } from './constants';
 import { getNextGroupId, getNextItemId, getNextOrderGroupId, calculateProductStats, formatCurrency, generateUUID, cleanProductName } from './utils';
 import ProductForm from './components/ProductForm';
-import { Trash2, Edit, Plus, Package, ShoppingCart, List, BarChart2, ChevronRight, ChevronDown, User, Box, X, Calculator, Download, Save, Wallet, ArrowUpCircle, ArrowDownCircle, Grid, PieChart, Check, Database, Upload, AlertTriangle } from 'lucide-react';
+import { Trash2, Edit, Plus, Package, ShoppingCart, List, BarChart2, ChevronRight, ChevronDown, User, Box, X, Calculator, Download, Save, Wallet, ArrowUpCircle, ArrowDownCircle, Grid, PieChart, Check, Database, Upload, AlertTriangle, Home } from 'lucide-react';
 import { db } from './firebase';
 import { 
   collection, 
@@ -104,6 +104,7 @@ const IncomeField = ({ label, value, isInput = false, onChange, colorClass = "te
 
 const App: React.FC = () => {
   // --- State ---
+  const [appMode, setAppMode] = useState<'home' | 'ecommerce'>('home');
   const [view, setView] = useState<ViewState>('products');
   const [dbError, setDbError] = useState<string | null>(null);
   
@@ -1273,6 +1274,38 @@ const App: React.FC = () => {
       </button>
   );
 
+  if (appMode === 'home') {
+      return (
+          <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6">
+              <h1 className="text-3xl font-bold text-slate-800 mb-10 tracking-tight text-center">龍辰系統首頁</h1>
+              <div className="w-full max-w-sm space-y-6">
+                  <button 
+                      onClick={() => setAppMode('ecommerce')}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-5 px-6 rounded-2xl shadow-lg border border-blue-500 transition-all active:scale-95 flex items-center justify-between"
+                  >
+                      <div className="flex items-center gap-4">
+                          <ShoppingCart size={28} />
+                          <span className="text-2xl mt-1 tracking-wider">網購系統</span>
+                      </div>
+                      <ChevronRight size={28} className="opacity-70" />
+                  </button>
+
+                  <button 
+                      onClick={() => {}} // "銀行明細"按鈕先不作動
+                      className="w-full bg-white text-slate-700 hover:bg-slate-100 font-bold py-5 px-6 rounded-2xl shadow border border-slate-200 transition-all active:scale-95 flex items-center justify-between opacity-80 cursor-not-allowed"
+                      disabled
+                  >
+                      <div className="flex items-center gap-4">
+                          <Database size={28} className="text-emerald-600" />
+                          <span className="text-2xl mt-1 tracking-wider">銀行明細</span>
+                      </div>
+                      <span className="text-xs bg-slate-200 text-slate-500 px-2 py-1.5 rounded font-normal shrink-0">建置中</span>
+                  </button>
+              </div>
+          </div>
+      );
+  }
+
   return (
     <div className="flex flex-col h-screen bg-slate-100 font-sans text-slate-900 overflow-hidden">
         {dbError && (
@@ -1387,6 +1420,13 @@ const App: React.FC = () => {
             <NavButton id="analysis" label="分析" icon={BarChart2} />
             <NavButton id="deposits" label="預收" icon={Wallet} />
             <NavButton id="income" label="收支" icon={Calculator} />
+            <button 
+                onClick={() => setAppMode('home')} 
+                className="flex-1 flex flex-col items-center justify-center h-full transition-all duration-200 text-blue-200 hover:text-white"
+            >
+                <Home size={24} strokeWidth={2} />
+                <span className="text-sm font-bold mt-1 tracking-wide">返回</span>
+            </button>
         </div>
     </div>
   );
