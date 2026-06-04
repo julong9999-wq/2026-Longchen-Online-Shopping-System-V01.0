@@ -56,6 +56,7 @@ export interface BankTransaction {
 
 export interface BankVocabulary {
   id: string;
-  type: BankTransactionType;
+  type: BankTransactionType | '備註';
   word: string;
+  parentId?: string; // 全新加入：指向父項目 (如股息收益) 的 ID
 }

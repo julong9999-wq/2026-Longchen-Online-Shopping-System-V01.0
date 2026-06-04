@@ -313,7 +313,7 @@ export const INITIAL_ORDER_ITEMS: OrderItem[] = [
 
 import { BankVocabulary, BankTransaction } from './types';
 
-export const INITIAL_BANK_VOCABULARY: BankVocabulary[] = [
+export const INITIAL_BANK_VOCABULARY_BASE: BankVocabulary[] = [
   { id: generateUUID(), type: '收入', word: '股息收益' },
   { id: generateUUID(), type: '收入', word: '轉帳匯入' },
   { id: generateUUID(), type: '收入', word: '其他收入' },
@@ -325,6 +325,18 @@ export const INITIAL_BANK_VOCABULARY: BankVocabulary[] = [
   { id: generateUUID(), type: '支出', word: '其他支出' },
   { id: generateUUID(), type: '股票', word: '買入金額' },
   { id: generateUUID(), type: '股票', word: '賣出金額' },
+];
+
+const divId = INITIAL_BANK_VOCABULARY_BASE.find(v => v.word === '股息收益')?.id || '';
+
+export const INITIAL_BANK_VOCABULARY: BankVocabulary[] = [
+  ...INITIAL_BANK_VOCABULARY_BASE,
+  { id: generateUUID(), type: '備註', word: '禹君代墊' },
+  { id: generateUUID(), type: '備註', word: '禹辰代墊' },
+  { id: generateUUID(), type: '備註', word: '共同生活費' },
+  { id: generateUUID(), type: '備註', word: '零用金' },
+  { id: generateUUID(), type: '備註', word: '00929', parentId: divId },
+  { id: generateUUID(), type: '備註', word: '00919', parentId: divId }
 ];
 
 export const INITIAL_BANK_TRANSACTIONS: BankTransaction[] = [];
