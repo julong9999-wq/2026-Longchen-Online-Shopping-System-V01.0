@@ -331,10 +331,6 @@ const divId = INITIAL_BANK_VOCABULARY_BASE.find(v => v.word === '股息收益')?
 
 export const INITIAL_BANK_VOCABULARY: BankVocabulary[] = [
   ...INITIAL_BANK_VOCABULARY_BASE,
-  { id: generateUUID(), type: '備註', word: '禹君代墊' },
-  { id: generateUUID(), type: '備註', word: '禹辰代墊' },
-  { id: generateUUID(), type: '備註', word: '共同生活費' },
-  { id: generateUUID(), type: '備註', word: '零用金' },
   { id: generateUUID(), type: '備註', word: '00929', parentId: divId },
   { id: generateUUID(), type: '備註', word: '00919', parentId: divId }
 ];
