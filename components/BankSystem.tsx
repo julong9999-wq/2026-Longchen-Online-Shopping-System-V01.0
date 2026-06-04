@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Home, List, CalendarDays, Plus, BookType, ChevronDown, ChevronRight, X, Save } from 'lucide-react';
+import { collection, onSnapshot, setDoc, deleteDoc, doc, writeBatch } from 'firebase/firestore';
+import { db } from '../firebase';
 import { BankTransaction, BankVocabulary, BankAccount, BankTransactionType } from '../types';
 import { INITIAL_BANK_VOCABULARY } from '../constants';
 import { formatCurrency, generateUUID } from '../utils';
@@ -13,6 +15,26 @@ interface Props {
 const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
   const [view, setView] = useState<BankView>('add');
   const [vocabularies, setVocabularies] = useState<BankVocabulary[]>(INITIAL_BANK_VOCABULARY);
+
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'vocabularies'), async (snapshot) => {
+      const data = snapshot.docs.map(d => d.data() as BankVocabulary);
+      if (data.length > 0) {
+        setVocabularies(data);
+      } else {
+        // Init Firebase with starting constants if empty
+        const batch = writeBatch(db);
+        INITIAL_BANK_VOCABULARY.forEach(v => {
+           batch.set(doc(db, 'vocabularies', v.id), v);
+        });
+        await batch.commit();
+        setVocabularies(INITIAL_BANK_VOCABULARY);
+      }
+    }, (error) => {
+      console.error("Firebase sync error:", error);
+    });
+    return () => unsub();
+  }, []);
 
   const [activeAccount, setActiveAccount] = useState<BankAccount>('禹君');
   const [selectedMonth, setSelectedMonth] = useState<string>('2026-06');
@@ -277,43 +299,86 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
     const [newWord, setNewWord] = useState('');
     const [selectedParentId, setSelectedParentId] = useState<string | null>(null);
     const [newSubWord, setNewSubWord] = useState('');
+    const [deleteConfirm, setDeleteConfirm] = useState<{id: string, type: 'main' | 'sub', word: string} | null>(null);
 
     const mainVocabs = vocabularies.filter(v => v.type === vocabTab && !v.parentId);
     const selectedParent = mainVocabs.find(v => v.id === selectedParentId);
     const subVocabs = selectedParent ? vocabularies.filter(v => v.parentId === selectedParentId) : [];
 
-    const handleAddMain = () => {
+    const handleAddMain = async () => {
         if (!newWord.trim()) return;
         const newVocab: BankVocabulary = { id: generateUUID(), type: vocabTab, word: newWord.trim() };
-        setVocabularies(prev => [...prev, newVocab]);
+        try {
+           await setDoc(doc(db, 'vocabularies', newVocab.id), newVocab);
+        } catch (e) {
+           console.error("error adding", e);
+        }
         setNewWord('');
     };
 
-    const handleDeleteMain = (id: string) => {
-        setVocabularies(prev => prev.filter(v => v.id !== id && v.parentId !== id));
+    const handleDeleteMain = async (id: string) => {
+        try {
+            const batch = writeBatch(db);
+            batch.delete(doc(db, 'vocabularies', id));
+            // delete all sub remarks of this parent
+            const subItems = vocabularies.filter(v => v.parentId === id);
+            subItems.forEach(v => {
+                batch.delete(doc(db, 'vocabularies', v.id));
+            });
+            await batch.commit();
+        } catch (e) {
+            console.error("error deleting main", e);
+        }
         if (selectedParentId === id) setSelectedParentId(null);
     };
 
-    const handleAddSub = () => {
+    const handleAddSub = async () => {
         if (!newSubWord.trim() || !selectedParentId) return;
         const newVocab: BankVocabulary = { id: generateUUID(), type: '備註', word: newSubWord.trim(), parentId: selectedParentId };
-        setVocabularies(prev => [...prev, newVocab]);
+        try {
+            await setDoc(doc(db, 'vocabularies', newVocab.id), newVocab);
+        } catch (e) {
+            console.error("error adding sub", e);
+        }
         setNewSubWord('');
     };
 
-    const handleDeleteSub = (id: string) => {
-        setVocabularies(prev => prev.filter(v => v.id !== id));
+    const handleDeleteSub = async (id: string) => {
+        try {
+            await deleteDoc(doc(db, 'vocabularies', id));
+        } catch (e) {
+            console.error("error deleting sub", e);
+        }
     };
 
     return (
-      <div className="p-4 max-w-lg mx-auto animate-in fade-in flex flex-col h-full overflow-hidden pb-4">
+      <div className="p-4 max-w-lg mx-auto animate-in fade-in flex flex-col h-full overflow-hidden pb-4 relative">
+        {deleteConfirm && (
+          <div className="absolute inset-0 z-50 bg-slate-900/40 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-lg p-5 w-full max-w-xs animate-in zoom-in-95">
+              <h3 className="text-lg font-bold text-slate-800 mb-2">確定刪除項目？</h3>
+              <p className="text-slate-600 mb-5 text-sm">您即將刪除「<span className="font-bold text-rose-600">{deleteConfirm.word}</span>」，此操作無法復原。</p>
+              <div className="flex gap-2 justify-end">
+                <button type="button" onClick={() => setDeleteConfirm(null)} className="px-4 py-2 text-sm font-bold text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors">取消</button>
+                <button type="button" onClick={() => {
+                    if (deleteConfirm.type === 'main') {
+                        handleDeleteMain(deleteConfirm.id);
+                    } else {
+                        handleDeleteSub(deleteConfirm.id);
+                    }
+                    setDeleteConfirm(null);
+                }} className="px-4 py-2 text-sm font-bold text-white bg-rose-600 rounded-lg hover:bg-rose-700 transition-colors shadow-sm">確定刪除</button>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 w-full p-4 md:p-6 flex flex-col h-full space-y-4">
            
            {/* Top Tabs */}
            <div className="flex gap-2 shrink-0 bg-slate-100 p-1.5 rounded-xl">
-              <button type="button" onClick={() => {setVocabTab('收入'); setSelectedParentId(null);}} className={`flex-1 py-2 rounded-lg font-bold text-sm transition-all shadow-sm ${vocabTab === '收入' ? 'bg-white text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}>收入</button>
-              <button type="button" onClick={() => {setVocabTab('支出'); setSelectedParentId(null);}} className={`flex-1 py-2 rounded-lg font-bold text-sm transition-all shadow-sm ${vocabTab === '支出' ? 'bg-white text-rose-600' : 'text-slate-500 hover:text-slate-700'}`}>支出</button>
-              <button type="button" onClick={() => {setVocabTab('股票'); setSelectedParentId(null);}} className={`flex-1 py-2 rounded-lg font-bold text-sm transition-all shadow-sm ${vocabTab === '股票' ? 'bg-white text-emerald-600' : 'text-slate-500 hover:text-slate-700'}`}>股票</button>
+              <button type="button" onClick={() => {setVocabTab('收入'); setSelectedParentId(null);}} className={`flex-1 py-2 rounded-lg font-bold text-sm transition-all shadow-sm ${vocabTab === '收入' ? 'bg-white text-blue-600 ring-2 ring-blue-600/20' : 'text-blue-500 hover:bg-blue-50'}`}>收入</button>
+              <button type="button" onClick={() => {setVocabTab('支出'); setSelectedParentId(null);}} className={`flex-1 py-2 rounded-lg font-bold text-sm transition-all shadow-sm ${vocabTab === '支出' ? 'bg-white text-rose-600 ring-2 ring-rose-600/20' : 'text-rose-500 hover:bg-rose-50'}`}>支出</button>
+              <button type="button" onClick={() => {setVocabTab('股票'); setSelectedParentId(null);}} className={`flex-1 py-2 rounded-lg font-bold text-sm transition-all shadow-sm ${vocabTab === '股票' ? 'bg-white text-emerald-600 ring-2 ring-emerald-600/20' : 'text-emerald-500 hover:bg-emerald-50'}`}>股票</button>
            </div>
            
            {/* Add Main Vocab */}
@@ -332,7 +397,7 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
                        (vocabTab === '收入' ? 'bg-blue-600 text-white border-blue-600' : vocabTab === '支出' ? 'bg-rose-600 text-white border-rose-600' : 'bg-emerald-600 text-white border-emerald-600') 
                        : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50'}`}>
                        {v.word}
-                       <button type="button" onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleDeleteMain(v.id); }} className={`p-0.5 rounded-full transition-colors ml-1 ${selectedParentId === v.id ? 
+                       <button type="button" onClick={(e) => { e.stopPropagation(); e.preventDefault(); setDeleteConfirm({id: v.id, type: 'main', word: v.word}); }} className={`p-0.5 rounded-full transition-colors ml-1 ${selectedParentId === v.id ? 
                           'hover:bg-white/20 text-white' 
                           : 'text-slate-400 hover:bg-slate-200 hover:text-rose-500'}`}>
                           <X size={14} />
@@ -361,7 +426,7 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
                     {subVocabs.length > 0 ? subVocabs.map(v => (
                         <div key={v.id} className="flex items-center gap-1 bg-white border border-slate-200 text-slate-700 rounded-lg px-3 py-1.5 text-sm font-bold shadow-sm">
                            {v.word}
-                           <button type="button" onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleDeleteSub(v.id); }} className="text-slate-400 hover:text-rose-500 rounded p-[1px] ml-1 transition-colors">
+                           <button type="button" onClick={(e) => { e.stopPropagation(); e.preventDefault(); setDeleteConfirm({id: v.id, type: 'sub', word: v.word}); }} className="text-slate-400 hover:text-rose-500 rounded p-[1px] ml-1 transition-colors">
                              <X size={14} />
                            </button>
                         </div>
