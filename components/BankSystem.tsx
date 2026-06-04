@@ -211,25 +211,34 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
 
   const renderSummaryView = () => {
     const accountTxs = transactions.filter(t => t.account === activeAccount);
-    const monthPrefix = selectedMonth; // e.g. "2026-06"
-    const currentMonthTxs = accountTxs.filter(t => t.date.startsWith(monthPrefix));
+    const currentMonthStr = new Date().toISOString().substring(0, 7);
+    const currentMonthTxs = accountTxs.filter(t => t.date.startsWith(currentMonthStr));
     
     const incTxs = currentMonthTxs.filter(t => t.type === '收入');
     const expTxs = currentMonthTxs.filter(t => t.type === '支出');
     const stockTxs = currentMonthTxs.filter(t => t.type === '股票');
 
-    const totalInc = incTxs.reduce((sum, t) => sum + t.amount, 0);
-    const totalExp = expTxs.reduce((sum, t) => sum + t.amount, 0);
+    let lastMonthBalance = 0;
+    accountTxs.forEach(t => {
+       if (t.date < currentMonthStr + "-01") {
+          if (t.type === '收入') lastMonthBalance += t.amount;
+          else if (t.type === '支出') lastMonthBalance -= t.amount;
+       }
+    });
+
+    let monthBalanceDiff = 0;
+    currentMonthTxs.forEach(t => {
+       if (t.type === '收入') monthBalanceDiff += t.amount;
+       else if (t.type === '支出') monthBalanceDiff -= t.amount;
+    });
     
-    // For calculating balances, we would ideally need a full history.
-    // For now we just show this month's balance + previous if we aggregated it.
-    const monthBalance = totalInc - totalExp;
+    const currentTotalBalance = lastMonthBalance + monthBalanceDiff;
 
     return (
       <div className="p-4 max-w-lg mx-auto animate-in fade-in space-y-4">
-        <div className="flex items-center justify-between pt-2">
+        <div className="flex items-center gap-3 pt-2">
            <h2 className="text-2xl font-bold text-slate-800">本月分析</h2>
-           <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="bg-slate-200 text-slate-600 px-3 py-1 rounded-lg text-sm font-bold shadow-inner outline-none focus:ring-2 focus:ring-[#408f61]" />
+           <span className="bg-slate-200 text-slate-600 px-3 py-1 rounded-lg text-sm font-bold shadow-inner">{currentMonthStr}</span>
         </div>
 
         <AccountTabs />
@@ -237,11 +246,11 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
         <div className="grid grid-cols-2 gap-3 pb-2">
           <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
              <div className="text-slate-400 font-bold mb-1 text-sm">上月結餘</div>
-             <div className="text-xl font-mono font-bold text-slate-800">{formatCurrency(0)}</div>
+             <div className="text-xl font-mono font-bold text-slate-800">{formatCurrency(lastMonthBalance)}</div>
           </div>
           <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-emerald-500 hover:shadow-md transition-shadow">
-             <div className="text-slate-400 font-bold mb-1 text-sm">本月預結</div>
-             <div className={`text-xl font-mono font-bold ${monthBalance >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>{formatCurrency(monthBalance)}</div>
+             <div className="text-slate-400 font-bold mb-1 text-sm">本月結餘</div>
+             <div className={`text-xl font-mono font-bold ${currentTotalBalance >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>{formatCurrency(currentTotalBalance)}</div>
           </div>
         </div>
 
@@ -254,16 +263,35 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
 
   const renderMonthlyView = () => {
     const accountTxs = transactions.filter(t => t.account === activeAccount);
-    const monthPrefix = selectedMonth; 
-    const currentMonthTxs = accountTxs.filter(t => t.date.startsWith(monthPrefix));
+    
+    // Find all unique months available in data
+    const availableMonths = Array.from(new Set(accountTxs.map(t => t.date.substring(0, 7)))).sort((a, b) => b.localeCompare(a));
+    const currentMonthStr = new Date().toISOString().substring(0, 7);
+    
+    // If selectedMonth is not in availableMonths (e.g. initial load), use the newest available or current
+    const displayMonth = availableMonths.includes(selectedMonth) ? selectedMonth : (availableMonths[0] || currentMonthStr);
+    
+    const currentMonthTxs = accountTxs.filter(t => t.date.startsWith(displayMonth));
     
     const incTxs = currentMonthTxs.filter(t => t.type === '收入');
     const expTxs = currentMonthTxs.filter(t => t.type === '支出');
     const stockTxs = currentMonthTxs.filter(t => t.type === '股票');
 
-    const totalInc = incTxs.reduce((sum, t) => sum + t.amount, 0);
-    const totalExp = expTxs.reduce((sum, t) => sum + t.amount, 0);
-    const monthBalance = totalInc - totalExp;
+    let lastMonthBalance = 0;
+    accountTxs.forEach(t => {
+       if (t.date < displayMonth + "-01") {
+          if (t.type === '收入') lastMonthBalance += t.amount;
+          else if (t.type === '支出') lastMonthBalance -= t.amount;
+       }
+    });
+
+    let monthBalanceDiff = 0;
+    currentMonthTxs.forEach(t => {
+       if (t.type === '收入') monthBalanceDiff += t.amount;
+       else if (t.type === '支出') monthBalanceDiff -= t.amount;
+    });
+    
+    const currentTotalBalance = lastMonthBalance + monthBalanceDiff;
 
     return (
       <div className="p-4 max-w-lg mx-auto animate-in fade-in space-y-4">
@@ -271,7 +299,14 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
            <h2 className="text-2xl font-bold text-slate-800">月份明細</h2>
            <div className="flex items-center gap-2">
               <span className="text-slate-500 text-sm font-bold">選擇月份</span>
-              <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="bg-white border border-slate-300 text-slate-800 px-3 py-1.5 rounded-lg text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-[#408f61]" />
+              <select 
+                value={displayMonth} 
+                onChange={e => setSelectedMonth(e.target.value)} 
+                className="bg-white border border-slate-300 text-slate-800 px-3 py-1.5 rounded-lg text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-[#408f61]"
+              >
+                 {availableMonths.length === 0 && <option value={currentMonthStr}>{currentMonthStr}</option>}
+                 {availableMonths.map(m => <option key={m} value={m}>{m}</option>)}
+              </select>
            </div>
         </div>
 
@@ -280,11 +315,11 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
         <div className="grid grid-cols-2 gap-3 pb-2">
           <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-blue-500">
              <div className="text-slate-400 font-bold mb-1 text-sm">上月結餘</div>
-             <div className="text-xl font-mono font-bold text-slate-800">{formatCurrency(0)}</div>
+             <div className="text-xl font-mono font-bold text-slate-800">{formatCurrency(lastMonthBalance)}</div>
           </div>
           <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-emerald-500">
-             <div className="text-slate-400 font-bold mb-1 text-sm">本月預結</div>
-             <div className={`text-xl font-mono font-bold ${monthBalance >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>{formatCurrency(monthBalance)}</div>
+             <div className="text-slate-400 font-bold mb-1 text-sm">本月結餘</div>
+             <div className={`text-xl font-mono font-bold ${currentTotalBalance >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>{formatCurrency(currentTotalBalance)}</div>
           </div>
         </div>
 
