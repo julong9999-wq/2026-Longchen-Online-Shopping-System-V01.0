@@ -49,6 +49,13 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
     remarks: ''
   });
 
+  // Vocab View State
+  const [vocabTab, setVocabTab] = useState<BankTransactionType>('收入');
+  const [newWord, setNewWord] = useState('');
+  const [selectedParentId, setSelectedParentId] = useState<string | null>(null);
+  const [newSubWord, setNewSubWord] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState<{id: string, type: 'main' | 'sub', word: string} | null>(null);
+
   const renderNav = () => (
     <div className="bg-[#275b3b] flex shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] overflow-x-auto shrink-0 z-50">
       {[
@@ -130,7 +137,7 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
     );
   };
 
-  const SummaryView = () => (
+  const renderSummaryView = () => (
     <div className="p-4 max-w-lg mx-auto animate-in fade-in space-y-4">
       <div className="flex items-center gap-3 pt-2">
          <h2 className="text-2xl font-bold text-slate-800">本月分析</h2>
@@ -156,7 +163,7 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
     </div>
   );
 
-  const MonthlyView = () => (
+  const renderMonthlyView = () => (
     <div className="p-4 max-w-lg mx-auto animate-in fade-in space-y-4">
       <div className="flex items-center justify-between pt-2">
          <h2 className="text-2xl font-bold text-slate-800">月份明細</h2>
@@ -194,7 +201,7 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
     </div>
   );
 
-  const AddDataView = () => {
+  const renderAddDataView = () => {
     const categoriesForType = vocabularies.filter(v => v.type === addForm.type && !v.parentId);
     const staticRemarks = vocabularies.filter(v => v.type === '備註' && !v.parentId).map(v => v.word);
     
@@ -294,16 +301,10 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
     );
   };
 
-  const VocabView = () => {
-    const [vocabTab, setVocabTab] = useState<BankTransactionType>('收入');
-    const [newWord, setNewWord] = useState('');
-    const [selectedParentId, setSelectedParentId] = useState<string | null>(null);
-    const [newSubWord, setNewSubWord] = useState('');
-    const [deleteConfirm, setDeleteConfirm] = useState<{id: string, type: 'main' | 'sub', word: string} | null>(null);
-
-    const mainVocabs = vocabularies.filter(v => v.type === vocabTab && !v.parentId);
+  const renderVocabView = () => {
+    const mainVocabs = [...vocabularies].filter(v => v.type === vocabTab && !v.parentId).sort((a,b) => a.word.localeCompare(b.word));
     const selectedParent = mainVocabs.find(v => v.id === selectedParentId);
-    const subVocabs = selectedParent ? vocabularies.filter(v => v.parentId === selectedParentId) : [];
+    const subVocabs = selectedParent ? [...vocabularies].filter(v => v.parentId === selectedParentId).sort((a,b) => a.word.localeCompare(b.word)) : [];
 
     const handleAddMain = async () => {
         if (!newWord.trim()) return;
@@ -375,22 +376,22 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 w-full p-4 md:p-6 flex flex-col h-full space-y-4">
            
            {/* Top Tabs */}
-           <div className="flex gap-2 shrink-0 bg-slate-100 p-1.5 rounded-xl">
-              <button type="button" onClick={() => {setVocabTab('收入'); setSelectedParentId(null);}} className={`flex-1 py-2 rounded-lg font-bold text-sm transition-all shadow-sm ${vocabTab === '收入' ? 'bg-white text-blue-600 ring-2 ring-blue-600/20' : 'text-blue-500 hover:bg-blue-50'}`}>收入</button>
-              <button type="button" onClick={() => {setVocabTab('支出'); setSelectedParentId(null);}} className={`flex-1 py-2 rounded-lg font-bold text-sm transition-all shadow-sm ${vocabTab === '支出' ? 'bg-white text-rose-600 ring-2 ring-rose-600/20' : 'text-rose-500 hover:bg-rose-50'}`}>支出</button>
-              <button type="button" onClick={() => {setVocabTab('股票'); setSelectedParentId(null);}} className={`flex-1 py-2 rounded-lg font-bold text-sm transition-all shadow-sm ${vocabTab === '股票' ? 'bg-white text-emerald-600 ring-2 ring-emerald-600/20' : 'text-emerald-500 hover:bg-emerald-50'}`}>股票</button>
+           <div className="flex gap-2 shrink-0 p-1">
+              <button type="button" onClick={() => {setVocabTab('收入'); setSelectedParentId(null);}} className={`flex-1 py-1.5 rounded-xl font-bold text-[15px] transition-all border ${vocabTab === '收入' ? 'bg-blue-600 text-white border-blue-600 shadow-md scale-[1.02]' : 'bg-white text-blue-500 border-slate-200 hover:bg-blue-50 hover:border-blue-300'}`}>收入</button>
+              <button type="button" onClick={() => {setVocabTab('支出'); setSelectedParentId(null);}} className={`flex-1 py-1.5 rounded-xl font-bold text-[15px] transition-all border ${vocabTab === '支出' ? 'bg-rose-600 text-white border-rose-600 shadow-md scale-[1.02]' : 'bg-white text-rose-500 border-slate-200 hover:bg-rose-50 hover:border-rose-300'}`}>支出</button>
+              <button type="button" onClick={() => {setVocabTab('股票'); setSelectedParentId(null);}} className={`flex-1 py-1.5 rounded-xl font-bold text-[15px] transition-all border ${vocabTab === '股票' ? 'bg-emerald-600 text-white border-emerald-600 shadow-md scale-[1.02]' : 'bg-white text-emerald-500 border-slate-200 hover:bg-emerald-50 hover:border-emerald-300'}`}>股票</button>
            </div>
            
            {/* Add Main Vocab */}
            <div className="flex gap-2 shrink-0 items-center">
              <input value={newWord} onChange={e=>setNewWord(e.target.value)} placeholder={`新增${vocabTab}項目...`} className={`flex-1 border-b-2 px-2 py-2 font-bold text-slate-800 bg-transparent outline-none text-base transition-colors ${vocabTab === '收入' ? 'focus:border-blue-500 border-slate-200' : vocabTab === '支出' ? 'focus:border-rose-500 border-slate-200' : 'focus:border-emerald-500 border-slate-200'}`} />
-             <button type="button" onClick={handleAddMain} className={`px-4 py-2 font-bold flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap text-sm rounded-lg active:scale-95 ${vocabTab === '收入' ? 'text-blue-600 hover:bg-blue-50' : vocabTab === '支出' ? 'text-rose-600 hover:bg-rose-50' : 'text-emerald-600 hover:bg-emerald-50'}`}>
+             <button type="button" onClick={handleAddMain} className={`px-4 py-2 font-bold flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap text-sm rounded-lg active:scale-95 text-white shadow-sm ${vocabTab === '收入' ? 'bg-blue-600 hover:bg-blue-700' : vocabTab === '支出' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}>
                 <Plus size={18} /> 新增
              </button>
            </div>
 
            {/* Main Vocab List */}
-           <div className="flex-1 overflow-y-auto content-start py-1">
+           <div className="max-h-[140px] shrink-0 overflow-y-auto content-start py-1">
               <div className="flex flex-wrap gap-2 items-start">
                  {mainVocabs.map(v => (
                     <div key={v.id} onClick={() => setSelectedParentId(v.id)} className={`flex items-center gap-1 px-3 py-1.5 rounded-full cursor-pointer font-bold text-sm transition-all border shadow-sm ${selectedParentId === v.id ? 
@@ -410,19 +411,19 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
 
            {/* Sub Vocab Section */}
            {selectedParent && (
-              <div className={`border-t border-slate-100 pt-4 shrink-0 flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-2`}>
-                 <div className="flex items-center justify-between gap-2">
+              <div className={`border-t border-slate-100 pt-4 flex-1 min-h-[220px] flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-2`}>
+                 <div className="flex items-center justify-between gap-2 shrink-0">
                     <span className="font-bold text-slate-800 text-[15px] ml-1">{selectedParent.word} - 專屬備註</span>
                     <button type="button" onClick={handleAddSub} className={`px-4 py-1.5 rounded-lg font-bold text-sm flex items-center justify-center transition-all active:scale-95 whitespace-nowrap shadow-sm ${vocabTab === '收入' ? 'bg-blue-600 text-white hover:bg-blue-700' : vocabTab === '支出' ? 'bg-rose-600 text-white hover:bg-rose-700' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}>
                         新增備註
                     </button>
                  </div>
                  
-                 <div>
+                 <div className="shrink-0">
                    <input value={newSubWord} onChange={e=>setNewSubWord(e.target.value)} placeholder="追加備註...輸入區" className={`w-full border rounded-lg px-3 py-2 text-sm font-bold text-slate-800 bg-slate-50 focus:bg-white focus:ring-2 focus:border-transparent outline-none placeholder:text-slate-400 transition-colors shadow-sm ${vocabTab === '收入' ? 'focus:ring-blue-500 border-slate-200' : vocabTab === '支出' ? 'focus:ring-rose-500 border-slate-200' : 'focus:ring-emerald-500 border-slate-200'}`} />
                  </div>
 
-                 <div className="h-[120px] overflow-y-auto bg-slate-50 rounded-xl p-3 flex flex-wrap gap-2 items-start content-start border border-slate-100 shadow-inner">
+                 <div className="flex-1 min-h-[120px] overflow-y-auto bg-slate-50 rounded-xl p-3 flex flex-wrap gap-2 items-start content-start border border-slate-100 shadow-inner">
                     {subVocabs.length > 0 ? subVocabs.map(v => (
                         <div key={v.id} className="flex items-center gap-1 bg-white border border-slate-200 text-slate-700 rounded-lg px-3 py-1.5 text-sm font-bold shadow-sm">
                            {v.word}
@@ -446,10 +447,10 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
   return (
     <div className="flex flex-col h-screen bg-[#f8f9fa] overflow-hidden font-sans">
       <div className="flex-1 overflow-hidden w-full relative">
-        {view === 'summary' && <div className="absolute inset-0 overflow-y-auto"><SummaryView /></div>}
-        {view === 'monthly' && <div className="absolute inset-0 overflow-y-auto"><MonthlyView /></div>}
-        {view === 'add' && <div className="absolute inset-0 overflow-hidden"><AddDataView /></div>}
-        {view === 'vocab' && <div className="absolute inset-0 overflow-hidden"><VocabView /></div>}
+        {view === 'summary' && <div className="absolute inset-0 overflow-y-auto">{renderSummaryView()}</div>}
+        {view === 'monthly' && <div className="absolute inset-0 overflow-y-auto">{renderMonthlyView()}</div>}
+        {view === 'add' && <div className="absolute inset-0 overflow-hidden">{renderAddDataView()}</div>}
+        {view === 'vocab' && <div className="absolute inset-0 overflow-hidden">{renderVocabView()}</div>}
       </div>
       {renderNav()}
     </div>
