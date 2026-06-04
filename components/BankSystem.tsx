@@ -91,7 +91,6 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
       setShowSaveConfirm(false);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2000);
-      setView('summary');
     } catch (e) {
       console.error("error saving transaction", e);
     }
