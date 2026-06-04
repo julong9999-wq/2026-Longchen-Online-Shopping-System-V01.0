@@ -1278,7 +1278,8 @@ const App: React.FC = () => {
   if (appMode === 'home') {
       return (
           <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6">
-              <h1 className="text-3xl font-bold text-slate-800 mb-10 tracking-tight text-center">龍辰系統首頁</h1>
+              <img src="/logo.png" alt="龍辰系統" className="w-24 h-24 mb-6 rounded-2xl object-cover shadow-sm bg-white" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+              <h1 className="text-3xl font-bold text-slate-800 mb-10 tracking-tight text-center">龍辰系統</h1>
               <div className="w-full max-w-sm space-y-6">
                   <button 
                       onClick={() => setAppMode('ecommerce')}
@@ -1293,11 +1294,22 @@ const App: React.FC = () => {
 
                   <button 
                       onClick={() => setAppMode('bank')}
-                      className="w-full bg-white text-slate-700 hover:bg-slate-100 font-bold py-5 px-6 rounded-2xl shadow border border-slate-200 transition-all active:scale-95 flex items-center justify-between"
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-5 px-6 rounded-2xl shadow border border-emerald-500 transition-all active:scale-95 flex items-center justify-between"
                   >
                       <div className="flex items-center gap-4">
-                          <Database size={28} className="text-emerald-600" />
+                          <Database size={28} className="text-white text-opacity-90" />
                           <span className="text-2xl mt-1 tracking-wider">銀行明細</span>
+                      </div>
+                      <ChevronRight size={28} className="opacity-70" />
+                  </button>
+
+                  <button 
+                      onClick={() => { alert('代購對帳功能開發中'); }}
+                      className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-5 px-6 rounded-2xl shadow border border-orange-500 transition-all active:scale-95 flex items-center justify-between"
+                  >
+                      <div className="flex items-center gap-4">
+                          <List size={28} className="text-white text-opacity-90" />
+                          <span className="text-2xl mt-1 tracking-wider">代購對帳</span>
                       </div>
                       <ChevronRight size={28} className="opacity-70" />
                   </button>
