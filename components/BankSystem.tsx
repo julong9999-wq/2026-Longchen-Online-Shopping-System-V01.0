@@ -161,6 +161,10 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
 
   const SubTable = ({ title, borderColor, valueColor, items = [] }: { title: string, borderColor: string, valueColor: string, items?: BankTransaction[] }) => {
     const [isOpen, setIsOpen] = useState(false);
+    const sortedItems = [...items].sort((a, b) => {
+       if (a.date === b.date) return (b.createdAt || 0) - (a.createdAt || 0);
+       return b.date.localeCompare(a.date);
+    });
     const total = items.reduce((sum, item) => sum + item.amount, 0); 
     
     return (
@@ -179,10 +183,10 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
         {isOpen && (
           <div className="border-t border-slate-100 bg-slate-50 p-2">
             <div className="flex flex-col gap-2">
-               {items.length === 0 ? (
+               {sortedItems.length === 0 ? (
                   <div className="text-center py-6 text-slate-400 italic font-medium text-sm">尚無資料</div>
                ) : (
-                  items.map(item => (
+                  sortedItems.map(item => (
                     <div key={item.id} className="bg-white border border-slate-200 rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow">
                        <div className="flex justify-between items-center mb-1">
                          <div className="flex items-center gap-2">
@@ -222,6 +226,7 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
        if (t.date < currentMonthStr + "-01") {
           if (t.type === '收入') lastMonthBalance += t.amount;
           else if (t.type === '支出') lastMonthBalance -= t.amount;
+          else if (t.type === '股票') lastMonthBalance += t.amount;
        }
     });
 
@@ -229,6 +234,7 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
     currentMonthTxs.forEach(t => {
        if (t.type === '收入') monthBalanceDiff += t.amount;
        else if (t.type === '支出') monthBalanceDiff -= t.amount;
+       else if (t.type === '股票') monthBalanceDiff += t.amount;
     });
     
     const currentTotalBalance = lastMonthBalance + monthBalanceDiff;
@@ -281,6 +287,7 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
        if (t.date < displayMonth + "-01") {
           if (t.type === '收入') lastMonthBalance += t.amount;
           else if (t.type === '支出') lastMonthBalance -= t.amount;
+          else if (t.type === '股票') lastMonthBalance += t.amount;
        }
     });
 
@@ -288,6 +295,7 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
     currentMonthTxs.forEach(t => {
        if (t.type === '收入') monthBalanceDiff += t.amount;
        else if (t.type === '支出') monthBalanceDiff -= t.amount;
+       else if (t.type === '股票') monthBalanceDiff += t.amount;
     });
     
     const currentTotalBalance = lastMonthBalance + monthBalanceDiff;
