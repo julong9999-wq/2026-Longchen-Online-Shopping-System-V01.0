@@ -154,7 +154,7 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
     const total = items.reduce((sum, item) => sum + item.amount, 0); 
     
     return (
-      <div className={`bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-2 border-l-4 ${borderColor}`}>
+      <div className={`bg-white rounded-xl shadow-sm border overflow-hidden mb-2 border-l-4 ${borderColor}`}>
         <div 
           className={`px-3 py-1.5 flex justify-between items-center cursor-pointer transition-colors ${headerClass}`}
           onClick={() => setIsOpen(!isOpen)}
@@ -431,7 +431,7 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
 
            <div>
               <label className="block text-[13px] font-bold text-slate-700 mb-1.5">日期</label>
-              <input type="date" className="w-full h-[42px] border border-slate-200 rounded-xl px-3 font-bold text-slate-800 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-[#408f61] focus:border-transparent outline-none transition-colors" value={addForm.date} onChange={e => setAddForm({...addForm, date: e.target.value})} />
+              <input type="date" className="w-[200px] max-w-full h-[42px] border border-slate-200 rounded-xl px-3 font-bold text-slate-800 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-[#408f61] focus:border-transparent outline-none transition-colors" value={addForm.date} onChange={e => setAddForm({...addForm, date: e.target.value})} />
            </div>
 
            <div>
@@ -571,8 +571,8 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
            
            {/* Add Main Vocab */}
            <div className="flex gap-2 shrink-0 items-center">
-             <input value={newWord} onChange={e=>setNewWord(e.target.value)} placeholder={`新增${vocabTab}項目...`} className={`flex-1 border-b-2 px-2 py-2 font-bold text-slate-800 bg-transparent outline-none text-base transition-colors ${vocabTab === '收入' ? 'focus:border-blue-500 border-slate-200' : vocabTab === '支出' ? 'focus:border-rose-500 border-slate-200' : vocabTab === '股票' ? 'focus:border-emerald-500 border-slate-200' : 'focus:border-yellow-500 border-slate-200'}`} />
-             <button type="button" onClick={handleAddMain} className={`px-4 py-2 font-bold flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap text-sm rounded-lg active:scale-95 text-white shadow-sm ${vocabTab === '收入' ? 'bg-blue-600 hover:bg-blue-700' : vocabTab === '支出' ? 'bg-rose-600 hover:bg-rose-700' : vocabTab === '股票' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-yellow-500 hover:bg-yellow-600'}`}>
+             <input value={newWord} onChange={e=>setNewWord(e.target.value)} placeholder={`新增${vocabTab}項目...`} className={`flex-1 min-w-0 border-b-2 px-2 py-2 font-bold text-slate-800 bg-transparent outline-none text-base transition-colors ${vocabTab === '收入' ? 'focus:border-blue-500 border-slate-200' : vocabTab === '支出' ? 'focus:border-rose-500 border-slate-200' : vocabTab === '股票' ? 'focus:border-emerald-500 border-slate-200' : 'focus:border-yellow-500 border-slate-200'}`} />
+             <button type="button" onClick={handleAddMain} className={`px-4 py-2 font-bold flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap shrink-0 text-sm rounded-lg active:scale-95 text-white shadow-sm ${vocabTab === '收入' ? 'bg-blue-600 hover:bg-blue-700' : vocabTab === '支出' ? 'bg-rose-600 hover:bg-rose-700' : vocabTab === '股票' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-yellow-500 hover:bg-yellow-600'}`}>
                 <Plus size={18} /> 新增
              </button>
            </div>
