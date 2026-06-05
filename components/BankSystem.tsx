@@ -15,6 +15,7 @@ interface Props {
 
 const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
   const [view, setView] = useState<BankView>('summary');
+  const [returnView, setReturnView] = useState<BankView | null>(null);
   const [vocabularies, setVocabularies] = useState<BankVocabulary[]>(INITIAL_BANK_VOCABULARY);
   const [transactions, setTransactions] = useState<BankTransaction[]>([]);
 
@@ -101,6 +102,10 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
       setShowSaveConfirm(false);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2000);
+      if (returnView) {
+         setView(returnView);
+         setReturnView(null);
+      }
     } catch (e) {
       console.error("error saving transaction", e);
     }
@@ -118,6 +123,7 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
 
   const handleEditTx = (tx: BankTransaction) => {
     setAddForm(tx);
+    setReturnView(view);
     setView('add');
   };
 
@@ -139,7 +145,10 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
       ].map(nav => (
         <button
           key={nav.id}
-          onClick={() => setView(nav.id as BankView)}
+          onClick={() => {
+             setView(nav.id as BankView);
+             if (nav.id === 'add') setReturnView(null);
+          }}
           className={`flex-1 flex flex-col items-center justify-center py-3 transition-opacity ${view === nav.id ? 'text-yellow-400 bg-[#1e482d]' : 'text-emerald-100 hover:text-white hover:bg-emerald-800/50'}`}
         >
           <nav.icon size={22} className="mb-1" />
@@ -320,10 +329,10 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
         </div>
 
         <div className="flex-1 overflow-y-auto pr-1">
-          <SubTable title="本月收入" borderColor="border-blue-500" valueColor="text-blue-600" items={incTxs} bgClass="bg-blue-50" headerClass="hover:bg-blue-50/50 bg-blue-100/30" onAddClick={() => { setAddForm({...defaultFormState, account: activeAccount, type: '收入'}); setView('add'); }} />
-          <SubTable title="本月支出" borderColor="border-rose-500" valueColor="text-rose-600" items={expTxs} bgClass="bg-rose-50" headerClass="hover:bg-rose-50/50 bg-rose-100/30" onAddClick={() => { setAddForm({...defaultFormState, account: activeAccount, type: '支出'}); setView('add'); }} />
-          <SubTable title="股票買賣" borderColor="border-emerald-500" valueColor="text-emerald-600" items={stockTxs} bgClass="bg-emerald-50" headerClass="hover:bg-emerald-50/50 bg-emerald-100/30" onAddClick={() => { setAddForm({...defaultFormState, account: activeAccount, type: '股票'}); setView('add'); }} />
-          <SubTable title="資金調度" borderColor="border-yellow-500" valueColor="text-yellow-600" items={transferTxs} bgClass="bg-yellow-50" headerClass="hover:bg-yellow-50/50 bg-yellow-100/30" onAddClick={() => { setAddForm({...defaultFormState, account: activeAccount, type: '調度'}); setView('add'); }} />
+          <SubTable title="本月收入" borderColor="border-blue-500" valueColor="text-blue-600" items={incTxs} bgClass="bg-blue-50" headerClass="hover:bg-blue-50/50 bg-blue-100/30" onAddClick={() => { setAddForm({...defaultFormState, account: activeAccount, type: '收入'}); setReturnView('summary'); setView('add'); }} />
+          <SubTable title="本月支出" borderColor="border-rose-500" valueColor="text-rose-600" items={expTxs} bgClass="bg-rose-50" headerClass="hover:bg-rose-50/50 bg-rose-100/30" onAddClick={() => { setAddForm({...defaultFormState, account: activeAccount, type: '支出'}); setReturnView('summary'); setView('add'); }} />
+          <SubTable title="股票買賣" borderColor="border-emerald-500" valueColor="text-emerald-600" items={stockTxs} bgClass="bg-emerald-50" headerClass="hover:bg-emerald-50/50 bg-emerald-100/30" onAddClick={() => { setAddForm({...defaultFormState, account: activeAccount, type: '股票'}); setReturnView('summary'); setView('add'); }} />
+          <SubTable title="資金調度" borderColor="border-yellow-500" valueColor="text-yellow-600" items={transferTxs} bgClass="bg-yellow-50" headerClass="hover:bg-yellow-50/50 bg-yellow-100/30" onAddClick={() => { setAddForm({...defaultFormState, account: activeAccount, type: '調度'}); setReturnView('summary'); setView('add'); }} />
           <ExpenseChart txs={transactions.filter(t => t.date >= '2026-04')} title="支出分析 (自 2026-04 起)" />
         </div>
       </div>
@@ -406,10 +415,10 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
         </div>
 
         <div className="flex-1 overflow-y-auto pr-1">
-          <SubTable title="本月收入" borderColor="border-blue-500" valueColor="text-blue-600" items={incTxs} bgClass="bg-blue-50" headerClass="hover:bg-blue-50/50 bg-blue-100/30" onAddClick={() => { setAddForm({...defaultFormState, account: activeAccount, type: '收入'}); setView('add'); }} />
-          <SubTable title="本月支出" borderColor="border-rose-500" valueColor="text-rose-600" items={expTxs} bgClass="bg-rose-50" headerClass="hover:bg-rose-50/50 bg-rose-100/30" onAddClick={() => { setAddForm({...defaultFormState, account: activeAccount, type: '支出'}); setView('add'); }} />
-          <SubTable title="股票買賣" borderColor="border-emerald-500" valueColor="text-emerald-600" items={stockTxs} bgClass="bg-emerald-50" headerClass="hover:bg-emerald-50/50 bg-emerald-100/30" onAddClick={() => { setAddForm({...defaultFormState, account: activeAccount, type: '股票'}); setView('add'); }} />
-          <SubTable title="資金調度" borderColor="border-yellow-500" valueColor="text-yellow-600" items={transferTxs} bgClass="bg-yellow-50" headerClass="hover:bg-yellow-50/50 bg-yellow-100/30" onAddClick={() => { setAddForm({...defaultFormState, account: activeAccount, type: '調度'}); setView('add'); }} />
+          <SubTable title="本月收入" borderColor="border-blue-500" valueColor="text-blue-600" items={incTxs} bgClass="bg-blue-50" headerClass="hover:bg-blue-50/50 bg-blue-100/30" onAddClick={() => { setAddForm({...defaultFormState, account: activeAccount, type: '收入'}); setReturnView('monthly'); setView('add'); }} />
+          <SubTable title="本月支出" borderColor="border-rose-500" valueColor="text-rose-600" items={expTxs} bgClass="bg-rose-50" headerClass="hover:bg-rose-50/50 bg-rose-100/30" onAddClick={() => { setAddForm({...defaultFormState, account: activeAccount, type: '支出'}); setReturnView('monthly'); setView('add'); }} />
+          <SubTable title="股票買賣" borderColor="border-emerald-500" valueColor="text-emerald-600" items={stockTxs} bgClass="bg-emerald-50" headerClass="hover:bg-emerald-50/50 bg-emerald-100/30" onAddClick={() => { setAddForm({...defaultFormState, account: activeAccount, type: '股票'}); setReturnView('monthly'); setView('add'); }} />
+          <SubTable title="資金調度" borderColor="border-yellow-500" valueColor="text-yellow-600" items={transferTxs} bgClass="bg-yellow-50" headerClass="hover:bg-yellow-50/50 bg-yellow-100/30" onAddClick={() => { setAddForm({...defaultFormState, account: activeAccount, type: '調度'}); setReturnView('monthly'); setView('add'); }} />
           <ExpenseChart txs={transactions.filter(t => t.date.startsWith(displayMonth))} title={`${displayMonth} 支出分析`} />
         </div>
       </div>
