@@ -5,6 +5,7 @@ import { db } from '../firebase';
 import { BankTransaction, BankVocabulary, BankAccount, BankTransactionType } from '../types';
 import { INITIAL_BANK_VOCABULARY } from '../constants';
 import { formatCurrency, generateUUID } from '../utils';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 type BankView = 'summary' | 'monthly' | 'add' | 'vocab';
 
@@ -209,6 +210,47 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
     );
   };
 
+  const ExpenseChart = ({ txs, title }: { txs: BankTransaction[], title: string }) => {
+    const categories = ["現金領用", "信用卡費", "轉帳匯出", "其他支出"];
+    const data = categories.map(cat => ({
+      name: cat,
+      禹君: 0,
+      禹辰: 0
+    }));
+
+    txs.filter(t => t.type === '支出').forEach(t => {
+       let catName = t.category;
+       if (!categories.includes(catName)) {
+          catName = "其他支出";
+       }
+       const dataRow = data.find(d => d.name === catName);
+       if (dataRow) {
+          if (t.account === '禹君') {
+             dataRow.禹君 += t.amount;
+          } else if (t.account === '禹辰') {
+             dataRow.禹辰 += t.amount;
+          }
+       }
+    });
+
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 mt-1">
+         <h3 className="text-[14px] font-bold text-slate-700 mb-3 ml-1">{title}</h3>
+         <ResponsiveContainer width="100%" height={240}>
+           <BarChart data={data} layout="vertical" margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+             <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+             <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(val) => Math.round(val/1000) + 'k'} />
+             <YAxis dataKey="name" type="category" width={65} tick={{ fontSize: 12, fill: '#475569', fontWeight: 'bold' }} />
+             <Tooltip cursor={{fill: '#f8fafc'}} formatter={(value: number) => [formatCurrency(value), '']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }} />
+             <Legend iconType="circle" wrapperStyle={{ fontSize: '13px', fontWeight: 'bold', paddingTop: '10px' }} />
+             <Bar dataKey="禹君" fill="#fed7aa" name="禹君" radius={[0, 4, 4, 0]} barSize={16} />
+             <Bar dataKey="禹辰" fill="#d8b4e2" name="禹辰" radius={[0, 4, 4, 0]} barSize={16} />
+           </BarChart>
+         </ResponsiveContainer>
+      </div>
+    );
+  };
+
   const renderSummaryView = () => {
     const accountTxs = transactions.filter(t => t.account === activeAccount);
     const currentMonthStr = new Date().toISOString().substring(0, 7);
@@ -272,6 +314,7 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
           <SubTable title="本月支出" borderColor="border-rose-500" valueColor="text-rose-600" items={expTxs} bgClass="bg-rose-50" headerClass="hover:bg-rose-50/50 bg-rose-100/30" onAddClick={() => { setAddForm({...defaultFormState, account: activeAccount, type: '支出'}); setView('add'); }} />
           <SubTable title="股票買賣" borderColor="border-emerald-500" valueColor="text-emerald-600" items={stockTxs} bgClass="bg-emerald-50" headerClass="hover:bg-emerald-50/50 bg-emerald-100/30" onAddClick={() => { setAddForm({...defaultFormState, account: activeAccount, type: '股票'}); setView('add'); }} />
           <SubTable title="資金調度" borderColor="border-yellow-500" valueColor="text-yellow-600" items={transferTxs} bgClass="bg-yellow-50" headerClass="hover:bg-yellow-50/50 bg-yellow-100/30" onAddClick={() => { setAddForm({...defaultFormState, account: activeAccount, type: '調度'}); setView('add'); }} />
+          <ExpenseChart txs={transactions.filter(t => t.date >= '2026-04')} title="支出分析 (自 2026-04 起)" />
         </div>
       </div>
     );
@@ -357,6 +400,7 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
           <SubTable title="本月支出" borderColor="border-rose-500" valueColor="text-rose-600" items={expTxs} bgClass="bg-rose-50" headerClass="hover:bg-rose-50/50 bg-rose-100/30" onAddClick={() => { setAddForm({...defaultFormState, account: activeAccount, type: '支出'}); setView('add'); }} />
           <SubTable title="股票買賣" borderColor="border-emerald-500" valueColor="text-emerald-600" items={stockTxs} bgClass="bg-emerald-50" headerClass="hover:bg-emerald-50/50 bg-emerald-100/30" onAddClick={() => { setAddForm({...defaultFormState, account: activeAccount, type: '股票'}); setView('add'); }} />
           <SubTable title="資金調度" borderColor="border-yellow-500" valueColor="text-yellow-600" items={transferTxs} bgClass="bg-yellow-50" headerClass="hover:bg-yellow-50/50 bg-yellow-100/30" onAddClick={() => { setAddForm({...defaultFormState, account: activeAccount, type: '調度'}); setView('add'); }} />
+          <ExpenseChart txs={transactions.filter(t => t.date.startsWith(displayMonth))} title={`${displayMonth} 支出分析`} />
         </div>
       </div>
     );
