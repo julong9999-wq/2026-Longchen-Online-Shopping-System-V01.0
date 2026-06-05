@@ -154,24 +154,24 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
     const total = items.reduce((sum, item) => sum + item.amount, 0); 
     
     return (
-      <div className={`bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-3 border-l-4 ${borderColor}`}>
+      <div className={`bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-2 border-l-4 ${borderColor}`}>
         <div 
-          className={`p-3 flex justify-between items-center cursor-pointer transition-colors ${headerClass}`}
+          className={`px-3 py-1.5 flex justify-between items-center cursor-pointer transition-colors ${headerClass}`}
           onClick={() => setIsOpen(!isOpen)}
         >
-          <div className="flex items-center gap-3">
-             {isOpen ? <ChevronDown className="text-slate-400" size={20} /> : <ChevronRight className="text-slate-400" size={20} />}
-             <span className="font-bold text-lg text-slate-700 flex items-center gap-2">{title} <span className="bg-white text-slate-500 text-xs px-2 py-0.5 rounded-md font-mono shadow-sm">({items.length})</span></span>
-          </div>
           <div className="flex items-center gap-2">
-            <span className={`font-mono font-bold text-xl ${valueColor}`}>{formatCurrency(total)}</span>
+             {isOpen ? <ChevronDown className="text-slate-400" size={18} /> : <ChevronRight className="text-slate-400" size={18} />}
+             <span className="font-bold text-base text-slate-700 flex items-center gap-2">{title} <span className="bg-white text-slate-500 text-[11px] px-1.5 py-0.5 rounded-md font-mono shadow-sm leading-none">({items.length})</span></span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className={`font-mono font-bold text-lg ${valueColor}`}>{formatCurrency(total)}</span>
             {onAddClick && (
               <button 
                 onClick={(e) => { e.stopPropagation(); onAddClick(); }} 
                 className={`p-1 rounded-md hover:bg-black/5 transition-colors text-slate-400 hover:${valueColor.replace('text-', 'text-')}`}
                 title={`新增${title}`}
               >
-                <Plus size={18} />
+                <Plus size={16} />
               </button>
             )}
           </div>
@@ -258,11 +258,11 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
         
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-white px-4 py-2.5 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-blue-500 hover:shadow-md transition-shadow flex justify-between items-center">
-             <div className="text-slate-400 font-bold text-sm leading-none pt-1">上月結餘</div>
+             <div className="text-slate-400 font-bold text-[13px] leading-tight pt-0.5 text-center">上月<br/>結餘</div>
              <div className="text-lg font-mono font-bold text-slate-800 leading-none">{formatCurrency(lastMonthBalance)}</div>
           </div>
           <div className="bg-white px-4 py-2.5 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-emerald-500 hover:shadow-md transition-shadow flex justify-between items-center">
-             <div className="text-slate-400 font-bold text-sm leading-none pt-1">本月結餘</div>
+             <div className="text-slate-400 font-bold text-[13px] leading-tight pt-0.5 text-center">本月<br/>結餘</div>
              <div className={`text-lg font-mono font-bold leading-none ${currentTotalBalance >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>{formatCurrency(currentTotalBalance)}</div>
           </div>
         </div>
@@ -343,11 +343,11 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
         
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-white px-4 py-2.5 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-blue-500 flex justify-between items-center">
-             <div className="text-slate-400 font-bold text-sm leading-none pt-1">上月結餘</div>
+             <div className="text-slate-400 font-bold text-[13px] leading-tight pt-0.5 text-center">上月<br/>結餘</div>
              <div className="text-lg font-mono font-bold text-slate-800 leading-none">{formatCurrency(lastMonthBalance)}</div>
           </div>
           <div className="bg-white px-4 py-2.5 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-emerald-500 flex justify-between items-center">
-             <div className="text-slate-400 font-bold text-sm leading-none pt-1">本月結餘</div>
+             <div className="text-slate-400 font-bold text-[13px] leading-tight pt-0.5 text-center">本月<br/>結餘</div>
              <div className={`text-lg font-mono font-bold leading-none ${currentTotalBalance >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>{formatCurrency(currentTotalBalance)}</div>
           </div>
         </div>
@@ -429,16 +429,9 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
               </div>
            </div>
 
-           <div className="grid grid-cols-2 gap-3">
-              <div>
-                 <label className="block text-[13px] font-bold text-slate-700 mb-1.5">日期</label>
-                 <input type="date" className="w-full h-[42px] border border-slate-200 rounded-xl px-3 font-bold text-slate-800 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-[#408f61] focus:border-transparent outline-none transition-colors" value={addForm.date} onChange={e => setAddForm({...addForm, date: e.target.value})} />
-              </div>
-
-              <div>
-                 <label className="block text-[13px] font-bold text-slate-700 mb-1.5">金額</label>
-                 <input type="text" placeholder="0" className="w-full h-[42px] border border-slate-200 rounded-xl px-3 font-mono font-bold text-lg text-slate-800 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-[#408f61] focus:border-transparent outline-none transition-colors" value={displayAmount} onChange={handleAmountChange} />
-              </div>
+           <div>
+              <label className="block text-[13px] font-bold text-slate-700 mb-1.5">日期</label>
+              <input type="date" className="w-full h-[42px] border border-slate-200 rounded-xl px-3 font-bold text-slate-800 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-[#408f61] focus:border-transparent outline-none transition-colors" value={addForm.date} onChange={e => setAddForm({...addForm, date: e.target.value})} />
            </div>
 
            <div>
@@ -449,6 +442,11 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
                   <option key={v.id} value={v.word}>{v.word}</option>
                 ))}
               </select>
+           </div>
+
+           <div>
+              <label className="block text-[13px] font-bold text-slate-700 mb-1.5">金額</label>
+              <input type="text" placeholder="0" className="w-full h-[42px] border border-slate-200 rounded-xl px-3 font-mono font-bold text-lg text-slate-800 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-[#408f61] focus:border-transparent outline-none transition-colors" value={displayAmount} onChange={handleAmountChange} />
            </div>
 
            <div className="relative">
