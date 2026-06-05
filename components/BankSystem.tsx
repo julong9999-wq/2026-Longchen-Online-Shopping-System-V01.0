@@ -497,10 +497,10 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
     stockTxs.forEach(t => {
        if (!stockSummary[t.account]) stockSummary[t.account] = { tradeAmount: 0, profitAmount: 0 };
        
+       stockSummary[t.account].tradeAmount += t.amount;
+       
        if (t.category.includes('獲利領取')) {
            stockSummary[t.account].profitAmount += t.amount;
-       } else {
-           stockSummary[t.account].tradeAmount += t.amount;
        }
     });
 
