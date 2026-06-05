@@ -75,13 +75,22 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
   const handleSaveTransaction = async () => {
     if (!addForm.category || !addForm.amount) return;
     
+    let finalAmount = Number(addForm.amount) || 0;
+    
+    // Auto convert missing minus sign for specific categories
+    if (finalAmount > 0) {
+       if (addForm.category.includes('買股') || addForm.category.includes('歸還') || addForm.category.includes('買入')) {
+          finalAmount = -finalAmount;
+       }
+    }
+    
     const newTx: BankTransaction = {
       id: addForm.id || generateUUID(),
       account: addForm.account as BankAccount,
       type: addForm.type as BankTransactionType,
       date: addForm.date || new Date().toISOString().split('T')[0],
       category: addForm.category,
-      amount: Number(addForm.amount) || 0,
+      amount: finalAmount,
       remarks: addForm.remarks || '',
       createdAt: addForm.createdAt || Date.now()
     };
@@ -478,13 +487,19 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
         setAddForm({...addForm, amount: 0});
         return;
       }
+      if (val === '-') {
+        setAddForm({...addForm, amount: -0});
+        return;
+      }
       const num = Number(val);
       if (!isNaN(num)) {
         setAddForm({...addForm, amount: num});
       }
     };
 
-    const displayAmount = addForm.amount ? addForm.amount.toLocaleString('en-US') : '';
+    const isMinusZero = addForm.amount === 0 && 1 / Number(addForm.amount) === -Infinity;
+    const displayAmount = isMinusZero ? '-' : (addForm.amount ? addForm.amount.toLocaleString('en-US') : '');
+
 
     return (
       <div className="px-3 pt-3 pb-3 max-w-lg mx-auto animate-in fade-in flex flex-col h-full overflow-y-auto">
