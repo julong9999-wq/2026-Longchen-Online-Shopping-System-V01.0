@@ -145,21 +145,7 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
     </div>
   );
 
-  const AccountTabs = () => (
-    <div className="flex gap-2">
-      {(['禹君', '禹辰'] as BankAccount[]).map(acc => (
-        <button
-          key={acc}
-          onClick={() => setActiveAccount(acc)}
-          className={`flex-1 py-3 rounded-lg font-bold border transition-colors ${activeAccount === acc ? 'bg-[#408f61] text-white border-[#408f61] shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
-        >
-          {acc}
-        </button>
-      ))}
-    </div>
-  );
-
-  const SubTable = ({ title, borderColor, valueColor, items = [] }: { title: string, borderColor: string, valueColor: string, items?: BankTransaction[] }) => {
+  const SubTable = ({ title, borderColor, valueColor, items = [], bgClass = 'bg-slate-50', headerClass = 'hover:bg-slate-50', onAddClick }: { title: string, borderColor: string, valueColor: string, items?: BankTransaction[], bgClass?: string, headerClass?: string, onAddClick?: () => void }) => {
     const [isOpen, setIsOpen] = useState(false);
     const sortedItems = [...items].sort((a, b) => {
        if (a.date === b.date) return (b.createdAt || 0) - (a.createdAt || 0);
@@ -168,20 +154,31 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
     const total = items.reduce((sum, item) => sum + item.amount, 0); 
     
     return (
-      <div className={`bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-4 border-l-4 ${borderColor}`}>
+      <div className={`bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-3 border-l-4 ${borderColor}`}>
         <div 
-          className="p-4 flex justify-between items-center cursor-pointer hover:bg-slate-50 transition-colors"
+          className={`p-3 flex justify-between items-center cursor-pointer transition-colors ${headerClass}`}
           onClick={() => setIsOpen(!isOpen)}
         >
           <div className="flex items-center gap-3">
              {isOpen ? <ChevronDown className="text-slate-400" size={20} /> : <ChevronRight className="text-slate-400" size={20} />}
-             <span className="font-bold text-lg text-slate-700 flex items-center gap-2">{title} <span className="bg-slate-100 text-slate-500 text-xs px-2 py-0.5 rounded-md font-mono">({items.length})</span></span>
+             <span className="font-bold text-lg text-slate-700 flex items-center gap-2">{title} <span className="bg-white text-slate-500 text-xs px-2 py-0.5 rounded-md font-mono shadow-sm">({items.length})</span></span>
           </div>
-          <span className={`font-mono font-bold text-xl ${valueColor}`}>{formatCurrency(total)}</span>
+          <div className="flex items-center gap-2">
+            <span className={`font-mono font-bold text-xl ${valueColor}`}>{formatCurrency(total)}</span>
+            {onAddClick && (
+              <button 
+                onClick={(e) => { e.stopPropagation(); onAddClick(); }} 
+                className={`p-1 rounded-md hover:bg-black/5 transition-colors text-slate-400 hover:${valueColor.replace('text-', 'text-')}`}
+                title={`新增${title}`}
+              >
+                <Plus size={18} />
+              </button>
+            )}
+          </div>
         </div>
         
         {isOpen && (
-          <div className="border-t border-slate-100 bg-slate-50 p-2">
+          <div className={`border-t border-black/5 p-2 ${bgClass}`}>
             <div className="flex flex-col gap-2">
                {sortedItems.length === 0 ? (
                   <div className="text-center py-6 text-slate-400 italic font-medium text-sm">尚無資料</div>
@@ -220,6 +217,7 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
     const incTxs = currentMonthTxs.filter(t => t.type === '收入');
     const expTxs = currentMonthTxs.filter(t => t.type === '支出');
     const stockTxs = currentMonthTxs.filter(t => t.type === '股票');
+    const transferTxs = currentMonthTxs.filter(t => t.type === '調度');
 
     let lastMonthBalance = 0;
     accountTxs.forEach(t => {
@@ -240,28 +238,41 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
     const currentTotalBalance = lastMonthBalance + monthBalanceDiff;
 
     return (
-      <div className="p-4 max-w-lg mx-auto animate-in fade-in space-y-4">
-        <div className="flex items-center gap-3 pt-2">
-           <h2 className="text-2xl font-bold text-slate-800">本月分析</h2>
+      <div className="p-3 max-w-lg mx-auto animate-in fade-in flex flex-col gap-3">
+        <div className="flex items-center gap-3 pt-1">
+           <h2 className="text-xl font-bold text-slate-800">本月分析</h2>
            <span className="bg-slate-200 text-slate-600 px-3 py-1 rounded-lg text-sm font-bold shadow-inner">{currentMonthStr}</span>
         </div>
 
-        <AccountTabs />
+        <div className="flex gap-2">
+          {(['禹君', '禹辰'] as BankAccount[]).map(acc => (
+            <button
+              key={acc}
+              onClick={() => setActiveAccount(acc)}
+              className={`flex-1 py-1.5 rounded-lg font-bold border transition-colors ${activeAccount === acc ? 'bg-[#408f61] text-white border-[#408f61] shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+            >
+              {acc}
+            </button>
+          ))}
+        </div>
         
-        <div className="grid grid-cols-2 gap-3 pb-2">
-          <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
-             <div className="text-slate-400 font-bold mb-1 text-sm">上月結餘</div>
-             <div className="text-xl font-mono font-bold text-slate-800">{formatCurrency(lastMonthBalance)}</div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-white px-4 py-2.5 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-blue-500 hover:shadow-md transition-shadow flex justify-between items-center">
+             <div className="text-slate-400 font-bold text-sm leading-none pt-1">上月結餘</div>
+             <div className="text-lg font-mono font-bold text-slate-800 leading-none">{formatCurrency(lastMonthBalance)}</div>
           </div>
-          <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-emerald-500 hover:shadow-md transition-shadow">
-             <div className="text-slate-400 font-bold mb-1 text-sm">本月結餘</div>
-             <div className={`text-xl font-mono font-bold ${currentTotalBalance >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>{formatCurrency(currentTotalBalance)}</div>
+          <div className="bg-white px-4 py-2.5 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-emerald-500 hover:shadow-md transition-shadow flex justify-between items-center">
+             <div className="text-slate-400 font-bold text-sm leading-none pt-1">本月結餘</div>
+             <div className={`text-lg font-mono font-bold leading-none ${currentTotalBalance >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>{formatCurrency(currentTotalBalance)}</div>
           </div>
         </div>
 
-        <SubTable title="本月收入" borderColor="border-blue-500" valueColor="text-blue-600" items={incTxs} />
-        <SubTable title="本月支出" borderColor="border-rose-500" valueColor="text-rose-600" items={expTxs} />
-        <SubTable title="股票買賣" borderColor="border-emerald-500" valueColor="text-emerald-600" items={stockTxs} />
+        <div className="flex-1 overflow-y-auto pr-1">
+          <SubTable title="本月收入" borderColor="border-blue-500" valueColor="text-blue-600" items={incTxs} bgClass="bg-blue-50" headerClass="hover:bg-blue-50/50 bg-blue-100/30" onAddClick={() => { setAddForm({...defaultFormState, account: activeAccount, type: '收入'}); setView('add'); }} />
+          <SubTable title="本月支出" borderColor="border-rose-500" valueColor="text-rose-600" items={expTxs} bgClass="bg-rose-50" headerClass="hover:bg-rose-50/50 bg-rose-100/30" onAddClick={() => { setAddForm({...defaultFormState, account: activeAccount, type: '支出'}); setView('add'); }} />
+          <SubTable title="股票買賣" borderColor="border-emerald-500" valueColor="text-emerald-600" items={stockTxs} bgClass="bg-emerald-50" headerClass="hover:bg-emerald-50/50 bg-emerald-100/30" onAddClick={() => { setAddForm({...defaultFormState, account: activeAccount, type: '股票'}); setView('add'); }} />
+          <SubTable title="資金調度" borderColor="border-yellow-500" valueColor="text-yellow-600" items={transferTxs} bgClass="bg-yellow-50" headerClass="hover:bg-yellow-50/50 bg-yellow-100/30" onAddClick={() => { setAddForm({...defaultFormState, account: activeAccount, type: '調度'}); setView('add'); }} />
+        </div>
       </div>
     );
   };
@@ -281,6 +292,7 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
     const incTxs = currentMonthTxs.filter(t => t.type === '收入');
     const expTxs = currentMonthTxs.filter(t => t.type === '支出');
     const stockTxs = currentMonthTxs.filter(t => t.type === '股票');
+    const transferTxs = currentMonthTxs.filter(t => t.type === '調度');
 
     let lastMonthBalance = 0;
     accountTxs.forEach(t => {
@@ -301,15 +313,15 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
     const currentTotalBalance = lastMonthBalance + monthBalanceDiff;
 
     return (
-      <div className="p-4 max-w-lg mx-auto animate-in fade-in space-y-4">
-        <div className="flex items-center justify-between pt-2">
-           <h2 className="text-2xl font-bold text-slate-800">月份明細</h2>
+      <div className="p-3 max-w-lg mx-auto animate-in fade-in flex flex-col gap-3">
+        <div className="flex items-center justify-between pt-1">
+           <h2 className="text-xl font-bold text-slate-800">月份明細</h2>
            <div className="flex items-center gap-2">
               <span className="text-slate-500 text-sm font-bold">選擇月份</span>
               <select 
                 value={displayMonth} 
                 onChange={e => setSelectedMonth(e.target.value)} 
-                className="bg-white border border-slate-300 text-slate-800 px-3 py-1.5 rounded-lg text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-[#408f61]"
+                className="bg-white border border-slate-300 text-slate-800 px-3 py-1 rounded-lg text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-[#408f61]"
               >
                  {availableMonths.length === 0 && <option value={currentMonthStr}>{currentMonthStr}</option>}
                  {availableMonths.map(m => <option key={m} value={m}>{m}</option>)}
@@ -317,22 +329,35 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
            </div>
         </div>
 
-        <AccountTabs />
+        <div className="flex gap-2">
+          {(['禹君', '禹辰'] as BankAccount[]).map(acc => (
+            <button
+              key={acc}
+              onClick={() => setActiveAccount(acc)}
+              className={`flex-1 py-1.5 rounded-lg font-bold border transition-colors ${activeAccount === acc ? 'bg-[#408f61] text-white border-[#408f61] shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+            >
+              {acc}
+            </button>
+          ))}
+        </div>
         
-        <div className="grid grid-cols-2 gap-3 pb-2">
-          <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-blue-500">
-             <div className="text-slate-400 font-bold mb-1 text-sm">上月結餘</div>
-             <div className="text-xl font-mono font-bold text-slate-800">{formatCurrency(lastMonthBalance)}</div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-white px-4 py-2.5 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-blue-500 flex justify-between items-center">
+             <div className="text-slate-400 font-bold text-sm leading-none pt-1">上月結餘</div>
+             <div className="text-lg font-mono font-bold text-slate-800 leading-none">{formatCurrency(lastMonthBalance)}</div>
           </div>
-          <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-emerald-500">
-             <div className="text-slate-400 font-bold mb-1 text-sm">本月結餘</div>
-             <div className={`text-xl font-mono font-bold ${currentTotalBalance >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>{formatCurrency(currentTotalBalance)}</div>
+          <div className="bg-white px-4 py-2.5 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-emerald-500 flex justify-between items-center">
+             <div className="text-slate-400 font-bold text-sm leading-none pt-1">本月結餘</div>
+             <div className={`text-lg font-mono font-bold leading-none ${currentTotalBalance >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>{formatCurrency(currentTotalBalance)}</div>
           </div>
         </div>
 
-        <SubTable title="本月收入" borderColor="border-blue-500" valueColor="text-blue-600" items={incTxs} />
-        <SubTable title="本月支出" borderColor="border-rose-500" valueColor="text-rose-600" items={expTxs} />
-        <SubTable title="股票買賣" borderColor="border-emerald-500" valueColor="text-emerald-600" items={stockTxs} />
+        <div className="flex-1 overflow-y-auto pr-1">
+          <SubTable title="本月收入" borderColor="border-blue-500" valueColor="text-blue-600" items={incTxs} bgClass="bg-blue-50" headerClass="hover:bg-blue-50/50 bg-blue-100/30" onAddClick={() => { setAddForm({...defaultFormState, account: activeAccount, type: '收入'}); setView('add'); }} />
+          <SubTable title="本月支出" borderColor="border-rose-500" valueColor="text-rose-600" items={expTxs} bgClass="bg-rose-50" headerClass="hover:bg-rose-50/50 bg-rose-100/30" onAddClick={() => { setAddForm({...defaultFormState, account: activeAccount, type: '支出'}); setView('add'); }} />
+          <SubTable title="股票買賣" borderColor="border-emerald-500" valueColor="text-emerald-600" items={stockTxs} bgClass="bg-emerald-50" headerClass="hover:bg-emerald-50/50 bg-emerald-100/30" onAddClick={() => { setAddForm({...defaultFormState, account: activeAccount, type: '股票'}); setView('add'); }} />
+          <SubTable title="資金調度" borderColor="border-yellow-500" valueColor="text-yellow-600" items={transferTxs} bgClass="bg-yellow-50" headerClass="hover:bg-yellow-50/50 bg-yellow-100/30" onAddClick={() => { setAddForm({...defaultFormState, account: activeAccount, type: '調度'}); setView('add'); }} />
+        </div>
       </div>
     );
   };
@@ -352,8 +377,23 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
       if (t === '收入') return 'bg-blue-600 text-white border-blue-600 shadow-sm';
       if (t === '支出') return 'bg-rose-600 text-white border-rose-600 shadow-sm';
       if (t === '股票') return 'bg-emerald-600 text-white border-emerald-600 shadow-sm';
+      if (t === '調度') return 'bg-yellow-500 text-white border-yellow-500 shadow-sm';
       return 'bg-slate-100 text-slate-700 border-slate-200 shadow-sm';
     };
+
+    const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const val = e.target.value.replace(/,/g, '');
+      if (val === '') {
+        setAddForm({...addForm, amount: 0});
+        return;
+      }
+      const num = Number(val);
+      if (!isNaN(num)) {
+        setAddForm({...addForm, amount: num});
+      }
+    };
+
+    const displayAmount = addForm.amount ? addForm.amount.toLocaleString('en-US') : '';
 
     return (
       <div className="px-3 pt-3 pb-3 max-w-lg mx-auto animate-in fade-in flex flex-col h-full overflow-y-auto">
@@ -377,7 +417,7 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
            <div>
               <label className="block text-[13px] font-bold text-slate-700 mb-1.5">收支類型</label>
               <div className="flex gap-2">
-                {(['收入', '支出', '股票'] as BankTransactionType[]).map(t => (
+                {(['收入', '支出', '股票', '調度'] as BankTransactionType[]).map(t => (
                   <button
                     key={t}
                     onClick={() => setAddForm({...addForm, type: t, category: ''})}
@@ -389,9 +429,16 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
               </div>
            </div>
 
-           <div>
-              <label className="block text-[13px] font-bold text-slate-700 mb-1.5">日期</label>
-              <input type="date" className="w-full h-[42px] border border-slate-200 rounded-xl px-3 font-bold text-slate-800 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-[#408f61] focus:border-transparent outline-none transition-colors" value={addForm.date} onChange={e => setAddForm({...addForm, date: e.target.value})} />
+           <div className="grid grid-cols-2 gap-3">
+              <div>
+                 <label className="block text-[13px] font-bold text-slate-700 mb-1.5">日期</label>
+                 <input type="date" className="w-full h-[42px] border border-slate-200 rounded-xl px-3 font-bold text-slate-800 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-[#408f61] focus:border-transparent outline-none transition-colors" value={addForm.date} onChange={e => setAddForm({...addForm, date: e.target.value})} />
+              </div>
+
+              <div>
+                 <label className="block text-[13px] font-bold text-slate-700 mb-1.5">金額</label>
+                 <input type="text" placeholder="0" className="w-full h-[42px] border border-slate-200 rounded-xl px-3 font-mono font-bold text-lg text-slate-800 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-[#408f61] focus:border-transparent outline-none transition-colors" value={displayAmount} onChange={handleAmountChange} />
+              </div>
            </div>
 
            <div>
@@ -402,11 +449,6 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
                   <option key={v.id} value={v.word}>{v.word}</option>
                 ))}
               </select>
-           </div>
-
-           <div>
-              <label className="block text-[13px] font-bold text-slate-700 mb-1.5">金額</label>
-              <input type="number" placeholder="0" className="w-full h-[42px] border border-slate-200 rounded-xl px-3 font-mono font-bold text-lg text-slate-800 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-[#408f61] focus:border-transparent outline-none transition-colors" value={addForm.amount || ''} onChange={e => setAddForm({...addForm, amount: Number(e.target.value)})} />
            </div>
 
            <div className="relative">
@@ -523,15 +565,16 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
            
            {/* Top Tabs */}
            <div className="flex gap-2 shrink-0 p-1">
-              <button type="button" onClick={() => {setVocabTab('收入'); setSelectedParentId(null);}} className={`flex-1 py-1.5 rounded-xl font-bold text-[15px] transition-all border ${vocabTab === '收入' ? 'bg-blue-600 text-white border-blue-600 shadow-md scale-[1.02]' : 'bg-white text-blue-500 border-slate-200 hover:bg-blue-50 hover:border-blue-300'}`}>收入</button>
-              <button type="button" onClick={() => {setVocabTab('支出'); setSelectedParentId(null);}} className={`flex-1 py-1.5 rounded-xl font-bold text-[15px] transition-all border ${vocabTab === '支出' ? 'bg-rose-600 text-white border-rose-600 shadow-md scale-[1.02]' : 'bg-white text-rose-500 border-slate-200 hover:bg-rose-50 hover:border-rose-300'}`}>支出</button>
-              <button type="button" onClick={() => {setVocabTab('股票'); setSelectedParentId(null);}} className={`flex-1 py-1.5 rounded-xl font-bold text-[15px] transition-all border ${vocabTab === '股票' ? 'bg-emerald-600 text-white border-emerald-600 shadow-md scale-[1.02]' : 'bg-white text-emerald-500 border-slate-200 hover:bg-emerald-50 hover:border-emerald-300'}`}>股票</button>
+              <button type="button" onClick={() => {setVocabTab('收入'); setSelectedParentId(null);}} className={`flex-1 py-1.5 rounded-xl font-bold text-[14px] transition-all border ${vocabTab === '收入' ? 'bg-blue-600 text-white border-blue-600 shadow-md scale-[1.02]' : 'bg-white text-blue-500 border-slate-200 hover:bg-blue-50 hover:border-blue-300'}`}>收入</button>
+              <button type="button" onClick={() => {setVocabTab('支出'); setSelectedParentId(null);}} className={`flex-1 py-1.5 rounded-xl font-bold text-[14px] transition-all border ${vocabTab === '支出' ? 'bg-rose-600 text-white border-rose-600 shadow-md scale-[1.02]' : 'bg-white text-rose-500 border-slate-200 hover:bg-rose-50 hover:border-rose-300'}`}>支出</button>
+              <button type="button" onClick={() => {setVocabTab('股票'); setSelectedParentId(null);}} className={`flex-1 py-1.5 rounded-xl font-bold text-[14px] transition-all border ${vocabTab === '股票' ? 'bg-emerald-600 text-white border-emerald-600 shadow-md scale-[1.02]' : 'bg-white text-emerald-500 border-slate-200 hover:bg-emerald-50 hover:border-emerald-300'}`}>股票</button>
+              <button type="button" onClick={() => {setVocabTab('調度'); setSelectedParentId(null);}} className={`flex-1 py-1.5 rounded-xl font-bold text-[14px] transition-all border ${vocabTab === '調度' ? 'bg-yellow-500 text-white border-yellow-500 shadow-md scale-[1.02]' : 'bg-white text-yellow-500 border-slate-200 hover:bg-yellow-50 hover:border-yellow-300'}`}>調度</button>
            </div>
            
            {/* Add Main Vocab */}
            <div className="flex gap-2 shrink-0 items-center">
-             <input value={newWord} onChange={e=>setNewWord(e.target.value)} placeholder={`新增${vocabTab}項目...`} className={`flex-1 border-b-2 px-2 py-2 font-bold text-slate-800 bg-transparent outline-none text-base transition-colors ${vocabTab === '收入' ? 'focus:border-blue-500 border-slate-200' : vocabTab === '支出' ? 'focus:border-rose-500 border-slate-200' : 'focus:border-emerald-500 border-slate-200'}`} />
-             <button type="button" onClick={handleAddMain} className={`px-4 py-2 font-bold flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap text-sm rounded-lg active:scale-95 text-white shadow-sm ${vocabTab === '收入' ? 'bg-blue-600 hover:bg-blue-700' : vocabTab === '支出' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}>
+             <input value={newWord} onChange={e=>setNewWord(e.target.value)} placeholder={`新增${vocabTab}項目...`} className={`flex-1 border-b-2 px-2 py-2 font-bold text-slate-800 bg-transparent outline-none text-base transition-colors ${vocabTab === '收入' ? 'focus:border-blue-500 border-slate-200' : vocabTab === '支出' ? 'focus:border-rose-500 border-slate-200' : vocabTab === '股票' ? 'focus:border-emerald-500 border-slate-200' : 'focus:border-yellow-500 border-slate-200'}`} />
+             <button type="button" onClick={handleAddMain} className={`px-4 py-2 font-bold flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap text-sm rounded-lg active:scale-95 text-white shadow-sm ${vocabTab === '收入' ? 'bg-blue-600 hover:bg-blue-700' : vocabTab === '支出' ? 'bg-rose-600 hover:bg-rose-700' : vocabTab === '股票' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-yellow-500 hover:bg-yellow-600'}`}>
                 <Plus size={18} /> 新增
              </button>
            </div>
@@ -541,7 +584,7 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
               <div className="flex flex-wrap gap-2 items-start">
                  {mainVocabs.map(v => (
                     <div key={v.id} onClick={() => setSelectedParentId(v.id)} className={`flex items-center gap-1 px-3 py-1.5 rounded-full cursor-pointer font-bold text-sm transition-all border shadow-sm ${selectedParentId === v.id ? 
-                       (vocabTab === '收入' ? 'bg-blue-600 text-white border-blue-600' : vocabTab === '支出' ? 'bg-rose-600 text-white border-rose-600' : 'bg-emerald-600 text-white border-emerald-600') 
+                       (vocabTab === '收入' ? 'bg-blue-600 text-white border-blue-600' : vocabTab === '支出' ? 'bg-rose-600 text-white border-rose-600' : vocabTab === '股票' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-yellow-500 text-white border-yellow-500') 
                        : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50'}`}>
                        {v.word}
                        <button type="button" onClick={(e) => { e.stopPropagation(); e.preventDefault(); setDeleteConfirm({id: v.id, type: 'main', word: v.word}); }} className={`p-0.5 rounded-full transition-colors ml-1 ${selectedParentId === v.id ? 
@@ -560,13 +603,13 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
               <div className={`border-t border-slate-100 pt-4 flex-1 min-h-[220px] flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-2`}>
                  <div className="flex items-center justify-between gap-2 shrink-0">
                     <span className="font-bold text-slate-800 text-[15px] ml-1">{selectedParent.word} - 專屬備註</span>
-                    <button type="button" onClick={handleAddSub} className={`px-4 py-1.5 rounded-lg font-bold text-sm flex items-center justify-center transition-all active:scale-95 whitespace-nowrap shadow-sm ${vocabTab === '收入' ? 'bg-blue-600 text-white hover:bg-blue-700' : vocabTab === '支出' ? 'bg-rose-600 text-white hover:bg-rose-700' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}>
+                    <button type="button" onClick={handleAddSub} className={`px-4 py-1.5 rounded-lg font-bold text-sm flex items-center justify-center transition-all active:scale-95 whitespace-nowrap shadow-sm ${vocabTab === '收入' ? 'bg-blue-600 text-white hover:bg-blue-700' : vocabTab === '支出' ? 'bg-rose-600 text-white hover:bg-rose-700' : vocabTab === '股票' ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-yellow-500 text-white hover:bg-yellow-600'}`}>
                         新增備註
                     </button>
                  </div>
                  
                  <div className="shrink-0">
-                   <input value={newSubWord} onChange={e=>setNewSubWord(e.target.value)} placeholder="追加備註...輸入區" className={`w-full border rounded-lg px-3 py-2 text-sm font-bold text-slate-800 bg-slate-50 focus:bg-white focus:ring-2 focus:border-transparent outline-none placeholder:text-slate-400 transition-colors shadow-sm ${vocabTab === '收入' ? 'focus:ring-blue-500 border-slate-200' : vocabTab === '支出' ? 'focus:ring-rose-500 border-slate-200' : 'focus:ring-emerald-500 border-slate-200'}`} />
+                   <input value={newSubWord} onChange={e=>setNewSubWord(e.target.value)} placeholder="追加備註...輸入區" className={`w-full border rounded-lg px-3 py-2 text-sm font-bold text-slate-800 bg-slate-50 focus:bg-white focus:ring-2 focus:border-transparent outline-none placeholder:text-slate-400 transition-colors shadow-sm ${vocabTab === '收入' ? 'focus:ring-blue-500 border-slate-200' : vocabTab === '支出' ? 'focus:ring-rose-500 border-slate-200' : vocabTab === '股票' ? 'focus:ring-emerald-500 border-slate-200' : 'focus:ring-yellow-500 border-slate-200'}`} />
                  </div>
 
                  <div className="flex-1 min-h-[120px] overflow-y-auto bg-slate-50 rounded-xl p-3 flex flex-wrap gap-2 items-start content-start border border-slate-100 shadow-inner">

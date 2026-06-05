@@ -41,7 +41,7 @@ export interface OrderItem {
 export type ViewState = 'products' | 'orders' | 'details' | 'analysis' | 'deposits' | 'income';
 
 export type BankAccount = '禹君' | '禹辰';
-export type BankTransactionType = '收入' | '支出' | '股票';
+export type BankTransactionType = '收入' | '支出' | '股票' | '調度';
 
 export interface BankTransaction {
   id: string;
