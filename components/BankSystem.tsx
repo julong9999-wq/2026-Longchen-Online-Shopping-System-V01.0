@@ -80,7 +80,7 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
     
     // Auto convert missing minus sign for specific categories
     if (finalAmount > 0) {
-       if (addForm.category.includes('買股') || addForm.category.includes('歸還') || addForm.category.includes('買入')) {
+       if (addForm.category.includes('買股') || addForm.category.includes('歸還') || addForm.category.includes('買入') || addForm.category.includes('獲利領取')) {
           finalAmount = -finalAmount;
        }
     }
@@ -493,12 +493,18 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
     unsettledTransfers.sort((a, b) => b.date.localeCompare(a.date));
 
     const stockTxs = transactions.filter(t => t.type === '股票');
-    const stockSummary: Record<string, number> = {};
+    const stockSummary: Record<string, { tradeAmount: number, profitAmount: number }> = {};
     stockTxs.forEach(t => {
-       if (!stockSummary[t.account]) stockSummary[t.account] = 0;
-       stockSummary[t.account] += t.amount;
+       if (!stockSummary[t.account]) stockSummary[t.account] = { tradeAmount: 0, profitAmount: 0 };
+       
+       if (t.category.includes('獲利領取')) {
+           stockSummary[t.account].profitAmount += t.amount;
+       } else {
+           stockSummary[t.account].tradeAmount += t.amount;
+       }
     });
-    const stockSummaryArray = Object.entries(stockSummary).map(([account, totalAmount]) => ({ account, totalAmount })).sort((a,b) => b.totalAmount - a.totalAmount);
+
+    const stockSummaryArray = Object.entries(stockSummary).map(([account, data]) => ({ account, tradeAmount: data.tradeAmount, profitAmount: data.profitAmount })).sort((a,b) => b.tradeAmount - a.tradeAmount);
 
     // To allow negative bars to render from 0, recharts handles it automatically with CartesianGrid, but we can add ReferenceLine
     return (
@@ -568,20 +574,24 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
               <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold">
                 <tr>
                   <th className="px-4 py-3">帳戶</th>
-                  <th className="px-4 py-3 text-right">金額合計</th>
+                  <th className="px-4 py-3 text-right">買賣金額合計</th>
+                  <th className="px-4 py-3 text-right">獲利領取合計</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {stockSummaryArray.length === 0 ? (
                   <tr>
-                    <td colSpan={2} className="px-4 py-8 text-center text-slate-400 font-bold">尚無股票買賣紀錄</td>
+                    <td colSpan={3} className="px-4 py-8 text-center text-slate-400 font-bold">尚無股票買賣紀錄</td>
                   </tr>
                 ) : (
                   stockSummaryArray.map(row => (
                     <tr key={row.account} className="hover:bg-slate-50 transition-colors">
                       <td className="px-4 py-3 font-bold text-slate-700">{row.account}</td>
-                      <td className={`px-4 py-3 text-right font-mono font-bold ${row.totalAmount > 0 ? 'text-emerald-600' : (row.totalAmount < 0 ? 'text-rose-600' : 'text-slate-700')}`}>
-                        {formatCurrency(row.totalAmount)}
+                      <td className={`px-4 py-3 text-right font-mono font-bold ${row.tradeAmount > 0 ? 'text-emerald-600' : (row.tradeAmount < 0 ? 'text-rose-600' : 'text-slate-700')}`}>
+                        {formatCurrency(row.tradeAmount)}
+                      </td>
+                      <td className={`px-4 py-3 text-right font-mono font-bold text-emerald-600`}>
+                        {formatCurrency(Math.abs(row.profitAmount))}
                       </td>
                     </tr>
                   ))
