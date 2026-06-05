@@ -451,13 +451,54 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
        return row;
     });
 
+    const transferTxs = transactions.filter(t => t.type === '調度').sort((a, b) => a.date.localeCompare(b.date));
+    const groupedTxs: Record<string, BankTransaction[]> = {};
+    transferTxs.forEach(t => {
+       const key = `${t.account}-${t.category}`;
+       if (!groupedTxs[key]) groupedTxs[key] = [];
+       groupedTxs[key].push(t);
+    });
+
+    const unsettledTransfers: BankTransaction[] = [];
+    Object.values(groupedTxs).forEach(txs => {
+       let posTxs: BankTransaction[] = [];
+       let negTxs: BankTransaction[] = [];
+       for (const tx of txs) {
+           if (tx.amount > 0) posTxs.push({...tx});
+           else if (tx.amount < 0) negTxs.push({...tx});
+       }
+       for (let i = 0; i < negTxs.length; i++) {
+           let negAmt = -negTxs[i].amount;
+           for (let j = 0; j < posTxs.length; j++) {
+               if (posTxs[j].amount > 0 && negAmt > 0) {
+                   if (posTxs[j].amount >= negAmt) {
+                       posTxs[j].amount -= negAmt;
+                       negAmt = 0;
+                   } else {
+                       negAmt -= posTxs[j].amount;
+                       posTxs[j].amount = 0;
+                   }
+               }
+           }
+           if (negAmt > 0) {
+               negTxs[i].amount = -negAmt;
+           } else {
+               negTxs[i].amount = 0;
+           }
+       }
+       posTxs.forEach(t => { if (t.amount > 0) unsettledTransfers.push(t); });
+       negTxs.forEach(t => { if (t.amount < 0) unsettledTransfers.push(t); });
+    });
+    
+    unsettledTransfers.sort((a, b) => b.date.localeCompare(a.date));
+
     // To allow negative bars to render from 0, recharts handles it automatically with CartesianGrid, but we can add ReferenceLine
     return (
-      <div className="p-3 max-w-lg mx-auto animate-in fade-in flex flex-col gap-3 h-full pb-20">
+      <div className="p-3 max-w-lg mx-auto animate-in fade-in flex flex-col gap-3 pb-20">
          <div className="flex items-center gap-3 pt-1">
            <h2 className="text-xl font-bold text-slate-800">收入 減 支出 之 餘額分析</h2>
          </div>
-         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 mt-1 flex-1 min-h-[450px]">
+         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 mt-1 shrink-0 h-[450px]">
            <ResponsiveContainer width="100%" height="100%">
              <BarChart data={data} layout="vertical" margin={{ top: 5, right: 20, left: 5, bottom: 5 }} barGap={2} barCategoryGap="25%">
                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={true} />
@@ -471,6 +512,44 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
              </BarChart>
            </ResponsiveContainer>
          </div>
+
+         <div className="flex items-center gap-3 pt-4">
+           <h2 className="text-xl font-bold text-slate-800">「資金調度」分析總表</h2>
+         </div>
+         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden shrink-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-[14px] whitespace-nowrap">
+              <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold">
+                <tr>
+                  <th className="px-4 py-3">帳戶</th>
+                  <th className="px-4 py-3">日期</th>
+                  <th className="px-4 py-3">項目</th>
+                  <th className="px-4 py-3 text-right">金額</th>
+                  <th className="px-4 py-3">備註</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {unsettledTransfers.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-8 text-center text-slate-400 font-bold">目前無未抵銷項目</td>
+                  </tr>
+                ) : (
+                  unsettledTransfers.map(row => (
+                    <tr key={row.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-4 py-3 font-bold text-slate-700">{row.account}</td>
+                      <td className="px-4 py-3 text-slate-500">{row.date}</td>
+                      <td className="px-4 py-3 font-bold text-slate-700">{row.category}</td>
+                      <td className={`px-4 py-3 text-right font-mono font-bold ${row.amount > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        {formatCurrency(row.amount)}
+                      </td>
+                      <td className="px-4 py-3 text-slate-500 truncate max-w-[120px]" title={row.remarks}>{row.remarks}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     );
   };
