@@ -454,7 +454,7 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
     const transferTxs = transactions.filter(t => t.type === '調度').sort((a, b) => a.date.localeCompare(b.date));
     const groupedTxs: Record<string, BankTransaction[]> = {};
     transferTxs.forEach(t => {
-       const key = `${t.account}-${t.category}`;
+       const key = `${t.account}`;
        if (!groupedTxs[key]) groupedTxs[key] = [];
        groupedTxs[key].push(t);
     });
@@ -491,6 +491,14 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
     });
     
     unsettledTransfers.sort((a, b) => b.date.localeCompare(a.date));
+
+    const stockTxs = transactions.filter(t => t.type === '股票');
+    const stockSummary: Record<string, number> = {};
+    stockTxs.forEach(t => {
+       if (!stockSummary[t.account]) stockSummary[t.account] = 0;
+       stockSummary[t.account] += t.amount;
+    });
+    const stockSummaryArray = Object.entries(stockSummary).map(([account, totalAmount]) => ({ account, totalAmount })).sort((a,b) => b.totalAmount - a.totalAmount);
 
     // To allow negative bars to render from 0, recharts handles it automatically with CartesianGrid, but we can add ReferenceLine
     return (
@@ -543,6 +551,38 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
                         {formatCurrency(row.amount)}
                       </td>
                       <td className="px-4 py-3 text-slate-500 truncate max-w-[120px]" title={row.remarks}>{row.remarks}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+         <div className="flex items-center gap-3 pt-4">
+           <h2 className="text-xl font-bold text-slate-800">「股票買賣」分析總表</h2>
+         </div>
+         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden shrink-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-[14px] whitespace-nowrap">
+              <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold">
+                <tr>
+                  <th className="px-4 py-3">帳戶</th>
+                  <th className="px-4 py-3 text-right">金額合計</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {stockSummaryArray.length === 0 ? (
+                  <tr>
+                    <td colSpan={2} className="px-4 py-8 text-center text-slate-400 font-bold">尚無股票買賣紀錄</td>
+                  </tr>
+                ) : (
+                  stockSummaryArray.map(row => (
+                    <tr key={row.account} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-4 py-3 font-bold text-slate-700">{row.account}</td>
+                      <td className={`px-4 py-3 text-right font-mono font-bold ${row.totalAmount > 0 ? 'text-emerald-600' : (row.totalAmount < 0 ? 'text-rose-600' : 'text-slate-700')}`}>
+                        {formatCurrency(row.totalAmount)}
+                      </td>
                     </tr>
                   ))
                 )}
