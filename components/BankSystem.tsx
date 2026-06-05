@@ -324,8 +324,8 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
   const renderMonthlyView = () => {
     const accountTxs = transactions.filter(t => t.account === activeAccount);
     
-    // Find all unique months available in data
-    const availableMonths = Array.from(new Set(accountTxs.map(t => t.date.substring(0, 7)))).sort((a, b) => b.localeCompare(a));
+    // Find all unique months available in data across all accounts
+    const availableMonths = Array.from(new Set(transactions.map(t => t.date.substring(0, 7)))).sort((a, b) => b.localeCompare(a));
     const currentMonthStr = new Date().toISOString().substring(0, 7);
     
     // If selectedMonth is not in availableMonths (e.g. initial load), use the newest available or current
