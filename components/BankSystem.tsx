@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Home, List, CalendarDays, Plus, BookType, ChevronDown, ChevronRight, X, Save, Pencil, Trash2, AlertCircle } from 'lucide-react';
+import { Home, List, CalendarDays, Plus, BookType, ChevronDown, ChevronRight, X, Save, Pencil, Trash2, AlertCircle, BarChart as BarChartIcon } from 'lucide-react';
 import { collection, onSnapshot, setDoc, deleteDoc, doc, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase';
 import { BankTransaction, BankVocabulary, BankAccount, BankTransactionType } from '../types';
 import { INITIAL_BANK_VOCABULARY } from '../constants';
 import { formatCurrency, generateUUID } from '../utils';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
 
-type BankView = 'summary' | 'monthly' | 'add' | 'vocab';
+type BankView = 'summary' | 'monthly' | 'analysis' | 'add' | 'vocab';
 
 interface Props {
   onNavigateHome: () => void;
@@ -124,6 +124,7 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
       {[
         { id: 'summary', label: '總表', icon: List },
         { id: 'monthly', label: '月份', icon: CalendarDays },
+        { id: 'analysis', label: '分析', icon: BarChartIcon },
         { id: 'add', label: '新增', icon: Plus },
         { id: 'vocab', label: '詞庫', icon: BookType },
       ].map(nav => (
@@ -402,6 +403,52 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
           <SubTable title="資金調度" borderColor="border-yellow-500" valueColor="text-yellow-600" items={transferTxs} bgClass="bg-yellow-50" headerClass="hover:bg-yellow-50/50 bg-yellow-100/30" onAddClick={() => { setAddForm({...defaultFormState, account: activeAccount, type: '調度'}); setView('add'); }} />
           <ExpenseChart txs={transactions.filter(t => t.date.startsWith(displayMonth))} title={`${displayMonth} 支出分析`} />
         </div>
+      </div>
+    );
+  };
+
+  const renderAnalysisView = () => {
+    const last12Months = Array.from({length: 12}, (_, i) => {
+      const d = new Date();
+      d.setMonth(d.getMonth() - i);
+      return d.toISOString().substring(0, 7);
+    });
+
+    const data = last12Months.map(month => {
+       const row = { month, 禹君: 0, 禹辰: 0 };
+       const monthTxs = transactions.filter(t => t.date.startsWith(month));
+       monthTxs.forEach(t => {
+          if (t.type === '收入') {
+             if (t.account === '禹君') row.禹君 += t.amount;
+             else if (t.account === '禹辰') row.禹辰 += t.amount;
+          } else if (t.type === '支出') {
+             if (t.account === '禹君') row.禹君 -= t.amount;
+             else if (t.account === '禹辰') row.禹辰 -= t.amount;
+          }
+       });
+       return row;
+    });
+
+    // To allow negative bars to render from 0, recharts handles it automatically with CartesianGrid, but we can add ReferenceLine
+    return (
+      <div className="p-3 max-w-lg mx-auto animate-in fade-in flex flex-col gap-3 h-full pb-20">
+         <div className="flex items-center gap-3 pt-1">
+           <h2 className="text-xl font-bold text-slate-800">收入 減 支出 之 餘額分析</h2>
+         </div>
+         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 mt-1 flex-1 min-h-[450px]">
+           <ResponsiveContainer width="100%" height="100%">
+             <BarChart data={data} layout="vertical" margin={{ top: 5, right: 20, left: 5, bottom: 5 }} barGap={2} barCategoryGap="25%">
+               <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={true} />
+               <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(val) => Math.round(val/1000) + 'k'} />
+               <YAxis dataKey="month" type="category" width={65} tick={{ fontSize: 12, fill: '#475569', fontWeight: 'bold' }} />
+               <Tooltip cursor={{fill: '#f8fafc'}} formatter={(value: number) => [formatCurrency(value), '餘額']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+               <Legend iconType="circle" wrapperStyle={{ fontSize: '13px', fontWeight: 'bold', paddingTop: '10px' }} />
+               <ReferenceLine x={0} stroke="#94a3b8" />
+               <Bar dataKey="禹君" fill="#fed7aa" name="禹君" radius={[0, 4, 4, 0]} barSize={12} />
+               <Bar dataKey="禹辰" fill="#d8b4e2" name="禹辰" radius={[0, 4, 4, 0]} barSize={12} />
+             </BarChart>
+           </ResponsiveContainer>
+         </div>
       </div>
     );
   };
@@ -718,6 +765,7 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
       <div className="flex-1 overflow-hidden w-full relative">
         {view === 'summary' && <div className="absolute inset-0 overflow-y-auto">{renderSummaryView()}</div>}
         {view === 'monthly' && <div className="absolute inset-0 overflow-y-auto">{renderMonthlyView()}</div>}
+        {view === 'analysis' && <div className="absolute inset-0 overflow-y-auto">{renderAnalysisView()}</div>}
         {view === 'add' && <div className="absolute inset-0 overflow-hidden">{renderAddDataView()}</div>}
         {view === 'vocab' && <div className="absolute inset-0 overflow-hidden">{renderVocabView()}</div>}
       </div>
