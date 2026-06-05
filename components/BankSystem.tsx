@@ -286,6 +286,7 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
           if (t.type === '收入') lastMonthBalance += t.amount;
           else if (t.type === '支出') lastMonthBalance -= t.amount;
           else if (t.type === '股票') lastMonthBalance += t.amount;
+          else if (t.type === '調度') lastMonthBalance += t.amount;
        }
     });
 
@@ -294,6 +295,7 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
        if (t.type === '收入') monthBalanceDiff += t.amount;
        else if (t.type === '支出') monthBalanceDiff -= t.amount;
        else if (t.type === '股票') monthBalanceDiff += t.amount;
+       else if (t.type === '調度') monthBalanceDiff += t.amount;
     });
     
     const currentTotalBalance = lastMonthBalance + monthBalanceDiff;
@@ -362,6 +364,7 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
           if (t.type === '收入') lastMonthBalance += t.amount;
           else if (t.type === '支出') lastMonthBalance -= t.amount;
           else if (t.type === '股票') lastMonthBalance += t.amount;
+          else if (t.type === '調度') lastMonthBalance += t.amount;
        }
     });
 
@@ -370,6 +373,7 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
        if (t.type === '收入') monthBalanceDiff += t.amount;
        else if (t.type === '支出') monthBalanceDiff -= t.amount;
        else if (t.type === '股票') monthBalanceDiff += t.amount;
+       else if (t.type === '調度') monthBalanceDiff += t.amount;
     });
     
     const currentTotalBalance = lastMonthBalance + monthBalanceDiff;
@@ -788,7 +792,7 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
 
       <div className="flex-1 overflow-hidden w-full relative">
         {view === 'summary' && <div className="absolute inset-0 overflow-y-auto">{renderSummaryView()}</div>}
-        {view === 'monthly' && <div className="absolute inset-0 overflow-y-auto">{renderMonthlyView()}</div>}
+        {view === 'monthly' && <div className="absolute inset-0 overflow-y-auto bg-slate-200">{renderMonthlyView()}</div>}
         {view === 'analysis' && <div className="absolute inset-0 overflow-y-auto">{renderAnalysisView()}</div>}
         {view === 'add' && <div className="absolute inset-0 overflow-hidden">{renderAddDataView()}</div>}
         {view === 'vocab' && <div className="absolute inset-0 overflow-hidden">{renderVocabView()}</div>}
