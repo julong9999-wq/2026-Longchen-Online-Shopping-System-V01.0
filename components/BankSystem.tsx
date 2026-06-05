@@ -14,7 +14,7 @@ interface Props {
 }
 
 const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
-  const [view, setView] = useState<BankView>('add');
+  const [view, setView] = useState<BankView>('summary');
   const [vocabularies, setVocabularies] = useState<BankVocabulary[]>(INITIAL_BANK_VOCABULARY);
   const [transactions, setTransactions] = useState<BankTransaction[]>([]);
 
