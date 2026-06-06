@@ -524,28 +524,28 @@ const PurchasingSystem: React.FC<Props> = ({ onNavigateHome }) => {
                <X size={24} />
              </button>
            </div>
-           <div className="p-5 flex flex-col gap-5 flex-1 overflow-y-auto">
+           <div className="p-4 flex flex-col gap-4 overflow-y-auto pb-24">
              <div>
                 <label className="block text-sm font-bold text-slate-600 mb-1">訂單序號</label>
-                <input type="text" value={subItemModal.orderNo} onChange={e => setSubItemModal({...subItemModal, orderNo: e.target.value})} className="w-full border border-slate-300 rounded-xl p-4 text-lg font-mono outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white shadow-sm" placeholder="例如: 1024" autoFocus autoComplete="off" autoCorrect="off" spellCheck={false} />
+                <input type="text" value={subItemModal.orderNo} onChange={e => setSubItemModal({...subItemModal, orderNo: e.target.value})} className="w-full border border-slate-300 rounded-xl p-3 text-base font-mono outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white shadow-sm" placeholder="例如: 1024" autoFocus autoComplete="off" autoCorrect="off" spellCheck={false} />
              </div>
              <div>
                 <label className="block text-sm font-bold text-slate-600 mb-1">名稱</label>
-                <input type="text" value={subItemModal.name} onChange={e => setSubItemModal({...subItemModal, name: e.target.value})} className="w-full border border-slate-300 rounded-xl p-4 text-lg outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white shadow-sm" placeholder="商品名稱或代收項目" autoComplete="off" autoCorrect="off" spellCheck={false} />
+                <input type="text" value={subItemModal.name} onChange={e => setSubItemModal({...subItemModal, name: e.target.value})} className="w-full border border-slate-300 rounded-xl p-3 text-base outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white shadow-sm" placeholder="商品名稱或代收項目" autoComplete="off" autoCorrect="off" spellCheck={false} />
              </div>
              <div>
                 <label className="block text-sm font-bold text-slate-600 mb-1">金額</label>
-                <input type="number" step="any" value={subItemModal.amount} onChange={e => setSubItemModal({...subItemModal, amount: e.target.value})} onKeyDown={e => e.key === 'Enter' && handleSaveSubItem()} className="w-full border border-slate-300 rounded-xl p-4 text-lg font-mono outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white shadow-sm" placeholder="0" />
+                <input type="number" step="any" value={subItemModal.amount} onChange={e => setSubItemModal({...subItemModal, amount: e.target.value})} onKeyDown={e => e.key === 'Enter' && handleSaveSubItem()} className="w-full border border-slate-300 rounded-xl p-3 text-base font-mono outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white shadow-sm" placeholder="0" />
              </div>
-           </div>
-           <div className="p-4 bg-white border-t border-slate-200 flex gap-3 pb-safe">
-             <button onClick={() => setSubItemModal({...subItemModal, isOpen: false})} className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-4 rounded-xl font-bold text-lg transition-colors">
-               取消
-             </button>
-             <button onClick={handleSaveSubItem} className={`flex-1 ${subItemModal.type === 'payment' ? 'bg-orange-500 hover:bg-orange-600' : 'bg-emerald-500 hover:bg-emerald-600'} text-white py-4 rounded-xl font-bold text-lg shadow-md transition-all active:scale-95 flex items-center justify-center gap-2`}>
-               <Save size={20} />
-               確認{subItemModal.mode === 'add' ? '新增' : '修改'}
-             </button>
+             <div className="flex gap-3 mt-2">
+               <button onClick={() => setSubItemModal({...subItemModal, isOpen: false})} className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 py-3 rounded-xl font-bold text-base transition-colors">
+                 取消
+               </button>
+               <button onClick={handleSaveSubItem} className={`flex-1 ${subItemModal.type === 'payment' ? 'bg-orange-500 hover:bg-orange-600' : 'bg-emerald-500 hover:bg-emerald-600'} text-white py-3 rounded-xl font-bold text-base shadow-md transition-all active:scale-95 flex items-center justify-center gap-2`}>
+                 <Save size={18} />
+                 確認{subItemModal.mode === 'add' ? '新增' : '修改'}
+               </button>
+             </div>
            </div>
          </div>
        )}
