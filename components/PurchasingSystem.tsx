@@ -247,11 +247,11 @@ const PurchasingSystem: React.FC<Props> = ({ onNavigateHome }) => {
                   <div className="p-3 bg-white border border-slate-200 rounded-xl space-y-3 mt-1">
                      <div className="flex flex-col gap-2 mb-2">
                         <div className="flex gap-2">
-                           <input type="text" placeholder="訂單序號" value={paymentForm.orderNo} onChange={e => setPaymentForm({...paymentForm, orderNo: e.target.value})} className="border border-slate-300 rounded-lg p-2 text-sm font-mono flex-1 min-w-0 bg-slate-50 focus:bg-white transition-colors" autoComplete="off" autoCorrect="off" spellCheck="false" />
-                           <input type="text" placeholder="名稱" value={paymentForm.name} onChange={e => setPaymentForm({...paymentForm, name: e.target.value})} className="border border-slate-300 rounded-lg p-2 text-sm flex-1 min-w-0 bg-slate-50 focus:bg-white transition-colors" autoComplete="off" autoCorrect="off" spellCheck="false" />
+                           <input type="text" name="payment-order-fld" placeholder="訂單序號" value={paymentForm.orderNo} onChange={e => setPaymentForm({...paymentForm, orderNo: e.target.value})} className="border border-slate-300 rounded-lg p-3 text-base font-mono flex-1 min-w-0 bg-slate-50 focus:bg-white transition-colors" autoComplete="off" autoCorrect="off" spellCheck={false} />
+                           <input type="text" name="payment-name-fld" placeholder="名稱" value={paymentForm.name} onChange={e => setPaymentForm({...paymentForm, name: e.target.value})} className="border border-slate-300 rounded-lg p-3 text-base flex-1 min-w-0 bg-slate-50 focus:bg-white transition-colors" autoComplete="off" autoCorrect="off" spellCheck={false} />
                         </div>
                         <div className="flex gap-2">
-                           <input type="number" step="any" placeholder="金額" value={paymentForm.amount} onChange={e => setPaymentForm({...paymentForm, amount: e.target.value})} className="border border-slate-300 rounded-lg p-2 text-sm font-mono flex-1 min-w-0 bg-slate-50 focus:bg-white transition-colors" onKeyDown={e => e.key === 'Enter' && handleAddPayment()} />
+                           <input type="number" step="any" placeholder="金額" value={paymentForm.amount} onChange={e => setPaymentForm({...paymentForm, amount: e.target.value})} className="border border-slate-300 rounded-lg p-3 text-base font-mono flex-1 min-w-0 bg-slate-50 focus:bg-white transition-colors" onKeyDown={e => e.key === 'Enter' && handleAddPayment()} />
                            <button onClick={handleAddPayment} className="bg-orange-500 text-white rounded-lg px-4 font-bold hover:bg-orange-600 transition-colors shrink-0 flex items-center gap-1">
                               <Plus size={18} /> 新增
                            </button>
@@ -286,11 +286,11 @@ const PurchasingSystem: React.FC<Props> = ({ onNavigateHome }) => {
                   <div className="p-3 bg-white border border-slate-200 rounded-xl space-y-3 mt-1">
                      <div className="flex flex-col gap-2 mb-2">
                         <div className="flex gap-2">
-                           <input type="text" placeholder="訂單序號" value={collectionForm.orderNo} onChange={e => setCollectionForm({...collectionForm, orderNo: e.target.value})} className="border border-slate-300 rounded-lg p-2 text-sm font-mono flex-1 min-w-0 bg-slate-50 focus:bg-white transition-colors" autoComplete="off" autoCorrect="off" spellCheck="false" />
-                           <input type="text" placeholder="名稱" value={collectionForm.name} onChange={e => setCollectionForm({...collectionForm, name: e.target.value})} className="border border-slate-300 rounded-lg p-2 text-sm flex-1 min-w-0 bg-slate-50 focus:bg-white transition-colors" autoComplete="off" autoCorrect="off" spellCheck="false" />
+                           <input type="text" name="collection-order-fld" placeholder="訂單序號" value={collectionForm.orderNo} onChange={e => setCollectionForm({...collectionForm, orderNo: e.target.value})} className="border border-slate-300 rounded-lg p-3 text-base font-mono flex-1 min-w-0 bg-slate-50 focus:bg-white transition-colors" autoComplete="off" autoCorrect="off" spellCheck={false} />
+                           <input type="text" name="collection-name-fld" placeholder="名稱" value={collectionForm.name} onChange={e => setCollectionForm({...collectionForm, name: e.target.value})} className="border border-slate-300 rounded-lg p-3 text-base flex-1 min-w-0 bg-slate-50 focus:bg-white transition-colors" autoComplete="off" autoCorrect="off" spellCheck={false} />
                         </div>
                         <div className="flex gap-2">
-                           <input type="number" step="any" placeholder="金額" value={collectionForm.amount} onChange={e => setCollectionForm({...collectionForm, amount: e.target.value})} className="border border-slate-300 rounded-lg p-2 text-sm font-mono flex-1 min-w-0 bg-slate-50 focus:bg-white transition-colors" onKeyDown={e => e.key === 'Enter' && handleAddCollection()} />
+                           <input type="number" step="any" placeholder="金額" value={collectionForm.amount} onChange={e => setCollectionForm({...collectionForm, amount: e.target.value})} className="border border-slate-300 rounded-lg p-3 text-base font-mono flex-1 min-w-0 bg-slate-50 focus:bg-white transition-colors" onKeyDown={e => e.key === 'Enter' && handleAddCollection()} />
                            <button onClick={handleAddCollection} className="bg-emerald-500 text-white rounded-lg px-4 font-bold hover:bg-emerald-600 transition-colors shrink-0 flex items-center gap-1">
                               <Plus size={18} /> 新增
                            </button>
