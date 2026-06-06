@@ -101,6 +101,7 @@ const ProductForm: React.FC<Props> = ({ group, onSave, onCancel, initialData, ne
                 onChange={(e) => handleChange('name', e.target.value)}
                 placeholder="請輸入商品名稱"
                 autoFocus={!initialData}
+                autoComplete="one-time-code" autoCorrect="off" spellCheck={false} data-form-type="other"
               />
             </div>
 
