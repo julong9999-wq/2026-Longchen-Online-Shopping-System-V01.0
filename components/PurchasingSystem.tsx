@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { collection, onSnapshot, doc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { generateUUID, formatCurrency } from '../utils';
-import { FileText, Edit, Plus, Trash2, Home, Save, ChevronDown, ChevronUp, X } from 'lucide-react';
+import { FileText, Edit, Plus, Trash2, Home, ChevronDown, ChevronUp, X } from 'lucide-react';
 
 export interface PurchasingItem {
   id: string;
@@ -75,36 +75,55 @@ const PurchasingSystem: React.FC<Props> = ({ onNavigateHome }) => {
     if (view === 'record') {
       const existing = records.find(r => r.month === selectedMonth);
       if (existing) {
-        setBankBalanceStr(existing.bankBalance.toString());
-        setProfitWithdrawnStr(existing.profitWithdrawn.toString());
-        setPayments(existing.payments || []);
-        setCollections(existing.collections || []);
+        if (parseFloat(bankBalanceStr || '0') !== existing.bankBalance) {
+          setBankBalanceStr(existing.bankBalance.toString());
+        }
+        if (parseFloat(profitWithdrawnStr || '0') !== existing.profitWithdrawn) {
+          setProfitWithdrawnStr(existing.profitWithdrawn.toString());
+        }
+        
+        const currentPaymentsStr = JSON.stringify(payments);
+        const existingPaymentsStr = JSON.stringify(existing.payments || []);
+        if (currentPaymentsStr !== existingPaymentsStr) {
+          setPayments(existing.payments || []);
+        }
+        
+        const currentCollectionsStr = JSON.stringify(collections);
+        const existingCollectionsStr = JSON.stringify(existing.collections || []);
+        if (currentCollectionsStr !== existingCollectionsStr) {
+          setCollections(existing.collections || []);
+        }
       } else {
-        setBankBalanceStr('0');
-        setProfitWithdrawnStr('0');
-        setPayments([]);
-        setCollections([]);
+        if (bankBalanceStr !== '0') setBankBalanceStr('0');
+        if (profitWithdrawnStr !== '0') setProfitWithdrawnStr('0');
+        if (payments.length !== 0) setPayments([]);
+        if (collections.length !== 0) setCollections([]);
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedMonth, records, view]);
 
-  const handleSaveMonth = async () => {
-    const record: PurchasingRecord = {
-      id: selectedMonth,
-      month: selectedMonth,
-      bankBalance: parseFloat(bankBalanceStr) || 0,
-      profitWithdrawn: parseFloat(profitWithdrawnStr) || 0,
-      payments,
-      collections
-    };
-    try {
-      await setDoc(doc(db, 'purchasingRecords', selectedMonth), record);
-      alert('儲存成功！');
-    } catch (e) {
-      console.error("Error saving record:", e);
-      alert('儲存失敗！');
-    }
-  };
+  useEffect(() => {
+    if (view !== 'record') return;
+    
+    const timeout = setTimeout(async () => {
+      const record: PurchasingRecord = {
+        id: selectedMonth,
+        month: selectedMonth,
+        bankBalance: parseFloat(bankBalanceStr) || 0,
+        profitWithdrawn: parseFloat(profitWithdrawnStr) || 0,
+        payments,
+        collections
+      };
+      try {
+        await setDoc(doc(db, 'purchasingRecords', selectedMonth), record, { merge: true });
+      } catch (e) {
+        console.error("Error saving record:", e);
+      }
+    }, 500);
+
+    return () => clearTimeout(timeout);
+  }, [selectedMonth, bankBalanceStr, profitWithdrawnStr, payments, collections, view]);
 
   const handleSaveSubItem = () => {
     if (!subItemModal.name || !subItemModal.amount) return;
@@ -196,7 +215,7 @@ const PurchasingSystem: React.FC<Props> = ({ onNavigateHome }) => {
     </div>
   );
 
-  const SubTable = ({ title, items, colorClass, borderClass, bgClass, onRemove, onEdit, hideHeader, isDetail }: { title: string, items: PurchasingItem[], colorClass: string, borderClass: string, bgClass: string, onRemove?: (id: string) => void, onEdit?: (item: PurchasingItem) => void, hideHeader?: boolean, isDetail?: boolean }) => {
+  const SubTable = ({ title, items, colorClass, borderClass, bgClass, onRemove, onEdit, hideHeader }: { title: string, items: PurchasingItem[], colorClass: string, borderClass: string, bgClass: string, onRemove?: (id: string) => void, onEdit?: (item: PurchasingItem) => void, hideHeader?: boolean }) => {
     const sum = items.reduce((acc, curr) => acc + curr.amount, 0);
     return (
       <div className={`border ${borderClass} rounded-xl overflow-hidden mb-4 shadow-sm bg-white`}>
@@ -206,76 +225,49 @@ const PurchasingSystem: React.FC<Props> = ({ onNavigateHome }) => {
             <span className={`font-mono font-bold text-base ${colorClass}`}>{formatCurrency(sum)}</span>
           </div>
         )}
-        {isDetail ? (
-          <div className="p-0">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-slate-500 border-b border-slate-100">
+        <div className="p-0">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-slate-50 text-slate-500 border-b border-slate-100">
+              <tr>
+                <th className="px-3 py-2 font-bold w-1/4">訂單序</th>
+                <th className="px-3 py-2 font-bold w-1/2">名稱</th>
+                <th className="px-3 py-2 font-bold text-right w-1/4">金額</th>
+                {(onRemove || onEdit) && <th className="px-2 py-2 text-right"></th>}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {items.length === 0 ? (
                 <tr>
-                  <th className="px-3 py-2 font-bold w-1/4">訂單序</th>
-                  <th className="px-3 py-2 font-bold w-1/2">名稱</th>
-                  <th className="px-3 py-2 font-bold text-right w-1/4">金額</th>
-                  {onRemove && <th className="px-2 py-2"></th>}
+                  <td colSpan={(onRemove || onEdit) ? 4 : 3} className="px-3 py-4 text-center text-slate-400">目前無資料</td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {items.length === 0 ? (
-                  <tr>
-                    <td colSpan={onRemove ? 4 : 3} className="px-3 py-4 text-center text-slate-400">目前無資料</td>
+              ) : (
+                items.map(item => (
+                  <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-3 py-2 font-mono text-xs font-bold text-slate-500">{item.orderNo}</td>
+                    <td className="px-3 py-2 font-bold text-slate-700">{item.name}</td>
+                    <td className={`px-3 py-2 text-right font-mono font-bold ${item.amount < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>{formatCurrency(item.amount)}</td>
+                    {(onRemove || onEdit) && (
+                      <td className="px-2 py-2 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1">
+                          {onEdit && (
+                            <button onClick={() => onEdit(item)} className="text-slate-400 hover:text-blue-500 p-1.5 rounded-full hover:bg-blue-50 transition-colors">
+                              <Edit size={16} />
+                            </button>
+                          )}
+                          {onRemove && (
+                            <button onClick={() => onRemove(item.id)} className="text-slate-400 hover:text-rose-500 p-1.5 rounded-full hover:bg-rose-50 transition-colors">
+                              <Trash2 size={16} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    )}
                   </tr>
-                ) : (
-                  items.map(item => (
-                    <tr key={item.id} className="hover:bg-slate-50">
-                      <td className="px-3 py-2 font-mono text-xs">{item.orderNo}</td>
-                      <td className="px-3 py-2 font-bold text-slate-700">{item.name}</td>
-                      <td className={`px-3 py-2 text-right font-mono font-bold ${item.amount < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>{formatCurrency(item.amount)}</td>
-                      {onRemove && (
-                        <td className="px-2 py-2 text-center">
-                          <button onClick={() => onRemove(item.id)} className="text-slate-400 hover:text-rose-500 p-1 rounded-full hover:bg-rose-50 transition-colors">
-                            <Trash2 size={16} />
-                          </button>
-                        </td>
-                      )}
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="divide-y divide-slate-100 p-0 text-sm">
-            {items.length === 0 ? (
-              <div className="px-3 py-4 text-center text-slate-400">目前無資料</div>
-            ) : (
-              items.map(item => (
-                <div key={item.id} className="p-3 hover:bg-slate-50 transition-colors flex flex-col gap-1.5">
-                  {/* 第一行: 訂單序, 金額, 修改按鈕 */}
-                  <div className="flex justify-between items-center">
-                     <div className="flex items-center gap-2">
-                       <span className="bg-slate-200 text-slate-700 px-2 py-0.5 rounded text-xs font-mono font-bold">{item.orderNo || '無'}</span>
-                     </div>
-                     <div className="flex items-center gap-3">
-                       <span className={`font-mono font-bold text-base ${item.amount < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>{formatCurrency(item.amount)}</span>
-                       {onEdit && (
-                         <button onClick={() => onEdit(item)} className="text-slate-400 hover:text-blue-500 p-1.5 rounded-full hover:bg-blue-50 transition-colors">
-                           <Edit size={16} />
-                         </button>
-                       )}
-                     </div>
-                  </div>
-                  {/* 第二行: 名稱, 刪除按鈕 */}
-                  <div className="flex justify-between items-center">
-                     <div className="font-bold text-slate-800 text-base">{item.name}</div>
-                     {onRemove && (
-                       <button onClick={() => onRemove(item.id)} className="text-slate-400 hover:text-rose-500 p-1.5 rounded-full hover:bg-rose-50 transition-colors">
-                         <Trash2 size={16} />
-                       </button>
-                     )}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        )}
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     );
   };
@@ -294,9 +286,6 @@ const PurchasingSystem: React.FC<Props> = ({ onNavigateHome }) => {
                   className="appearance-none bg-slate-100 border border-slate-300 text-slate-800 pl-2 pr-2 py-1 rounded-lg text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-blue-500 w-36"
                 />
             </div>
-            <button onClick={handleSaveMonth} className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded-xl text-sm font-bold shadow-md transition-colors flex items-center gap-1.5">
-               <Save size={16} />儲存
-            </button>
          </div>
 
          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 space-y-4">
@@ -413,7 +402,7 @@ const PurchasingSystem: React.FC<Props> = ({ onNavigateHome }) => {
     const gTotal = sumP + sumC + bankB;
 
     return (
-      <div className="flex-1 overflow-y-auto p-3 bg-slate-200">
+      <div className="flex-1 overflow-y-auto p-3 bg-slate-400">
         <div className="max-w-lg mx-auto space-y-4 pb-20">
           <div className="flex items-center justify-between bg-white p-3 rounded-xl shadow-sm border border-slate-200">
              <h2 className="text-xl font-bold text-slate-800">代購明細</h2>
@@ -465,7 +454,6 @@ const PurchasingSystem: React.FC<Props> = ({ onNavigateHome }) => {
             colorClass="text-orange-600" 
             borderClass="border-orange-200" 
             bgClass="bg-orange-50"
-            isDetail={true}
           />
 
           <SubTable 
@@ -474,7 +462,6 @@ const PurchasingSystem: React.FC<Props> = ({ onNavigateHome }) => {
             colorClass="text-emerald-600" 
             borderClass="border-emerald-200" 
             bgClass="bg-emerald-50"
-            isDetail={true}
           />
         </div>
       </div>
