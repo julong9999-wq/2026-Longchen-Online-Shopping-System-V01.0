@@ -4,6 +4,7 @@ import { INITIAL_PRODUCT_GROUPS, INITIAL_PRODUCT_ITEMS, INITIAL_ORDER_GROUPS, IN
 import { getNextGroupId, getNextItemId, getNextOrderGroupId, calculateProductStats, formatCurrency, generateUUID, cleanProductName } from './utils';
 import ProductForm from './components/ProductForm';
 import BankSystem from './components/BankSystem';
+import PurchasingSystem from './components/PurchasingSystem';
 import { Trash2, Edit, Plus, Package, ShoppingCart, List, BarChart2, ChevronRight, ChevronDown, User, Box, X, Calculator, Download, Save, Wallet, ArrowUpCircle, ArrowDownCircle, Grid, PieChart, Check, Database, Upload, AlertTriangle, Home } from 'lucide-react';
 import { db } from './firebase';
 import { 
@@ -105,7 +106,7 @@ const IncomeField = ({ label, value, isInput = false, onChange, colorClass = "te
 
 const App: React.FC = () => {
   // --- State ---
-  const [appMode, setAppMode] = useState<'home' | 'ecommerce' | 'bank'>('home');
+  const [appMode, setAppMode] = useState<'home' | 'ecommerce' | 'bank' | 'purchasing'>('home');
   const [view, setView] = useState<ViewState>('products');
   const [dbError, setDbError] = useState<string | null>(null);
   
@@ -1304,7 +1305,7 @@ const App: React.FC = () => {
                   </button>
 
                   <button 
-                      onClick={() => { alert('代購對帳功能開發中'); }}
+                      onClick={() => setAppMode('purchasing')}
                       className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-5 px-6 rounded-2xl shadow border border-orange-500 transition-all active:scale-95 flex items-center justify-between"
                   >
                       <div className="flex items-center gap-4">
@@ -1320,6 +1321,10 @@ const App: React.FC = () => {
 
   if (appMode === 'bank') {
       return <BankSystem onNavigateHome={() => setAppMode('home')} />;
+  }
+
+  if (appMode === 'purchasing') {
+      return <PurchasingSystem onNavigateHome={() => setAppMode('home')} />;
   }
 
   return (
