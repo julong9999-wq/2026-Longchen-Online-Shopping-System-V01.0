@@ -110,6 +110,10 @@ const PurchasingSystem: React.FC<Props> = ({ onNavigateHome }) => {
     if (!subItemModal.name || !subItemModal.amount) return;
     const amountNum = parseFloat(subItemModal.amount) || 0;
     
+    if (subItemModal.mode === 'edit') {
+      if (!window.confirm('確定要儲存修改嗎？')) return;
+    }
+    
     if (subItemModal.type === 'payment') {
       if (subItemModal.mode === 'add') {
         setPayments([...payments, { id: generateUUID(), orderNo: subItemModal.orderNo, name: subItemModal.name, amount: amountNum }]);
@@ -138,8 +142,16 @@ const PurchasingSystem: React.FC<Props> = ({ onNavigateHome }) => {
     });
   };
 
-  const removePayment = (id: string) => setPayments(payments.filter(p => p.id !== id));
-  const removeCollection = (id: string) => setCollections(collections.filter(c => c.id !== id));
+  const removePayment = (id: string) => {
+    if (window.confirm('確定要刪除此筆資料嗎？')) {
+      setPayments(payments.filter(p => p.id !== id));
+    }
+  };
+  const removeCollection = (id: string) => {
+    if (window.confirm('確定要刪除此筆資料嗎？')) {
+      setCollections(collections.filter(c => c.id !== id));
+    }
+  };
 
   const totalPayments = payments.reduce((sum, p) => sum + p.amount, 0);
   const totalCollections = collections.reduce((sum, c) => sum + c.amount, 0);
@@ -184,7 +196,7 @@ const PurchasingSystem: React.FC<Props> = ({ onNavigateHome }) => {
     </div>
   );
 
-  const SubTable = ({ title, items, colorClass, borderClass, bgClass, onRemove, onEdit, hideHeader }: { title: string, items: PurchasingItem[], colorClass: string, borderClass: string, bgClass: string, onRemove?: (id: string) => void, onEdit?: (item: PurchasingItem) => void, hideHeader?: boolean }) => {
+  const SubTable = ({ title, items, colorClass, borderClass, bgClass, onRemove, onEdit, hideHeader, isDetail }: { title: string, items: PurchasingItem[], colorClass: string, borderClass: string, bgClass: string, onRemove?: (id: string) => void, onEdit?: (item: PurchasingItem) => void, hideHeader?: boolean, isDetail?: boolean }) => {
     const sum = items.reduce((acc, curr) => acc + curr.amount, 0);
     return (
       <div className={`border ${borderClass} rounded-xl overflow-hidden mb-4 shadow-sm bg-white`}>
@@ -194,39 +206,76 @@ const PurchasingSystem: React.FC<Props> = ({ onNavigateHome }) => {
             <span className={`font-mono font-bold text-base ${colorClass}`}>{formatCurrency(sum)}</span>
           </div>
         )}
-        <div className="divide-y divide-slate-100 p-0 text-sm">
-          {items.length === 0 ? (
-            <div className="px-3 py-4 text-center text-slate-400">目前無資料</div>
-          ) : (
-            items.map(item => (
-              <div key={item.id} className="p-3 hover:bg-slate-50 transition-colors flex flex-col gap-1.5">
-                {/* 第一行: 訂單序, 金額, 修改按鈕 */}
-                <div className="flex justify-between items-center">
-                   <div className="flex items-center gap-2">
-                     <span className="bg-slate-200 text-slate-700 px-2 py-0.5 rounded text-xs font-mono font-bold">{item.orderNo || '無'}</span>
-                   </div>
-                   <div className="flex items-center gap-3">
-                     <span className={`font-mono font-bold text-base ${item.amount < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>{formatCurrency(item.amount)}</span>
-                     {onEdit && (
-                       <button onClick={() => onEdit(item)} className="text-slate-400 hover:text-blue-500 p-1.5 rounded-full hover:bg-blue-50 transition-colors">
-                         <Edit size={16} />
+        {isDetail ? (
+          <div className="p-0">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 text-slate-500 border-b border-slate-100">
+                <tr>
+                  <th className="px-3 py-2 font-bold w-1/4">訂單序</th>
+                  <th className="px-3 py-2 font-bold w-1/2">名稱</th>
+                  <th className="px-3 py-2 font-bold text-right w-1/4">金額</th>
+                  {onRemove && <th className="px-2 py-2"></th>}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {items.length === 0 ? (
+                  <tr>
+                    <td colSpan={onRemove ? 4 : 3} className="px-3 py-4 text-center text-slate-400">目前無資料</td>
+                  </tr>
+                ) : (
+                  items.map(item => (
+                    <tr key={item.id} className="hover:bg-slate-50">
+                      <td className="px-3 py-2 font-mono text-xs">{item.orderNo}</td>
+                      <td className="px-3 py-2 font-bold text-slate-700">{item.name}</td>
+                      <td className={`px-3 py-2 text-right font-mono font-bold ${item.amount < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>{formatCurrency(item.amount)}</td>
+                      {onRemove && (
+                        <td className="px-2 py-2 text-center">
+                          <button onClick={() => onRemove(item.id)} className="text-slate-400 hover:text-rose-500 p-1 rounded-full hover:bg-rose-50 transition-colors">
+                            <Trash2 size={16} />
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="divide-y divide-slate-100 p-0 text-sm">
+            {items.length === 0 ? (
+              <div className="px-3 py-4 text-center text-slate-400">目前無資料</div>
+            ) : (
+              items.map(item => (
+                <div key={item.id} className="p-3 hover:bg-slate-50 transition-colors flex flex-col gap-1.5">
+                  {/* 第一行: 訂單序, 金額, 修改按鈕 */}
+                  <div className="flex justify-between items-center">
+                     <div className="flex items-center gap-2">
+                       <span className="bg-slate-200 text-slate-700 px-2 py-0.5 rounded text-xs font-mono font-bold">{item.orderNo || '無'}</span>
+                     </div>
+                     <div className="flex items-center gap-3">
+                       <span className={`font-mono font-bold text-base ${item.amount < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>{formatCurrency(item.amount)}</span>
+                       {onEdit && (
+                         <button onClick={() => onEdit(item)} className="text-slate-400 hover:text-blue-500 p-1.5 rounded-full hover:bg-blue-50 transition-colors">
+                           <Edit size={16} />
+                         </button>
+                       )}
+                     </div>
+                  </div>
+                  {/* 第二行: 名稱, 刪除按鈕 */}
+                  <div className="flex justify-between items-center">
+                     <div className="font-bold text-slate-800 text-base">{item.name}</div>
+                     {onRemove && (
+                       <button onClick={() => onRemove(item.id)} className="text-slate-400 hover:text-rose-500 p-1.5 rounded-full hover:bg-rose-50 transition-colors">
+                         <Trash2 size={16} />
                        </button>
                      )}
-                   </div>
+                  </div>
                 </div>
-                {/* 第二行: 名稱, 刪除按鈕 */}
-                <div className="flex justify-between items-center">
-                   <div className="font-bold text-slate-800 text-base">{item.name}</div>
-                   {onRemove && (
-                     <button onClick={() => onRemove(item.id)} className="text-slate-400 hover:text-rose-500 p-1.5 rounded-full hover:bg-rose-50 transition-colors">
-                       <Trash2 size={16} />
-                     </button>
-                   )}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
+              ))
+            )}
+          </div>
+        )}
       </div>
     );
   };
@@ -364,7 +413,7 @@ const PurchasingSystem: React.FC<Props> = ({ onNavigateHome }) => {
     const gTotal = sumP + sumC + bankB;
 
     return (
-      <div className="flex-1 overflow-y-auto p-3 bg-slate-100">
+      <div className="flex-1 overflow-y-auto p-3 bg-slate-200">
         <div className="max-w-lg mx-auto space-y-4 pb-20">
           <div className="flex items-center justify-between bg-white p-3 rounded-xl shadow-sm border border-slate-200">
              <h2 className="text-xl font-bold text-slate-800">代購明細</h2>
@@ -416,6 +465,7 @@ const PurchasingSystem: React.FC<Props> = ({ onNavigateHome }) => {
             colorClass="text-orange-600" 
             borderClass="border-orange-200" 
             bgClass="bg-orange-50"
+            isDetail={true}
           />
 
           <SubTable 
@@ -424,6 +474,7 @@ const PurchasingSystem: React.FC<Props> = ({ onNavigateHome }) => {
             colorClass="text-emerald-600" 
             borderClass="border-emerald-200" 
             bgClass="bg-emerald-50"
+            isDetail={true}
           />
         </div>
       </div>
