@@ -515,7 +515,7 @@ const PurchasingSystem: React.FC<Props> = ({ onNavigateHome }) => {
        {renderNav()}
        
        {subItemModal.isOpen && (
-         <div className="fixed inset-0 bg-slate-50 flex flex-col z-50 animate-in slide-in-from-bottom-2">
+         <div className="fixed inset-0 bg-slate-50 flex flex-col z-50 overscroll-none overflow-hidden animate-in slide-in-from-bottom-2">
            <div className="flex items-center justify-between p-4 bg-white border-b border-slate-200">
              <h3 className="font-bold text-xl text-slate-800">
                {subItemModal.mode === 'add' ? '新增' : '修改'}{subItemModal.type === 'payment' ? '代購付款' : '出貨代收'}
@@ -524,7 +524,7 @@ const PurchasingSystem: React.FC<Props> = ({ onNavigateHome }) => {
                <X size={24} />
              </button>
            </div>
-           <div className="p-4 flex flex-col gap-3">
+           <div className="p-4 flex flex-col gap-3 shrink-0">
              <div className="flex items-center gap-3 border-b border-slate-200 pb-2">
                 <label className="w-16 text-right text-sm font-bold text-slate-600">訂單序號</label>
                 <input type="text" value={subItemModal.orderNo} onChange={e => setSubItemModal({...subItemModal, orderNo: e.target.value})} className="flex-1 bg-transparent text-base font-mono outline-none focus:text-blue-600" placeholder="例如: 1024" autoFocus autoComplete="off" autoCorrect="off" spellCheck={false} />
