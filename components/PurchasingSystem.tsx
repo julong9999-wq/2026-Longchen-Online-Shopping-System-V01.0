@@ -247,8 +247,8 @@ const PurchasingSystem: React.FC<Props> = ({ onNavigateHome }) => {
                   <div className="p-3 bg-white border border-slate-200 rounded-xl space-y-3 mt-1">
                      <div className="flex flex-col gap-2 mb-2">
                         <div className="flex gap-2">
-                           <input type="text" placeholder="訂單序號" value={paymentForm.orderNo} onChange={e => setPaymentForm({...paymentForm, orderNo: e.target.value})} className="border border-slate-300 rounded-lg p-2 text-sm font-mono flex-1 min-w-0 bg-slate-50 focus:bg-white transition-colors" />
-                           <input type="text" placeholder="名稱" value={paymentForm.name} onChange={e => setPaymentForm({...paymentForm, name: e.target.value})} className="border border-slate-300 rounded-lg p-2 text-sm flex-1 min-w-0 bg-slate-50 focus:bg-white transition-colors" />
+                           <input type="text" placeholder="訂單序號" value={paymentForm.orderNo} onChange={e => setPaymentForm({...paymentForm, orderNo: e.target.value})} className="border border-slate-300 rounded-lg p-2 text-sm font-mono flex-1 min-w-0 bg-slate-50 focus:bg-white transition-colors" autoComplete="off" autoCorrect="off" spellCheck="false" />
+                           <input type="text" placeholder="名稱" value={paymentForm.name} onChange={e => setPaymentForm({...paymentForm, name: e.target.value})} className="border border-slate-300 rounded-lg p-2 text-sm flex-1 min-w-0 bg-slate-50 focus:bg-white transition-colors" autoComplete="off" autoCorrect="off" spellCheck="false" />
                         </div>
                         <div className="flex gap-2">
                            <input type="number" step="any" placeholder="金額" value={paymentForm.amount} onChange={e => setPaymentForm({...paymentForm, amount: e.target.value})} className="border border-slate-300 rounded-lg p-2 text-sm font-mono flex-1 min-w-0 bg-slate-50 focus:bg-white transition-colors" onKeyDown={e => e.key === 'Enter' && handleAddPayment()} />
@@ -286,8 +286,8 @@ const PurchasingSystem: React.FC<Props> = ({ onNavigateHome }) => {
                   <div className="p-3 bg-white border border-slate-200 rounded-xl space-y-3 mt-1">
                      <div className="flex flex-col gap-2 mb-2">
                         <div className="flex gap-2">
-                           <input type="text" placeholder="訂單序號" value={collectionForm.orderNo} onChange={e => setCollectionForm({...collectionForm, orderNo: e.target.value})} className="border border-slate-300 rounded-lg p-2 text-sm font-mono flex-1 min-w-0 bg-slate-50 focus:bg-white transition-colors" />
-                           <input type="text" placeholder="名稱" value={collectionForm.name} onChange={e => setCollectionForm({...collectionForm, name: e.target.value})} className="border border-slate-300 rounded-lg p-2 text-sm flex-1 min-w-0 bg-slate-50 focus:bg-white transition-colors" />
+                           <input type="text" placeholder="訂單序號" value={collectionForm.orderNo} onChange={e => setCollectionForm({...collectionForm, orderNo: e.target.value})} className="border border-slate-300 rounded-lg p-2 text-sm font-mono flex-1 min-w-0 bg-slate-50 focus:bg-white transition-colors" autoComplete="off" autoCorrect="off" spellCheck="false" />
+                           <input type="text" placeholder="名稱" value={collectionForm.name} onChange={e => setCollectionForm({...collectionForm, name: e.target.value})} className="border border-slate-300 rounded-lg p-2 text-sm flex-1 min-w-0 bg-slate-50 focus:bg-white transition-colors" autoComplete="off" autoCorrect="off" spellCheck="false" />
                         </div>
                         <div className="flex gap-2">
                            <input type="number" step="any" placeholder="金額" value={collectionForm.amount} onChange={e => setCollectionForm({...collectionForm, amount: e.target.value})} className="border border-slate-300 rounded-lg p-2 text-sm font-mono flex-1 min-w-0 bg-slate-50 focus:bg-white transition-colors" onKeyDown={e => e.key === 'Enter' && handleAddCollection()} />
