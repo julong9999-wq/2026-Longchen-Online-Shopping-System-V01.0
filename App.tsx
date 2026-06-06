@@ -5,6 +5,7 @@ import { getNextGroupId, getNextItemId, getNextOrderGroupId, calculateProductSta
 import ProductForm from './components/ProductForm';
 import BankSystem from './components/BankSystem';
 import PurchasingSystem from './components/PurchasingSystem';
+import EcommerceAnalysisSystem from './components/EcommerceAnalysisSystem';
 import { Trash2, Edit, Plus, Package, ShoppingCart, List, BarChart2, ChevronRight, ChevronDown, User, Box, X, Calculator, Download, Save, Wallet, ArrowUpCircle, ArrowDownCircle, Grid, PieChart, Check, Database, Upload, AlertTriangle, Home } from 'lucide-react';
 import { db } from './firebase';
 import { 
@@ -106,7 +107,7 @@ const IncomeField = ({ label, value, isInput = false, onChange, colorClass = "te
 
 const App: React.FC = () => {
   // --- State ---
-  const [appMode, setAppMode] = useState<'home' | 'ecommerce' | 'bank' | 'purchasing'>('home');
+  const [appMode, setAppMode] = useState<'home' | 'ecommerce' | 'bank' | 'purchasing' | 'ecommerce_analysis'>('home');
   const [view, setView] = useState<ViewState>('products');
   const [dbError, setDbError] = useState<string | null>(null);
   
@@ -1294,6 +1295,17 @@ const App: React.FC = () => {
                   </button>
 
                   <button 
+                      onClick={() => setAppMode('ecommerce_analysis')}
+                      className="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-5 px-6 rounded-2xl shadow-lg border border-sky-400 transition-all active:scale-95 flex items-center justify-between"
+                  >
+                      <div className="flex items-center gap-4">
+                          <PieChart size={28} />
+                          <span className="text-2xl mt-1 tracking-wider">網購分析</span>
+                      </div>
+                      <ChevronRight size={28} className="opacity-70" />
+                  </button>
+
+                  <button 
                       onClick={() => setAppMode('bank')}
                       className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-5 px-6 rounded-2xl shadow border border-emerald-500 transition-all active:scale-95 flex items-center justify-between"
                   >
@@ -1325,6 +1337,16 @@ const App: React.FC = () => {
 
   if (appMode === 'purchasing') {
       return <PurchasingSystem onNavigateHome={() => setAppMode('home')} />;
+  }
+
+  if (appMode === 'ecommerce_analysis') {
+      return <EcommerceAnalysisSystem 
+          orderGroups={orderGroups}
+          orderItems={orderItems}
+          productItems={productItems}
+          allIncomeSettings={allIncomeSettings}
+          onNavigateHome={() => setAppMode('home')} 
+      />;
   }
 
   return (
