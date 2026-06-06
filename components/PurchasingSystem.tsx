@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { collection, onSnapshot, doc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { generateUUID, formatCurrency } from '../utils';
-import { FileText, Edit, Plus, Trash2, Home, ChevronDown, ChevronUp, X } from 'lucide-react';
+import { FileText, Edit, Plus, Trash2, Home, ChevronDown, ChevronUp, X, Save } from 'lucide-react';
 
 export interface PurchasingItem {
   id: string;
@@ -515,35 +515,37 @@ const PurchasingSystem: React.FC<Props> = ({ onNavigateHome }) => {
        {renderNav()}
        
        {subItemModal.isOpen && (
-         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in">
-           <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-xl">
-             <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50">
-               <h3 className="font-bold text-lg text-slate-800">
-                 {subItemModal.mode === 'add' ? '新增' : '修改'}{subItemModal.type === 'payment' ? '代購付款' : '出貨代收'}
-               </h3>
-               <button onClick={() => setSubItemModal({...subItemModal, isOpen: false})} className="text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-200 transition-colors">
-                 <X size={20} />
-               </button>
+         <div className="fixed inset-0 bg-slate-50 flex flex-col z-50 animate-in slide-in-from-bottom-2">
+           <div className="flex items-center justify-between p-4 bg-white border-b border-slate-200">
+             <h3 className="font-bold text-xl text-slate-800">
+               {subItemModal.mode === 'add' ? '新增' : '修改'}{subItemModal.type === 'payment' ? '代購付款' : '出貨代收'}
+             </h3>
+             <button onClick={() => setSubItemModal({...subItemModal, isOpen: false})} className="text-slate-400 hover:text-slate-600 p-2 rounded-full hover:bg-slate-100 transition-colors">
+               <X size={24} />
+             </button>
+           </div>
+           <div className="p-5 flex flex-col gap-5 flex-1 overflow-y-auto">
+             <div>
+                <label className="block text-sm font-bold text-slate-600 mb-1">訂單序號</label>
+                <input type="text" value={subItemModal.orderNo} onChange={e => setSubItemModal({...subItemModal, orderNo: e.target.value})} className="w-full border border-slate-300 rounded-xl p-4 text-lg font-mono outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white shadow-sm" placeholder="例如: 1024" autoFocus autoComplete="off" autoCorrect="off" spellCheck={false} />
              </div>
-             <div className="p-5 flex flex-col gap-4">
-               <div>
-                  <label className="block text-sm font-bold text-slate-600 mb-1">訂單序號</label>
-                  <input type="text" value={subItemModal.orderNo} onChange={e => setSubItemModal({...subItemModal, orderNo: e.target.value})} className="w-full border border-slate-300 rounded-xl p-3 text-base font-mono outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" placeholder="例如: 1024" autoFocus autoComplete="off" autoCorrect="off" spellCheck={false} />
-               </div>
-               <div>
-                  <label className="block text-sm font-bold text-slate-600 mb-1">名稱</label>
-                  <input type="text" value={subItemModal.name} onChange={e => setSubItemModal({...subItemModal, name: e.target.value})} className="w-full border border-slate-300 rounded-xl p-3 text-base outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" placeholder="商品名稱或代收項目" autoComplete="off" autoCorrect="off" spellCheck={false} />
-               </div>
-               <div>
-                  <label className="block text-sm font-bold text-slate-600 mb-1">金額</label>
-                  <input type="number" step="any" value={subItemModal.amount} onChange={e => setSubItemModal({...subItemModal, amount: e.target.value})} onKeyDown={e => e.key === 'Enter' && handleSaveSubItem()} className="w-full border border-slate-300 rounded-xl p-3 text-base font-mono outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" placeholder="0" />
-               </div>
-               <div className="mt-2">
-                 <button onClick={handleSaveSubItem} className={`w-full ${subItemModal.type === 'payment' ? 'bg-orange-500 hover:bg-orange-600' : 'bg-emerald-500 hover:bg-emerald-600'} text-white py-3 rounded-xl font-bold text-base shadow-md transition-all active:scale-95`}>
-                   確認{subItemModal.mode === 'add' ? '新增' : '修改'}
-                 </button>
-               </div>
+             <div>
+                <label className="block text-sm font-bold text-slate-600 mb-1">名稱</label>
+                <input type="text" value={subItemModal.name} onChange={e => setSubItemModal({...subItemModal, name: e.target.value})} className="w-full border border-slate-300 rounded-xl p-4 text-lg outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white shadow-sm" placeholder="商品名稱或代收項目" autoComplete="off" autoCorrect="off" spellCheck={false} />
              </div>
+             <div>
+                <label className="block text-sm font-bold text-slate-600 mb-1">金額</label>
+                <input type="number" step="any" value={subItemModal.amount} onChange={e => setSubItemModal({...subItemModal, amount: e.target.value})} onKeyDown={e => e.key === 'Enter' && handleSaveSubItem()} className="w-full border border-slate-300 rounded-xl p-4 text-lg font-mono outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white shadow-sm" placeholder="0" />
+             </div>
+           </div>
+           <div className="p-4 bg-white border-t border-slate-200 flex gap-3 pb-safe">
+             <button onClick={() => setSubItemModal({...subItemModal, isOpen: false})} className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-4 rounded-xl font-bold text-lg transition-colors">
+               取消
+             </button>
+             <button onClick={handleSaveSubItem} className={`flex-1 ${subItemModal.type === 'payment' ? 'bg-orange-500 hover:bg-orange-600' : 'bg-emerald-500 hover:bg-emerald-600'} text-white py-4 rounded-xl font-bold text-lg shadow-md transition-all active:scale-95 flex items-center justify-center gap-2`}>
+               <Save size={20} />
+               確認{subItemModal.mode === 'add' ? '新增' : '修改'}
+             </button>
            </div>
          </div>
        )}
