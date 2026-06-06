@@ -360,110 +360,83 @@ const PurchasingSystem: React.FC<Props> = ({ onNavigateHome }) => {
     const gTotal = sumP + sumC + bankB;
 
     return (
-      <div className="flex-1 overflow-y-auto p-3 bg-slate-50">
-        <div className="p-3 max-w-lg mx-auto animate-in fade-in flex flex-col gap-3 pb-20">
-         <div className="flex items-center justify-between pt-1">
-            <h2 className="text-xl font-bold text-slate-800">代購明細</h2>
-         </div>
-         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 space-y-4">
-            {/* 1. 年月 */}
-            <div className="flex flex-col gap-1.5">
-               <label className="text-sm font-bold text-slate-600 ml-1">年月</label>
-               <div className="relative">
-                 <select 
-                   value={detailMonth} 
-                   onChange={e => setDetailMonth(e.target.value)} 
-                   className="w-full appearance-none border border-slate-300 rounded-xl p-3 font-mono text-base outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 bg-white"
-                 >
-                    {availableMonths.length === 0 && <option value={getCurrentMonthStr()}>{getCurrentMonthStr()}</option>}
-                    {availableMonths.map(m => (
-                      <option key={m} value={m}>{m}</option>
-                    ))}
-                 </select>
-                 <ChevronDown size={20} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
-               </div>
+      <div className="flex-1 overflow-y-auto p-3 bg-slate-100">
+        <div className="max-w-lg mx-auto space-y-4 pb-20">
+          <div className="flex items-center justify-between bg-white p-3 rounded-xl shadow-sm border border-slate-200">
+             <h2 className="text-xl font-bold text-slate-800">代購明細</h2>
+             <div className="flex items-center gap-2">
+                <span className="text-slate-500 text-sm font-bold">年月</span>
+                <div className="relative">
+                  <select 
+                    value={detailMonth} 
+                    onChange={e => setDetailMonth(e.target.value)} 
+                    className="appearance-none bg-slate-100 border border-slate-300 text-slate-800 pl-3 pr-8 py-1 rounded-lg text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                     {availableMonths.length === 0 && <option value={getCurrentMonthStr()}>{getCurrentMonthStr()}</option>}
+                     {availableMonths.map(m => (
+                       <option key={m} value={m}>{m}</option>
+                     ))}
+                  </select>
+                  <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+                </div>
+             </div>
+          </div>
+
+          {/* A區 Details */}
+          <div className="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden">
+            <div className="bg-blue-600 px-4 py-3 text-white flex justify-between items-center">
+               <h2 className="font-bold text-lg tracking-wider">A區：代購對帳 ({detailMonth})</h2>
             </div>
-
-            {/* 2. 代購付款 */}
-            <div className="flex flex-col gap-1.5">
-               <div 
-                  className="flex justify-between items-center bg-orange-50 border border-orange-200 rounded-xl p-3 cursor-pointer select-none"
-                  onClick={() => setIsPaymentExpanded(!isPaymentExpanded)}
-               >
-                  <span className="text-sm font-bold text-orange-700">代購付款</span>
-                  <div className="flex items-center gap-2">
-                     <span className="font-mono font-bold text-orange-700">{formatCurrency(sumP)}</span>
-                     {isPaymentExpanded ? <ChevronUp size={20} className="text-orange-500"/> : <Plus size={20} className="text-orange-500"/>}
-                  </div>
-               </div>
-               {isPaymentExpanded && (
-                  <div className="p-3 bg-white border border-slate-200 rounded-xl space-y-3 mt-1">
-                     <SubTable 
-                       title="代購付款列表" 
-                       items={pItems} 
-                       colorClass="text-orange-600" 
-                       borderClass="border-slate-100" 
-                       bgClass=""
-                       hideHeader
-                     />
-                  </div>
-               )}
-            </div>
-
-            {/* 3. 出貨代收 */}
-            <div className="flex flex-col gap-1.5">
-               <div 
-                  className="flex justify-between items-center bg-emerald-50 border border-emerald-200 rounded-xl p-3 cursor-pointer select-none"
-                  onClick={() => setIsCollectionExpanded(!isCollectionExpanded)}
-               >
-                  <span className="text-sm font-bold text-emerald-700">出貨代收</span>
-                  <div className="flex items-center gap-2">
-                     <span className="font-mono font-bold text-emerald-700">{formatCurrency(sumC)}</span>
-                     {isCollectionExpanded ? <ChevronUp size={20} className="text-emerald-500"/> : <Plus size={20} className="text-emerald-500"/>}
-                  </div>
-               </div>
-               {isCollectionExpanded && (
-                  <div className="p-3 bg-white border border-slate-200 rounded-xl space-y-3 mt-1">
-                     <SubTable 
-                       title="出貨代收列表" 
-                       items={cItems} 
-                       colorClass="text-emerald-600" 
-                       borderClass="border-slate-100" 
-                       bgClass="" 
-                       hideHeader
-                     />
-                  </div>
-               )}
-            </div>
-
-            {/* 4. 銀行餘額 */}
-            <div className="flex flex-col gap-1.5">
-               <label className="text-sm font-bold text-slate-600 ml-1">銀行餘額</label>
-               <div className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 font-mono font-bold text-base text-slate-800 text-right">
-                  {formatCurrency(bankB)}
-               </div>
-            </div>
-
-            {/* 5. 合計金額 */}
-            <div className="flex flex-col gap-1.5">
-               <label className="text-sm font-bold text-slate-600 ml-1">合計金額</label>
-               <div className="w-full bg-slate-100 border border-slate-200 rounded-xl p-3 font-mono font-bold text-lg text-slate-800 text-right">
-                  {formatCurrency(gTotal)}
-               </div>
-            </div>
-
-            {/* 6. 空白 */}
-            <div className="h-4"></div>
-
-            {/* 7. 已領利潤 */}
-            <div className="flex flex-col gap-1.5 pt-4 border-t border-slate-200">
-               <label className="text-sm font-bold text-purple-700 ml-1">已領利潤</label>
-               <div className="w-full bg-purple-50 border border-purple-200 rounded-xl p-3 font-mono font-bold text-base text-purple-800 text-right">
-                  {formatCurrency(selectedDetailRecord?.profitWithdrawn || 0)}
-               </div>
+            <div className="p-4 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-orange-50 border border-orange-200 p-3 rounded-xl flex flex-col items-center justify-center">
+                  <span className="text-xs font-bold text-orange-600 mb-1">代購付款合計</span>
+                  <span className="font-mono font-bold text-xl text-orange-700">{formatCurrency(sumP)}</span>
+                </div>
+                <div className="bg-emerald-50 border border-emerald-200 p-3 rounded-xl flex flex-col items-center justify-center">
+                  <span className="text-xs font-bold text-emerald-600 mb-1">出貨代收合計</span>
+                  <span className="font-mono font-bold text-xl text-emerald-700">{formatCurrency(sumC)}</span>
+                </div>
+              </div>
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex flex-col gap-1 items-center justify-center">
+                 <span className="text-xs font-bold text-blue-800 mb-1">銀行餘額</span>
+                 <span className="font-mono font-bold text-xl text-blue-900">{formatCurrency(bankB)}</span>
+              </div>
+              <div className="bg-slate-800 rounded-xl p-4 flex justify-between items-center text-white shadow-inner">
+                 <span className="font-bold text-lg">合計金額</span>
+                 <span className="font-mono font-bold text-2xl tracking-tight">{formatCurrency(gTotal)}</span>
+              </div>
             </div>
           </div>
 
+          {/* B區 Details */}
+          <div className="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden">
+            <div className="bg-purple-600 px-4 py-2 text-white">
+              <h2 className="font-bold text-base tracking-wider">B區：獨立紀錄</h2>
+            </div>
+            <div className="p-4">
+              <div className="flex flex-col gap-1 items-center justify-center bg-purple-50 border border-purple-200 rounded-xl p-3">
+                 <span className="text-xs font-bold text-purple-700 mb-1">已領利潤</span>
+                 <span className="font-mono font-bold text-xl text-purple-900">{formatCurrency(selectedDetailRecord?.profitWithdrawn || 0)}</span>
+              </div>
+            </div>
+          </div>
+
+          <SubTable 
+            title="代購付款明細" 
+            items={pItems} 
+            colorClass="text-orange-600" 
+            borderClass="border-orange-200" 
+            bgClass="bg-orange-50"
+          />
+
+          <SubTable 
+            title="出貨代收明細" 
+            items={cItems} 
+            colorClass="text-emerald-600" 
+            borderClass="border-emerald-200" 
+            bgClass="bg-emerald-50"
+          />
         </div>
       </div>
     );
