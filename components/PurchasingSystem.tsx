@@ -174,7 +174,7 @@ const PurchasingSystem: React.FC<Props> = ({ onNavigateHome }) => {
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 text-slate-500 border-b border-slate-100">
               <tr>
-                <th className="px-3 py-2 font-bold w-1/4">訂單序號</th>
+                <th className="px-3 py-2 font-bold w-1/4">訂單序</th>
                 <th className="px-3 py-2 font-bold w-1/2">名稱</th>
                 <th className="px-3 py-2 font-bold text-right w-1/4">金額</th>
                 {onRemove && <th className="px-2 py-2"></th>}
@@ -247,7 +247,7 @@ const PurchasingSystem: React.FC<Props> = ({ onNavigateHome }) => {
                   <div className="p-3 bg-white border border-slate-200 rounded-xl space-y-3 mt-1">
                      <div className="flex flex-col gap-2 mb-2">
                         <div className="flex gap-2">
-                           <input type="text" placeholder="訂單序號" value={paymentForm.orderNo} onChange={e => setPaymentForm({...paymentForm, orderNo: e.target.value})} className="border border-slate-300 rounded-lg p-3 text-base font-mono flex-1 min-w-0 bg-slate-50 focus:bg-white transition-colors" autoComplete="one-time-code" autoCorrect="off" spellCheck={false} data-form-type="other" />
+                           <input type="text" placeholder="訂單序" value={paymentForm.orderNo} onChange={e => setPaymentForm({...paymentForm, orderNo: e.target.value})} className="border border-slate-300 rounded-lg p-3 text-base font-mono flex-1 min-w-0 bg-slate-50 focus:bg-white transition-colors" autoComplete="one-time-code" autoCorrect="off" spellCheck={false} data-form-type="other" />
                            <input type="text" placeholder="名稱" value={paymentForm.name} onChange={e => setPaymentForm({...paymentForm, name: e.target.value})} className="border border-slate-300 rounded-lg p-3 text-base flex-1 min-w-0 bg-slate-50 focus:bg-white transition-colors" autoComplete="one-time-code" autoCorrect="off" spellCheck={false} data-form-type="other" />
                         </div>
                         <div className="flex gap-2">
@@ -286,7 +286,7 @@ const PurchasingSystem: React.FC<Props> = ({ onNavigateHome }) => {
                   <div className="p-3 bg-white border border-slate-200 rounded-xl space-y-3 mt-1">
                      <div className="flex flex-col gap-2 mb-2">
                         <div className="flex gap-2">
-                           <input type="text" placeholder="訂單序號" value={collectionForm.orderNo} onChange={e => setCollectionForm({...collectionForm, orderNo: e.target.value})} className="border border-slate-300 rounded-lg p-3 text-base font-mono flex-1 min-w-0 bg-slate-50 focus:bg-white transition-colors" autoComplete="one-time-code" autoCorrect="off" spellCheck={false} data-form-type="other" />
+                           <input type="text" placeholder="訂單序" value={collectionForm.orderNo} onChange={e => setCollectionForm({...collectionForm, orderNo: e.target.value})} className="border border-slate-300 rounded-lg p-3 text-base font-mono flex-1 min-w-0 bg-slate-50 focus:bg-white transition-colors" autoComplete="one-time-code" autoCorrect="off" spellCheck={false} data-form-type="other" />
                            <input type="text" placeholder="名稱" value={collectionForm.name} onChange={e => setCollectionForm({...collectionForm, name: e.target.value})} className="border border-slate-300 rounded-lg p-3 text-base flex-1 min-w-0 bg-slate-50 focus:bg-white transition-colors" autoComplete="one-time-code" autoCorrect="off" spellCheck={false} data-form-type="other" />
                         </div>
                         <div className="flex gap-2">
@@ -382,43 +382,27 @@ const PurchasingSystem: React.FC<Props> = ({ onNavigateHome }) => {
              </div>
           </div>
 
-          {/* A區 Details */}
-          <div className="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden">
-            <div className="bg-blue-600 px-4 py-3 text-white flex justify-between items-center">
-               <h2 className="font-bold text-lg tracking-wider">A區：代購對帳 ({detailMonth})</h2>
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 space-y-3 mt-4">
+            <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 flex justify-between items-center">
+               <span className="text-sm font-bold text-orange-700">代購付款</span>
+               <span className="font-mono font-bold text-lg text-orange-700">{formatCurrency(sumP)}</span>
             </div>
-            <div className="p-4 space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-orange-50 border border-orange-200 p-3 rounded-xl flex flex-col items-center justify-center">
-                  <span className="text-xs font-bold text-orange-600 mb-1">代購付款合計</span>
-                  <span className="font-mono font-bold text-xl text-orange-700">{formatCurrency(sumP)}</span>
-                </div>
-                <div className="bg-emerald-50 border border-emerald-200 p-3 rounded-xl flex flex-col items-center justify-center">
-                  <span className="text-xs font-bold text-emerald-600 mb-1">出貨代收合計</span>
-                  <span className="font-mono font-bold text-xl text-emerald-700">{formatCurrency(sumC)}</span>
-                </div>
-              </div>
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex flex-col gap-1 items-center justify-center">
-                 <span className="text-xs font-bold text-blue-800 mb-1">銀行餘額</span>
-                 <span className="font-mono font-bold text-xl text-blue-900">{formatCurrency(bankB)}</span>
-              </div>
-              <div className="bg-slate-800 rounded-xl p-4 flex justify-between items-center text-white shadow-inner">
-                 <span className="font-bold text-lg">合計金額</span>
-                 <span className="font-mono font-bold text-2xl tracking-tight">{formatCurrency(gTotal)}</span>
-              </div>
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex justify-between items-center">
+               <span className="text-sm font-bold text-emerald-700">出貨代收</span>
+               <span className="font-mono font-bold text-lg text-emerald-700">{formatCurrency(sumC)}</span>
             </div>
-          </div>
-
-          {/* B區 Details */}
-          <div className="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden">
-            <div className="bg-purple-600 px-4 py-2 text-white">
-              <h2 className="font-bold text-base tracking-wider">B區：獨立紀錄</h2>
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex justify-between items-center">
+               <span className="text-sm font-bold text-blue-800">銀行餘額</span>
+               <span className="font-mono font-bold text-lg text-blue-900">{formatCurrency(bankB)}</span>
             </div>
-            <div className="p-4">
-              <div className="flex flex-col gap-1 items-center justify-center bg-purple-50 border border-purple-200 rounded-xl p-3">
-                 <span className="text-xs font-bold text-purple-700 mb-1">已領利潤</span>
-                 <span className="font-mono font-bold text-xl text-purple-900">{formatCurrency(selectedDetailRecord?.profitWithdrawn || 0)}</span>
-              </div>
+            <div className="bg-slate-100 border border-slate-200 rounded-xl p-3 flex justify-between items-center shadow-sm">
+               <span className="font-bold text-base text-slate-700">合計金額</span>
+               <span className="font-mono font-bold text-xl text-slate-800 tracking-tight">{formatCurrency(gTotal)}</span>
+            </div>
+            <div className="h-2"></div>
+            <div className="bg-purple-50 border border-purple-200 rounded-xl p-3 flex justify-between items-center">
+               <span className="text-sm font-bold text-purple-700">已領利潤</span>
+               <span className="font-mono font-bold text-lg text-purple-900">{formatCurrency(selectedDetailRecord?.profitWithdrawn || 0)}</span>
             </div>
           </div>
 
