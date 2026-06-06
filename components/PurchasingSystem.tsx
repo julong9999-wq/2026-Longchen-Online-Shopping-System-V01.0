@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { collection, onSnapshot, doc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { generateUUID, formatCurrency } from '../utils';
-import { FileText, Edit, Plus, Trash2, Home, Save, ChevronDown, ChevronUp } from 'lucide-react';
+import { FileText, Edit, Plus, Trash2, Home, Save, ChevronDown, ChevronUp, X } from 'lucide-react';
 
 export interface PurchasingItem {
   id: string;
@@ -39,8 +39,22 @@ const PurchasingSystem: React.FC<Props> = ({ onNavigateHome }) => {
   const [collections, setCollections] = useState<PurchasingItem[]>([]);
   
   // Subform inputs
-  const [paymentForm, setPaymentForm] = useState({ orderNo: '', name: '', amount: '' });
-  const [collectionForm, setCollectionForm] = useState({ orderNo: '', name: '', amount: '' });
+  const [subItemModal, setSubItemModal] = useState<{
+     isOpen: boolean;
+     type: 'payment' | 'collection';
+     mode: 'add' | 'edit';
+     id?: string;
+     orderNo: string;
+     name: string;
+     amount: string;
+  }>({
+     isOpen: false,
+     type: 'payment',
+     mode: 'add',
+     orderNo: '',
+     name: '',
+     amount: ''
+  });
 
   const [isPaymentExpanded, setIsPaymentExpanded] = useState(false);
   const [isCollectionExpanded, setIsCollectionExpanded] = useState(false);
@@ -92,26 +106,36 @@ const PurchasingSystem: React.FC<Props> = ({ onNavigateHome }) => {
     }
   };
 
-  const handleAddPayment = () => {
-    if (!paymentForm.name || !paymentForm.amount) return;
-    setPayments([...payments, {
-      id: generateUUID(),
-      orderNo: paymentForm.orderNo,
-      name: paymentForm.name,
-      amount: parseFloat(paymentForm.amount) || 0
-    }]);
-    setPaymentForm({ orderNo: '', name: '', amount: '' });
+  const handleSaveSubItem = () => {
+    if (!subItemModal.name || !subItemModal.amount) return;
+    const amountNum = parseFloat(subItemModal.amount) || 0;
+    
+    if (subItemModal.type === 'payment') {
+      if (subItemModal.mode === 'add') {
+        setPayments([...payments, { id: generateUUID(), orderNo: subItemModal.orderNo, name: subItemModal.name, amount: amountNum }]);
+      } else {
+        setPayments(payments.map(p => p.id === subItemModal.id ? { ...p, orderNo: subItemModal.orderNo, name: subItemModal.name, amount: amountNum } : p));
+      }
+    } else {
+      if (subItemModal.mode === 'add') {
+        setCollections([...collections, { id: generateUUID(), orderNo: subItemModal.orderNo, name: subItemModal.name, amount: amountNum }]);
+      } else {
+        setCollections(collections.map(c => c.id === subItemModal.id ? { ...c, orderNo: subItemModal.orderNo, name: subItemModal.name, amount: amountNum } : c));
+      }
+    }
+    setSubItemModal({ ...subItemModal, isOpen: false });
   };
-
-  const handleAddCollection = () => {
-    if (!collectionForm.name || !collectionForm.amount) return;
-    setCollections([...collections, {
-      id: generateUUID(),
-      orderNo: collectionForm.orderNo,
-      name: collectionForm.name,
-      amount: parseFloat(collectionForm.amount) || 0
-    }]);
-    setCollectionForm({ orderNo: '', name: '', amount: '' });
+  
+  const openSubItemModal = (type: 'payment' | 'collection', mode: 'add' | 'edit', item?: PurchasingItem) => {
+    setSubItemModal({
+      isOpen: true,
+      type,
+      mode,
+      id: item?.id,
+      orderNo: item?.orderNo || '',
+      name: item?.name || '',
+      amount: item ? String(item.amount) : ''
+    });
   };
 
   const removePayment = (id: string) => setPayments(payments.filter(p => p.id !== id));
@@ -160,7 +184,7 @@ const PurchasingSystem: React.FC<Props> = ({ onNavigateHome }) => {
     </div>
   );
 
-  const SubTable = ({ title, items, colorClass, borderClass, bgClass, onRemove, hideHeader }: { title: string, items: PurchasingItem[], colorClass: string, borderClass: string, bgClass: string, onRemove?: (id: string) => void, hideHeader?: boolean }) => {
+  const SubTable = ({ title, items, colorClass, borderClass, bgClass, onRemove, onEdit, hideHeader }: { title: string, items: PurchasingItem[], colorClass: string, borderClass: string, bgClass: string, onRemove?: (id: string) => void, onEdit?: (item: PurchasingItem) => void, hideHeader?: boolean }) => {
     const sum = items.reduce((acc, curr) => acc + curr.amount, 0);
     return (
       <div className={`border ${borderClass} rounded-xl overflow-hidden mb-4 shadow-sm bg-white`}>
@@ -170,68 +194,64 @@ const PurchasingSystem: React.FC<Props> = ({ onNavigateHome }) => {
             <span className={`font-mono font-bold text-base ${colorClass}`}>{formatCurrency(sum)}</span>
           </div>
         )}
-        <div className="p-0">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 text-slate-500 border-b border-slate-100">
-              <tr>
-                <th className="px-3 py-2 font-bold w-1/4">訂單序</th>
-                <th className="px-3 py-2 font-bold w-1/2">名稱</th>
-                <th className="px-3 py-2 font-bold text-right w-1/4">金額</th>
-                {onRemove && <th className="px-2 py-2"></th>}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {items.length === 0 ? (
-                <tr>
-                  <td colSpan={onRemove ? 4 : 3} className="px-3 py-4 text-center text-slate-400">目前無資料</td>
-                </tr>
-              ) : (
-                items.map(item => (
-                  <tr key={item.id} className="hover:bg-slate-50">
-                    <td className="px-3 py-2 font-mono text-xs">{item.orderNo}</td>
-                    <td className="px-3 py-2 font-bold text-slate-700">{item.name}</td>
-                    <td className={`px-3 py-2 text-right font-mono font-bold ${item.amount < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>{formatCurrency(item.amount)}</td>
-                    {onRemove && (
-                      <td className="px-2 py-2 text-center">
-                        <button onClick={() => onRemove(item.id)} className="text-slate-400 hover:text-rose-500 p-1 rounded-full hover:bg-rose-50 transition-colors">
-                          <Trash2 size={16} />
-                        </button>
-                      </td>
-                    )}
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+        <div className="divide-y divide-slate-100 p-0 text-sm">
+          {items.length === 0 ? (
+            <div className="px-3 py-4 text-center text-slate-400">目前無資料</div>
+          ) : (
+            items.map(item => (
+              <div key={item.id} className="p-3 hover:bg-slate-50 transition-colors flex flex-col gap-1.5">
+                {/* 第一行: 訂單序, 金額, 修改按鈕 */}
+                <div className="flex justify-between items-center">
+                   <div className="flex items-center gap-2">
+                     <span className="bg-slate-200 text-slate-700 px-2 py-0.5 rounded text-xs font-mono font-bold">{item.orderNo || '無'}</span>
+                   </div>
+                   <div className="flex items-center gap-3">
+                     <span className={`font-mono font-bold text-base ${item.amount < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>{formatCurrency(item.amount)}</span>
+                     {onEdit && (
+                       <button onClick={() => onEdit(item)} className="text-slate-400 hover:text-blue-500 p-1.5 rounded-full hover:bg-blue-50 transition-colors">
+                         <Edit size={16} />
+                       </button>
+                     )}
+                   </div>
+                </div>
+                {/* 第二行: 名稱, 刪除按鈕 */}
+                <div className="flex justify-between items-center">
+                   <div className="font-bold text-slate-800 text-base">{item.name}</div>
+                   {onRemove && (
+                     <button onClick={() => onRemove(item.id)} className="text-slate-400 hover:text-rose-500 p-1.5 rounded-full hover:bg-rose-50 transition-colors">
+                       <Trash2 size={16} />
+                     </button>
+                   )}
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     );
   };
 
   const renderRecordView = () => (
-    <div className="flex-1 overflow-y-auto p-3 bg-slate-50">
-      <div className="p-3 max-w-lg mx-auto animate-in fade-in flex flex-col gap-3 pb-20">
-         <div className="flex items-center justify-between pt-1">
-            <h2 className="text-xl font-bold text-slate-800">新增紀錄</h2>
-            <button onClick={handleSaveMonth} className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-md transition-colors flex items-center gap-2">
-               <Save size={18} />儲存
+    <div className="flex-1 overflow-y-auto p-3 bg-slate-100">
+      <div className="max-w-lg mx-auto animate-in fade-in flex flex-col gap-3 pb-20 mt-1">
+         <div className="flex items-center justify-between bg-white p-3 rounded-xl shadow-sm border border-slate-200">
+            <div className="flex items-center gap-2">
+                <h2 className="text-xl font-bold text-slate-800 mr-2">新增紀錄</h2>
+                <span className="text-slate-500 text-sm font-bold hidden sm:inline">年月</span>
+                <input 
+                  type="month" 
+                  value={selectedMonth} 
+                  onChange={(e) => setSelectedMonth(e.target.value)} 
+                  className="appearance-none bg-slate-100 border border-slate-300 text-slate-800 pl-2 pr-2 py-1 rounded-lg text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-blue-500 w-36"
+                />
+            </div>
+            <button onClick={handleSaveMonth} className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded-xl text-sm font-bold shadow-md transition-colors flex items-center gap-1.5">
+               <Save size={16} />儲存
             </button>
          </div>
 
          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 space-y-4">
-            
-            {/* 1. 年月 */}
-            <div className="flex flex-col gap-1.5">
-               <label className="text-sm font-bold text-slate-600 ml-1">年月</label>
-               <input 
-                 type="month" 
-                 value={selectedMonth} 
-                 onChange={(e) => setSelectedMonth(e.target.value)} 
-                 className="w-full border border-slate-300 rounded-xl p-3 font-mono text-base outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 bg-white"
-               />
-            </div>
-
-            {/* 2. 代購付款 */}
+            {/* 1. 代購付款 */}
             <div className="flex flex-col gap-1.5">
                <div 
                   className="flex justify-between items-center bg-orange-50 border border-orange-200 rounded-xl p-3 cursor-pointer select-none"
@@ -240,23 +260,14 @@ const PurchasingSystem: React.FC<Props> = ({ onNavigateHome }) => {
                   <span className="text-sm font-bold text-orange-700">代購付款</span>
                   <div className="flex items-center gap-2">
                      <span className="font-mono font-bold text-orange-700">{formatCurrency(totalPayments)}</span>
-                     {isPaymentExpanded ? <ChevronUp size={20} className="text-orange-500"/> : <Plus size={20} className="text-orange-500"/>}
+                     {isPaymentExpanded ? <ChevronUp size={20} className="text-orange-500"/> : <ChevronDown size={20} className="text-orange-500"/>}
+                     <button onClick={(e) => { e.stopPropagation(); openSubItemModal('payment', 'add'); setIsPaymentExpanded(true); }} className="bg-orange-500 hover:bg-orange-600 text-white rounded-full p-1 transition-colors ml-1">
+                        <Plus size={16} />
+                     </button>
                   </div>
                </div>
                {isPaymentExpanded && (
                   <div className="p-3 bg-white border border-slate-200 rounded-xl space-y-3 mt-1">
-                     <div className="flex flex-col gap-2 mb-2">
-                        <div className="flex gap-2">
-                           <input type="text" placeholder="訂單序" value={paymentForm.orderNo} onChange={e => setPaymentForm({...paymentForm, orderNo: e.target.value})} className="border border-slate-300 rounded-lg p-3 text-base font-mono flex-1 min-w-0 bg-slate-50 focus:bg-white transition-colors" autoComplete="one-time-code" autoCorrect="off" spellCheck={false} data-form-type="other" />
-                           <input type="text" placeholder="名稱" value={paymentForm.name} onChange={e => setPaymentForm({...paymentForm, name: e.target.value})} className="border border-slate-300 rounded-lg p-3 text-base flex-1 min-w-0 bg-slate-50 focus:bg-white transition-colors" autoComplete="one-time-code" autoCorrect="off" spellCheck={false} data-form-type="other" />
-                        </div>
-                        <div className="flex gap-2">
-                           <input type="number" step="any" placeholder="金額" value={paymentForm.amount} onChange={e => setPaymentForm({...paymentForm, amount: e.target.value})} className="border border-slate-300 rounded-lg p-3 text-base font-mono flex-1 min-w-0 bg-slate-50 focus:bg-white transition-colors" onKeyDown={e => e.key === 'Enter' && handleAddPayment()} />
-                           <button onClick={handleAddPayment} className="bg-orange-500 text-white rounded-lg px-4 font-bold hover:bg-orange-600 transition-colors shrink-0 flex items-center gap-1">
-                              <Plus size={18} /> 新增
-                           </button>
-                        </div>
-                     </div>
                      <SubTable 
                        title="代購付款列表" 
                        items={payments} 
@@ -265,12 +276,13 @@ const PurchasingSystem: React.FC<Props> = ({ onNavigateHome }) => {
                        bgClass=""
                        hideHeader
                        onRemove={removePayment}
+                       onEdit={(item) => openSubItemModal('payment', 'edit', item)}
                      />
                   </div>
                )}
             </div>
 
-            {/* 3. 出貨代收 */}
+            {/* 2. 出貨代收 */}
             <div className="flex flex-col gap-1.5">
                <div 
                   className="flex justify-between items-center bg-emerald-50 border border-emerald-200 rounded-xl p-3 cursor-pointer select-none"
@@ -279,23 +291,14 @@ const PurchasingSystem: React.FC<Props> = ({ onNavigateHome }) => {
                   <span className="text-sm font-bold text-emerald-700">出貨代收</span>
                   <div className="flex items-center gap-2">
                      <span className="font-mono font-bold text-emerald-700">{formatCurrency(totalCollections)}</span>
-                     {isCollectionExpanded ? <ChevronUp size={20} className="text-emerald-500"/> : <Plus size={20} className="text-emerald-500"/>}
+                     {isCollectionExpanded ? <ChevronUp size={20} className="text-emerald-500"/> : <ChevronDown size={20} className="text-emerald-500"/>}
+                     <button onClick={(e) => { e.stopPropagation(); openSubItemModal('collection', 'add'); setIsCollectionExpanded(true); }} className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-full p-1 transition-colors ml-1">
+                        <Plus size={16} />
+                     </button>
                   </div>
                </div>
                {isCollectionExpanded && (
                   <div className="p-3 bg-white border border-slate-200 rounded-xl space-y-3 mt-1">
-                     <div className="flex flex-col gap-2 mb-2">
-                        <div className="flex gap-2">
-                           <input type="text" placeholder="訂單序" value={collectionForm.orderNo} onChange={e => setCollectionForm({...collectionForm, orderNo: e.target.value})} className="border border-slate-300 rounded-lg p-3 text-base font-mono flex-1 min-w-0 bg-slate-50 focus:bg-white transition-colors" autoComplete="one-time-code" autoCorrect="off" spellCheck={false} data-form-type="other" />
-                           <input type="text" placeholder="名稱" value={collectionForm.name} onChange={e => setCollectionForm({...collectionForm, name: e.target.value})} className="border border-slate-300 rounded-lg p-3 text-base flex-1 min-w-0 bg-slate-50 focus:bg-white transition-colors" autoComplete="one-time-code" autoCorrect="off" spellCheck={false} data-form-type="other" />
-                        </div>
-                        <div className="flex gap-2">
-                           <input type="number" step="any" placeholder="金額" value={collectionForm.amount} onChange={e => setCollectionForm({...collectionForm, amount: e.target.value})} className="border border-slate-300 rounded-lg p-3 text-base font-mono flex-1 min-w-0 bg-slate-50 focus:bg-white transition-colors" onKeyDown={e => e.key === 'Enter' && handleAddCollection()} />
-                           <button onClick={handleAddCollection} className="bg-emerald-500 text-white rounded-lg px-4 font-bold hover:bg-emerald-600 transition-colors shrink-0 flex items-center gap-1">
-                              <Plus size={18} /> 新增
-                           </button>
-                        </div>
-                     </div>
                      <SubTable 
                        title="出貨代收列表" 
                        items={collections} 
@@ -304,12 +307,13 @@ const PurchasingSystem: React.FC<Props> = ({ onNavigateHome }) => {
                        bgClass="" 
                        hideHeader
                        onRemove={removeCollection}
+                       onEdit={(item) => openSubItemModal('collection', 'edit', item)}
                      />
                   </div>
                )}
             </div>
 
-            {/* 4. 銀行餘額 */}
+            {/* 3. 銀行餘額 */}
             <div className="flex flex-col gap-1.5">
                <label className="text-sm font-bold text-slate-600 ml-1">銀行餘額</label>
                <input 
@@ -433,6 +437,40 @@ const PurchasingSystem: React.FC<Props> = ({ onNavigateHome }) => {
          {view === 'detail' && <div className="absolute inset-0 overflow-hidden flex flex-col">{renderDetailView()}</div>}
        </div>
        {renderNav()}
+       
+       {subItemModal.isOpen && (
+         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in">
+           <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-xl">
+             <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50">
+               <h3 className="font-bold text-lg text-slate-800">
+                 {subItemModal.mode === 'add' ? '新增' : '修改'}{subItemModal.type === 'payment' ? '代購付款' : '出貨代收'}
+               </h3>
+               <button onClick={() => setSubItemModal({...subItemModal, isOpen: false})} className="text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-200 transition-colors">
+                 <X size={20} />
+               </button>
+             </div>
+             <div className="p-5 flex flex-col gap-4">
+               <div>
+                  <label className="block text-sm font-bold text-slate-600 mb-1">訂單序號</label>
+                  <input type="text" value={subItemModal.orderNo} onChange={e => setSubItemModal({...subItemModal, orderNo: e.target.value})} className="w-full border border-slate-300 rounded-xl p-3 text-base font-mono outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" placeholder="例如: 1024" autoFocus autoComplete="off" autoCorrect="off" spellCheck={false} />
+               </div>
+               <div>
+                  <label className="block text-sm font-bold text-slate-600 mb-1">名稱</label>
+                  <input type="text" value={subItemModal.name} onChange={e => setSubItemModal({...subItemModal, name: e.target.value})} className="w-full border border-slate-300 rounded-xl p-3 text-base outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" placeholder="商品名稱或代收項目" autoComplete="off" autoCorrect="off" spellCheck={false} />
+               </div>
+               <div>
+                  <label className="block text-sm font-bold text-slate-600 mb-1">金額</label>
+                  <input type="number" step="any" value={subItemModal.amount} onChange={e => setSubItemModal({...subItemModal, amount: e.target.value})} onKeyDown={e => e.key === 'Enter' && handleSaveSubItem()} className="w-full border border-slate-300 rounded-xl p-3 text-base font-mono outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" placeholder="0" />
+               </div>
+               <div className="mt-2">
+                 <button onClick={handleSaveSubItem} className={`w-full ${subItemModal.type === 'payment' ? 'bg-orange-500 hover:bg-orange-600' : 'bg-emerald-500 hover:bg-emerald-600'} text-white py-3 rounded-xl font-bold text-base shadow-md transition-all active:scale-95`}>
+                   確認{subItemModal.mode === 'add' ? '新增' : '修改'}
+                 </button>
+               </div>
+             </div>
+           </div>
+         </div>
+       )}
     </div>
   );
 };
