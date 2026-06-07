@@ -1,9 +1,10 @@
-import React, { useState, useMemo } from 'react';
-import { Home, Truck, DollarSign, Wallet, FileCheck, Edit2, X, Save } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Home, Truck, DollarSign, Wallet, FileCheck, Edit2, X, Save, AlertTriangle, CheckCircle } from 'lucide-react';
 import { OrderGroup, OrderItem, ProductItem } from '../types';
 import { formatCurrency } from '../utils';
 import { db } from '../firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, collection, onSnapshot } from 'firebase/firestore';
+import { PurchasingRecord } from './PurchasingSystem';
 
 interface EcommerceAnalysisSystemProps {
   orderGroups: OrderGroup[];
@@ -32,6 +33,18 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
   const [editDad, setEditDad] = useState('');
   const [editSister, setEditSister] = useState('');
   const [editNote, setEditNote] = useState('');
+
+  const [purchasingRecords, setPurchasingRecords] = useState<PurchasingRecord[]>([]);
+
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'purchasingRecords'), (snapshot) => {
+      const data = snapshot.docs.map(doc => doc.data() as PurchasingRecord);
+      setPurchasingRecords(data);
+    }, (error) => {
+      console.error("error fetching purchasing records", error);
+    });
+    return () => unsub();
+  }, []);
 
   // Calculate batched data
   const batchData = useMemo(() => {
@@ -389,12 +402,95 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
         </div>
       )}
 
-      {activeTab === 'reconciliation' && (
-         <div className="flex-1 p-2 flex flex-col items-center justify-center text-slate-400 font-bold bg-white">
-             <FileCheck size={48} className="mb-4 opacity-50" />
-             <p>對帳分析模組建置中...</p>
-         </div>
-      )}
+      {activeTab === 'reconciliation' && (() => {
+          // 網購系統: 綠(processing), 紅(preorder). 過濾 黃(closed)
+          const ecommerceOrders = batchData.filter(d => d.status !== 'closed');
+          
+          // 代購對帳: 最新月份有資料的月份
+          const latestMonth = purchasingRecords.filter(r => 
+              r.payments.length > 0 || r.collections.length > 0 || r.bankBalance > 0 || r.profitWithdrawn > 0
+          ).map(r => r.month).sort((a, b) => b.localeCompare(a))[0];
+          
+          const latestRecord = purchasingRecords.find(r => r.month === latestMonth);
+          const payments = latestRecord?.payments || [];
+          const collections = latestRecord?.collections || [];
+          
+          // Combine order IDs from both sources
+          const orderIds = Array.from(new Set([
+              ...ecommerceOrders.map(o => o.id),
+              ...payments.map(p => p.orderNo),
+              ...collections.map(c => c.orderNo)
+          ]));
+
+          // Sort descending by Order ID
+          orderIds.sort((a, b) => b.localeCompare(a));
+          
+          return (
+             <div className="flex-1 flex flex-col min-h-0 bg-white">
+                {latestMonth ? (
+                   <div className="p-3 bg-slate-50 border-b border-slate-200 shrink-0 z-10 shadow-sm">
+                      <div className="text-sm font-bold text-slate-700 mb-1 flex items-center gap-2">
+                          <CheckCircle size={16} className="text-emerald-500" /> 比對代購月份: <span className="text-blue-600 bg-blue-100 px-2 py-0.5 rounded-md">{latestMonth}</span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 flex items-center gap-1 mt-1 font-bold">
+                          網購對帳 (綠燈 / 紅燈) vs 代購對帳 ({latestMonth})
+                      </div>
+                   </div>
+                ) : (
+                   <div className="p-3 bg-amber-50 text-amber-700 text-sm font-bold border-b border-amber-200 shrink-0 z-10">
+                      <AlertTriangle size={16} className="inline mr-1" /> 尚未有代購對帳資料
+                   </div>
+                )}
+                <div className="overflow-y-auto flex-1 pb-16">
+                   <table className="w-full text-left text-sm">
+                       <thead className="bg-slate-100 text-slate-600 border-b border-slate-200 sticky top-0 z-10 shadow-sm">
+                           <tr>
+                               <th className="px-2 py-2 font-bold w-1/4">訂單序</th>
+                               <th className="px-2 py-2 font-bold text-right w-1/4">網購收入</th>
+                               <th className="px-2 py-2 font-bold text-right w-1/4 text-orange-700">代購付款</th>
+                               <th className="px-2 py-2 font-bold text-right w-1/4 text-fuchsia-700">出貨代收</th>
+                           </tr>
+                       </thead>
+                       <tbody className="divide-y divide-slate-100">
+                           {orderIds.map(id => {
+                               const eo = ecommerceOrders.find(o => o.id === id);
+                               const paymentAmount = payments.filter(p => p.orderNo === id).reduce((acc, p) => acc + p.amount, 0);
+                               const collectionAmount = collections.filter(c => c.orderNo === id).reduce((acc, c) => acc + c.amount, 0);
+                               
+                               const hasEo = !!eo;
+                               const income = hasEo ? eo.revenue : 0;
+                               
+                               // Check if it's missing from ecommerce but exists in purchasing
+                               const isWarning = !hasEo && (paymentAmount > 0 || collectionAmount > 0);
+                               
+                               return (
+                                   <tr key={id} className={`hover:bg-slate-50 transition-colors ${isWarning ? 'bg-amber-50/50' : ''}`}>
+                                       <td className="px-2 py-3 border-r border-slate-100">
+                                           <div className={`font-mono font-bold ${isWarning ? 'text-amber-700' : 'text-slate-700'}`}>{id}</div>
+                                       </td>
+                                       <td className="px-2 py-3 text-right border-r border-slate-100">
+                                           <div className="font-mono font-bold text-blue-600">{hasEo ? formatCurrency(income) : '-'}</div>
+                                       </td>
+                                       <td className="px-2 py-3 text-right border-r border-slate-100 bg-orange-50/30">
+                                           <div className="font-mono font-bold text-orange-600">{paymentAmount > 0 ? formatCurrency(paymentAmount) : '-'}</div>
+                                       </td>
+                                       <td className="px-2 py-3 text-right bg-fuchsia-50/30">
+                                            <div className="font-mono font-bold text-fuchsia-600">{collectionAmount > 0 ? formatCurrency(collectionAmount) : '-'}</div>
+                                       </td>
+                                   </tr>
+                               );
+                           })}
+                           {orderIds.length === 0 && (
+                               <tr>
+                                   <td colSpan={4} className="text-center py-8 text-slate-400 font-bold">目前沒有資料可比對</td>
+                               </tr>
+                           )}
+                       </tbody>
+                   </table>
+                </div>
+             </div>
+          );
+      })()}
 
       {renderNav()}
 
