@@ -285,24 +285,48 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
 
                  if (cashData.length === 0) return <div className="text-center py-6 text-slate-400">沒有符合的資料</div>;
 
+                 const sumProfit = cashFilter === 'withdrawn' ? cashData.reduce((acc, item) => acc + item.profit, 0) : 0;
+                 const sumDad = cashFilter === 'withdrawn' ? cashData.reduce((acc, item) => acc + item.dadReceivable, 0) : 0;
+                 const sumSister = cashFilter === 'withdrawn' ? cashData.reduce((acc, item) => acc + item.sisterReceivable, 0) : 0;
+
                  return (
                     <div className="flex flex-col gap-3">
+                      {cashFilter === 'withdrawn' ? (
+                         <div className="flex flex-col text-xs font-bold text-slate-500 px-3 pb-2 border-b border-slate-200 sticky top-0 bg-white z-10">
+                             <div className="flex items-center mb-1">
+                                 <span className="w-1/4 text-left">訂單序</span>
+                                 <span className="w-1/4 text-right">利潤</span>
+                                 <span className="w-1/4 text-right">爸爸應收</span>
+                                 <span className="w-1/4 text-right">妹妹應收</span>
+                             </div>
+                             <div className="flex items-center">
+                                 <span className="w-1/2 text-left">收款說明</span>
+                                 <span className="w-1/4 text-right">爸爸%</span>
+                                 <span className="w-1/4 text-right">妹妹%</span>
+                             </div>
+                         </div>
+                      ) : (
+                         <div className="flex justify-between items-center text-xs font-bold text-slate-500 px-3 pb-2 border-b border-slate-200 sticky top-0 bg-white z-10">
+                             <span>訂單序</span>
+                             <span>總利潤</span>
+                             <span>利潤率</span>
+                             <span className="w-8 text-center">操作</span>
+                         </div>
+                      )}
                       {cashData.map(item => (
                          <div key={item.id} className="border border-slate-100 bg-slate-50 rounded-xl p-3 shadow-sm">
                             {cashFilter === 'withdrawn' ? (
                                <>
-                                 <div className="flex justify-between items-center border-b border-slate-200 pb-2 mb-2">
-                                    <span className="font-mono font-bold text-slate-700">{item.id}</span>
-                                    <span className="text-emerald-600 font-mono font-bold">{formatCurrency(item.profit)}</span>
-                                    <span className="text-orange-600 font-mono font-bold">{formatCurrency(item.dadReceivable)}</span>
-                                    <span className="text-fuchsia-600 font-mono font-bold">{formatCurrency(item.sisterReceivable)}</span>
+                                 <div className="flex items-center border-b border-slate-200 pb-2 mb-2">
+                                    <span className="w-1/4 font-mono font-bold text-slate-700 text-left">{item.id}</span>
+                                    <span className="w-1/4 text-emerald-600 font-mono font-bold text-right">{formatCurrency(item.profit)}</span>
+                                    <span className="w-1/4 text-orange-600 font-mono font-bold text-right">{formatCurrency(item.dadReceivable)}</span>
+                                    <span className="w-1/4 text-fuchsia-600 font-mono font-bold text-right">{formatCurrency(item.sisterReceivable)}</span>
                                  </div>
-                                 <div className="flex justify-between items-center text-xs text-slate-500">
-                                    <span className="truncate max-w-[120px] font-bold">{item.paymentNote || '-'}</span>
-                                    <div className="flex gap-4">
-                                        <span className="text-orange-600">{item.profit > 0 ? ((item.dadReceivable / item.profit) * 100).toFixed(1) : 0}%</span>
-                                        <span className="text-fuchsia-600">{item.profit > 0 ? ((item.sisterReceivable / item.profit) * 100).toFixed(1) : 0}%</span>
-                                    </div>
+                                 <div className="flex items-center text-xs text-slate-500">
+                                    <span className="w-1/2 truncate font-bold text-left">{item.paymentNote || '-'}</span>
+                                    <span className="w-1/4 text-orange-600 text-right font-mono">{item.profit > 0 ? ((item.dadReceivable / item.profit) * 100).toFixed(1) : 0}%</span>
+                                    <span className="w-1/4 text-fuchsia-600 text-right font-mono">{item.profit > 0 ? ((item.sisterReceivable / item.profit) * 100).toFixed(1) : 0}%</span>
                                  </div>
                                </>
                             ) : (
@@ -321,6 +345,21 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
                             )}
                          </div>
                       ))}
+                      {cashFilter === 'withdrawn' && (
+                         <div className="border-t-2 border-slate-300 bg-sky-50 rounded-xl p-3 shadow-md mt-2 sticky bottom-0 z-10">
+                             <div className="flex items-center border-b border-sky-200 pb-2 mb-2">
+                                <span className="w-1/4 font-bold text-slate-800 text-left text-base">合計</span>
+                                <span className="w-1/4 text-emerald-700 font-mono font-bold text-right text-[15px]">{formatCurrency(sumProfit)}</span>
+                                <span className="w-1/4 text-orange-700 font-mono font-bold text-right text-[15px]">{formatCurrency(sumDad)}</span>
+                                <span className="w-1/4 text-fuchsia-700 font-mono font-bold text-right text-[15px]">{formatCurrency(sumSister)}</span>
+                             </div>
+                             <div className="flex items-center text-xs text-slate-600">
+                                <span className="w-1/2 font-bold text-left text-sky-800">-</span>
+                                <span className="w-1/4 text-orange-700 text-right font-mono font-bold">{sumProfit > 0 ? ((sumDad / sumProfit) * 100).toFixed(1) : 0}%</span>
+                                <span className="w-1/4 text-fuchsia-700 text-right font-mono font-bold">{sumProfit > 0 ? ((sumSister / sumProfit) * 100).toFixed(1) : 0}%</span>
+                             </div>
+                         </div>
+                      )}
                    </div>
                  );
               })()}
