@@ -458,13 +458,6 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
        });
        return row;
     });
-    
-    const totalRow = { month: '合計', 禹君: 0, 禹辰: 0 };
-    data.forEach(d => {
-       totalRow.禹君 += d.禹君;
-       totalRow.禹辰 += d.禹辰;
-    });
-    data.push(totalRow);
 
     const transferTxs = transactions.filter(t => t.type === '調度').sort((a, b) => a.date.localeCompare(b.date));
     const groupedTxs: Record<string, BankTransaction[]> = {};

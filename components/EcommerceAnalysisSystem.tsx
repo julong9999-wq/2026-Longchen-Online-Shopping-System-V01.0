@@ -116,10 +116,10 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
       </div>
 
       {/* Data Table */}
-      <div className="flex-1 overflow-y-auto p-4 pb-20">
-         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="flex-1 p-4 flex flex-col min-h-0">
+         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-y-auto flex-1">
             <table className="w-full text-left text-sm">
-                <thead className="bg-slate-50 text-slate-500 border-b border-slate-100">
+                <thead className="bg-slate-50 text-slate-500 border-b border-slate-100 sticky top-0 z-10">
                     <tr>
                         <th className="px-3 py-3 font-bold w-1/4">訂單序</th>
                         <th className="px-3 py-3 font-bold text-right w-1/4">收入</th>
@@ -154,7 +154,7 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
                     )}
                 </tbody>
                 {filteredData.length > 0 && (
-                    <tfoot className="bg-sky-50/50 border-t-2 border-slate-200">
+                    <tfoot className="bg-sky-100 border-t-2 border-sky-300 sticky bottom-0 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
                         <tr>
                             <td className="px-3 py-3 font-bold text-slate-800">合計</td>
                             <td className="px-3 py-3 text-right font-mono font-bold text-blue-700">
