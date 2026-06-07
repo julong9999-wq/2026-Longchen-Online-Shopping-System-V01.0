@@ -5,7 +5,7 @@ import { db } from '../firebase';
 import { BankTransaction, BankVocabulary, BankAccount, BankTransactionType } from '../types';
 import { INITIAL_BANK_VOCABULARY } from '../constants';
 import { formatCurrency, generateUUID } from '../utils';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 
 type BankView = 'summary' | 'monthly' | 'analysis' | 'add' | 'vocab';
 
@@ -230,7 +230,7 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
   };
 
   const ExpenseChart = ({ txs, title }: { txs: BankTransaction[], title: string }) => {
-    const categories = ["現金領用", "信用卡費", "轉帳匯出", "其他支出"];
+    const categories = ["現金領用", "信用卡費", "轉帳匯出", "其他支出", "合計"];
     const data = categories.map(cat => ({
       name: cat,
       禹君: 0,
@@ -239,31 +239,39 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
 
     txs.filter(t => t.type === '支出').forEach(t => {
        let catName = t.category;
-       if (!categories.includes(catName)) {
+       if (!["現金領用", "信用卡費", "轉帳匯出", "其他支出"].includes(catName)) {
           catName = "其他支出";
        }
        const dataRow = data.find(d => d.name === catName);
-       if (dataRow) {
+       const totalRow = data.find(d => d.name === "合計");
+       if (dataRow && totalRow) {
           if (t.account === '禹君') {
              dataRow.禹君 += t.amount;
+             totalRow.禹君 += t.amount;
           } else if (t.account === '禹辰') {
              dataRow.禹辰 += t.amount;
+             totalRow.禹辰 += t.amount;
           }
        }
     });
 
     return (
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 mt-1">
-         <h3 className="text-[14px] font-bold text-slate-700 mb-3 ml-1">{title}</h3>
-         <ResponsiveContainer width="100%" height={240}>
-           <BarChart data={data} layout="vertical" margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+         <div className="flex items-center justify-between mb-3 ml-1">
+           <h3 className="text-[14px] font-bold text-slate-700">{title}</h3>
+           <div className="flex items-center gap-3 text-[12px] font-bold text-slate-600">
+             <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-[#fed7aa]"></div>禹君</div>
+             <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-[#d8b4e2]"></div>禹辰</div>
+           </div>
+         </div>
+         <ResponsiveContainer width="100%" height={260}>
+           <BarChart data={data} layout="vertical" margin={{ top: 5, right: 20, left: 0, bottom: 5 }} barGap={2} barCategoryGap="20%">
              <CartesianGrid strokeDasharray="3 3" horizontal={false} />
              <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(val) => Math.round(val/1000) + 'k'} />
              <YAxis dataKey="name" type="category" width={65} tick={{ fontSize: 12, fill: '#475569', fontWeight: 'bold' }} />
              <Tooltip cursor={{fill: '#f8fafc'}} formatter={(value: number) => [formatCurrency(value), '']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }} />
-             <Legend iconType="circle" wrapperStyle={{ fontSize: '13px', fontWeight: 'bold', paddingTop: '10px' }} />
-             <Bar dataKey="禹君" fill="#fed7aa" name="禹君" radius={[0, 4, 4, 0]} barSize={16} />
-             <Bar dataKey="禹辰" fill="#d8b4e2" name="禹辰" radius={[0, 4, 4, 0]} barSize={16} />
+             <Bar dataKey="禹君" fill="#fed7aa" name="禹君" radius={[0, 4, 4, 0]} barSize={12} />
+             <Bar dataKey="禹辰" fill="#d8b4e2" name="禹辰" radius={[0, 4, 4, 0]} barSize={12} />
            </BarChart>
          </ResponsiveContainer>
       </div>
@@ -434,7 +442,7 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
       const d = new Date();
       d.setMonth(d.getMonth() - i);
       return d.toISOString().substring(0, 7);
-    });
+    }).filter(m => m !== '2026-04');
 
     const data = last12Months.map(month => {
        const row = { month, 禹君: 0, 禹辰: 0 };
@@ -450,6 +458,13 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
        });
        return row;
     });
+    
+    const totalRow = { month: '合計', 禹君: 0, 禹辰: 0 };
+    data.forEach(d => {
+       totalRow.禹君 += d.禹君;
+       totalRow.禹辰 += d.禹辰;
+    });
+    data.push(totalRow);
 
     const transferTxs = transactions.filter(t => t.type === '調度').sort((a, b) => a.date.localeCompare(b.date));
     const groupedTxs: Record<string, BankTransaction[]> = {};
@@ -508,9 +523,13 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
 
     // To allow negative bars to render from 0, recharts handles it automatically with CartesianGrid, but we can add ReferenceLine
     return (
-      <div className="p-3 max-w-lg mx-auto animate-in fade-in flex flex-col gap-3 pb-20">
-         <div className="flex items-center gap-3 pt-1">
+      <div className="p-3 max-w-lg mxauto animate-in fade-in flex flex-col gap-3 pb-20">
+         <div className="flex items-center justify-between pt-1 w-full">
            <h2 className="text-xl font-bold text-slate-800">收入 減 支出 之 餘額分析</h2>
+           <div className="flex items-center gap-3 text-[13px] font-bold text-slate-600">
+             <div className="flex items-center gap-1"><div className="w-3 h-3 rounded-full bg-[#fed7aa]"></div>禹君</div>
+             <div className="flex items-center gap-1"><div className="w-3 h-3 rounded-full bg-[#d8b4e2]"></div>禹辰</div>
+           </div>
          </div>
          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 mt-1 shrink-0 h-[450px]">
            <ResponsiveContainer width="100%" height="100%">
@@ -519,7 +538,6 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
                <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(val) => Math.round(val/1000) + 'k'} />
                <YAxis dataKey="month" type="category" width={65} tick={{ fontSize: 12, fill: '#475569', fontWeight: 'bold' }} />
                <Tooltip cursor={{fill: '#f8fafc'}} formatter={(value: number) => [formatCurrency(value), '餘額']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-               <Legend iconType="circle" wrapperStyle={{ fontSize: '13px', fontWeight: 'bold', paddingTop: '10px' }} />
                <ReferenceLine x={0} stroke="#94a3b8" />
                <Bar dataKey="禹君" fill="#fed7aa" name="禹君" radius={[0, 4, 4, 0]} barSize={12} />
                <Bar dataKey="禹辰" fill="#d8b4e2" name="禹辰" radius={[0, 4, 4, 0]} barSize={12} />
@@ -531,37 +549,30 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
            <h2 className="text-xl font-bold text-slate-800">「資金調度」分析總表</h2>
          </div>
          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden shrink-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-[14px] whitespace-nowrap">
-              <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold">
-                <tr>
-                  <th className="px-4 py-3">帳戶</th>
-                  <th className="px-4 py-3">日期</th>
-                  <th className="px-4 py-3">項目</th>
-                  <th className="px-4 py-3 text-right">金額</th>
-                  <th className="px-4 py-3">備註</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {unsettledTransfers.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-slate-400 font-bold">目前無未抵銷項目</td>
-                  </tr>
-                ) : (
-                  unsettledTransfers.map(row => (
-                    <tr key={row.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-4 py-3 font-bold text-slate-700">{row.account}</td>
-                      <td className="px-4 py-3 text-slate-500">{row.date}</td>
-                      <td className="px-4 py-3 font-bold text-slate-700">{row.category}</td>
-                      <td className={`px-4 py-3 text-right font-mono font-bold ${row.amount > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                        {formatCurrency(row.amount)}
-                      </td>
-                      <td className="px-4 py-3 text-slate-500 truncate max-w-[120px]" title={row.remarks}>{row.remarks}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+          <div className="flex flex-col">
+            {unsettledTransfers.length === 0 ? (
+                <div className="px-4 py-8 text-center text-slate-400 font-bold">目前無未抵銷項目</div>
+            ) : (
+                unsettledTransfers.map(row => (
+                    <div key={row.id} className="p-3 border-b border-slate-100 last:border-0 hover:bg-slate-50 flex flex-col gap-1.5 transition-colors">
+                        <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                                <span className={`px-2 py-0.5 rounded text-xs font-bold text-white shadow-sm ${row.account === '禹君' ? 'bg-[#fed7aa] text-orange-900 border border-orange-200' : 'bg-[#d8b4e2] text-fuchsia-900 border border-fuchsia-200'}`}>
+                                    {row.account}
+                                </span>
+                                <span className="text-[13px] font-bold text-slate-600 font-mono">{row.date}</span>
+                            </div>
+                            <span className={`font-mono font-bold text-[15px] ${row.amount > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                {formatCurrency(row.amount)}
+                            </span>
+                        </div>
+                        <div className="flex justify-between items-center text-[13px] text-slate-500 px-1">
+                            <span className="font-bold flex-shrink-0">{row.category}</span>
+                            <span className="truncate max-w-[200px] text-right ml-4 text-slate-400">{row.remarks}</span>
+                        </div>
+                    </div>
+                ))
+            )}
           </div>
         </div>
 
