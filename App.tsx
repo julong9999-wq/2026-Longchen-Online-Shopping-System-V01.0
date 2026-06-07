@@ -28,6 +28,7 @@ const DEFAULT_INCOME_DATA = {
     cardFee: 0,
     intlShipping: 0,
     dadReceivable: 0,
+    sisterReceivable: 0,
     paymentNote: '',
     status: 'processing' // Default 'processing' (Green)
 };
@@ -432,6 +433,7 @@ const App: React.FC = () => {
         cardFee: parseFloat(String(incomeData.cardFee)) || 0,
         intlShipping: parseFloat(String(incomeData.intlShipping)) || 0,
         dadReceivable: parseFloat(String(incomeData.dadReceivable)) || 0,
+        sisterReceivable: parseFloat(String(incomeData.sisterReceivable)) || 0,
         paymentNote: incomeData.paymentNote || '',
         status: incomeData.status || 'processing' // Save status as well
     };
@@ -1259,7 +1261,7 @@ const App: React.FC = () => {
                     <div className="grid grid-cols-2 gap-1.5"><IncomeField label="爸爸 (20%)" value={formatCurrency(Math.round(netProfit * 0.2))} colorClass="text-indigo-600" /><IncomeField label="妹妹 (80%)" value={formatCurrency(Math.round(netProfit * 0.8))} colorClass="text-rose-500" /></div>
                 </div>
                 <div className="bg-white p-2 rounded-xl border border-slate-300 shadow-sm flex flex-col justify-center shrink-0">
-                    <div className="grid grid-cols-12 gap-1.5"><div className="col-span-4"><IncomeField label="爸爸應收" value={incomeData.dadReceivable} isInput onChange={(e:any) => setIncomeData({...incomeData, dadReceivable: e.target.value})} /></div><div className="col-span-8"><IncomeField label="收款說明" value={incomeData.paymentNote || ''} isInput onChange={(e:any) => setIncomeData({...incomeData, paymentNote: e.target.value})} /></div></div>
+                    <div className="grid grid-cols-12 gap-1.5"><div className="col-span-3"><IncomeField label="爸爸應收" value={incomeData.dadReceivable} isInput onChange={(e:any) => setIncomeData({...incomeData, dadReceivable: e.target.value})} /></div><div className="col-span-3"><IncomeField label="妹妹應收" value={incomeData.sisterReceivable} isInput onChange={(e:any) => setIncomeData({...incomeData, sisterReceivable: e.target.value})} /></div><div className="col-span-6"><IncomeField label="收款說明" value={incomeData.paymentNote || ''} isInput onChange={(e:any) => setIncomeData({...incomeData, paymentNote: e.target.value})} /></div></div>
                 </div>
              </div>
              {showIncomeAnalysisModal && renderIncomeAnalysisModal()}

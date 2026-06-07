@@ -153,6 +153,27 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
                         })
                     )}
                 </tbody>
+                {filteredData.length > 0 && (
+                    <tfoot className="bg-sky-50/50 border-t-2 border-slate-200">
+                        <tr>
+                            <td className="px-3 py-3 font-bold text-slate-800">合計</td>
+                            <td className="px-3 py-3 text-right font-mono font-bold text-blue-700">
+                                {formatCurrency(filteredData.reduce((acc, item) => acc + item.revenue, 0))}
+                            </td>
+                            <td className={`px-3 py-3 text-right font-mono font-bold ${activeTab === 'shipping' ? 'text-amber-700' : 'text-emerald-700'}`}>
+                                {formatCurrency(filteredData.reduce((acc, item) => acc + (activeTab === 'shipping' ? item.intlShip : item.profit), 0))}
+                            </td>
+                            <td className="px-3 py-3 text-right font-mono font-bold text-slate-800">
+                                {(() => {
+                                    const sumRev = filteredData.reduce((acc, item) => acc + item.revenue, 0);
+                                    const sumVal = filteredData.reduce((acc, item) => acc + (activeTab === 'shipping' ? item.intlShip : item.profit), 0);
+                                    if (sumRev === 0) return '0.0%';
+                                    return `${((sumVal / sumRev) * 100).toFixed(1)}%`;
+                                })()}
+                            </td>
+                        </tr>
+                    </tfoot>
+                )}
             </table>
          </div>
       </div>
