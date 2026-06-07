@@ -13,6 +13,8 @@ interface EcommerceAnalysisSystemProps {
   onNavigateHome: () => void;
 }
 
+const PREVIOUS_PERIOD_IDS = ['202511A', '202511B', '202511C', '202511D'];
+
 const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
   orderGroups,
   orderItems,
@@ -24,7 +26,7 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
   const [statusFilter, setStatusFilter] = useState<'processing' | 'preorder' | 'closed'>('processing');
   
   // Cash sub-tabs and edit modal states
-  const [cashFilter, setCashFilter] = useState<'withdrawn' | 'unwithdrawn'>('withdrawn');
+  const [cashFilter, setCashFilter] = useState<'withdrawn' | 'unwithdrawn' | 'previous'>('withdrawn');
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<string | null>(null);
   const [editDad, setEditDad] = useState('');
@@ -187,11 +189,16 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
 
       {activeTab === 'cash' && (
         <div className="bg-white p-2 shadow-sm border-b border-slate-200 shrink-0 z-10 flex gap-1">
-          {(['withdrawn', 'unwithdrawn'] as const).map(mode => {
-             let label = mode === 'withdrawn' ? '已領' : '未領';
-             let count = mode === 'withdrawn' 
-                 ? batchData.filter(d => d.dadReceivable !== 0 || d.sisterReceivable !== 0).length
-                 : batchData.filter(d => d.dadReceivable === 0 && d.sisterReceivable === 0).length;
+          {(['withdrawn', 'unwithdrawn', 'previous'] as const).map(mode => {
+             let label = mode === 'withdrawn' ? '已領' : mode === 'unwithdrawn' ? '未領' : '前期';
+             let count = 0;
+             if (mode === 'previous') {
+                 count = batchData.filter(d => PREVIOUS_PERIOD_IDS.includes(d.id)).length;
+             } else if (mode === 'withdrawn') {
+                 count = batchData.filter(d => !PREVIOUS_PERIOD_IDS.includes(d.id) && (d.dadReceivable !== 0 || d.sisterReceivable !== 0)).length;
+             } else {
+                 count = batchData.filter(d => !PREVIOUS_PERIOD_IDS.includes(d.id) && d.dadReceivable === 0 && d.sisterReceivable === 0).length;
+             }
              return (
                <button
                   key={mode}
@@ -278,20 +285,27 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
       {activeTab === 'cash' && (
         <div className="flex-1 flex flex-col min-h-0 bg-white">
            {(() => {
-              const cashData = cashFilter === 'withdrawn'
-                 ? batchData.filter(d => d.dadReceivable !== 0 || d.sisterReceivable !== 0)
-                 : batchData.filter(d => d.dadReceivable === 0 && d.sisterReceivable === 0);
+              const cashData = (() => {
+                 if (cashFilter === 'previous') {
+                     return batchData.filter(d => PREVIOUS_PERIOD_IDS.includes(d.id));
+                 } else if (cashFilter === 'withdrawn') {
+                     return batchData.filter(d => !PREVIOUS_PERIOD_IDS.includes(d.id) && (d.dadReceivable !== 0 || d.sisterReceivable !== 0));
+                 } else {
+                     return batchData.filter(d => !PREVIOUS_PERIOD_IDS.includes(d.id) && d.dadReceivable === 0 && d.sisterReceivable === 0);
+                 }
+              })();
 
               if (cashData.length === 0) return <div className="text-center py-6 text-slate-400 overflow-y-auto flex-1">沒有符合的資料</div>;
 
-              const sumProfit = cashFilter === 'withdrawn' ? cashData.reduce((acc, item) => acc + item.profit, 0) : 0;
-              const sumDad = cashFilter === 'withdrawn' ? cashData.reduce((acc, item) => acc + item.dadReceivable, 0) : 0;
-              const sumSister = cashFilter === 'withdrawn' ? cashData.reduce((acc, item) => acc + item.sisterReceivable, 0) : 0;
+              const isWithdrawnView = cashFilter === 'withdrawn' || cashFilter === 'previous';
+              const sumProfit = isWithdrawnView ? cashData.reduce((acc, item) => acc + item.profit, 0) : 0;
+              const sumDad = isWithdrawnView ? cashData.reduce((acc, item) => acc + item.dadReceivable, 0) : 0;
+              const sumSister = isWithdrawnView ? cashData.reduce((acc, item) => acc + item.sisterReceivable, 0) : 0;
 
               return (
                  <>
                    <div className="shrink-0 bg-white z-10 relative shadow-sm">
-                     {cashFilter === 'withdrawn' && (
+                     {isWithdrawnView && (
                         <div className="bg-sky-50 shadow-sm p-3">
                             <div className="flex items-center border-b border-sky-200 pb-1.5 mb-1.5">
                                <span className="w-1/4 font-bold text-slate-900 text-left text-sm border-r border-sky-200">合計</span>
@@ -307,7 +321,7 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
                         </div>
                      )}
                      
-                     {cashFilter === 'withdrawn' ? (
+                     {isWithdrawnView ? (
                         <div className="flex flex-col text-xs font-bold text-slate-500 px-3 py-2 border-b border-slate-200">
                             <div className="flex items-center mb-1">
                                 <span className="w-1/4 text-left">訂單序</span>
@@ -335,7 +349,7 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
                      <div className="flex flex-col gap-1.5 p-2">
                        {cashData.map(item => (
                           <div key={item.id} className="border border-slate-200 bg-white rounded-md p-2 shadow-sm hover:shadow transition-shadow">
-                             {cashFilter === 'withdrawn' ? (
+                             {isWithdrawnView ? (
                                 <>
                                   <div className="flex items-center border-b border-slate-100 pb-1.5 mb-1.5">
                                      <span className="w-1/4 font-mono font-bold text-slate-700 text-left truncate">{item.id}</span>
