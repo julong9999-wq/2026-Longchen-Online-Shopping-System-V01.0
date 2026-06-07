@@ -59,13 +59,17 @@ const PurchasingSystem: React.FC<Props> = ({ onNavigateHome }) => {
   const [isPaymentExpanded, setIsPaymentExpanded] = useState(false);
   const [isCollectionExpanded, setIsCollectionExpanded] = useState(false);
 
+  const [isRecordsLoaded, setIsRecordsLoaded] = useState(false);
+
   // Load records
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'purchasingRecords'), (snapshot) => {
       const data = snapshot.docs.map(doc => doc.data() as PurchasingRecord);
       setRecords(data);
+      setIsRecordsLoaded(true);
     }, (error) => {
       console.error("error fetching purchasing records", error);
+      setIsRecordsLoaded(true);
     });
     return () => unsub();
   }, []);
@@ -186,6 +190,22 @@ const PurchasingSystem: React.FC<Props> = ({ onNavigateHome }) => {
   }, [records]);
 
   const [detailMonth, setDetailMonth] = useState(getCurrentMonthStr());
+  const [isDetailMonthInitialized, setIsDetailMonthInitialized] = useState(false);
+
+  useEffect(() => {
+    if (isRecordsLoaded && !isDetailMonthInitialized) {
+      if (records.length > 0) {
+        const latestMonthWithData = records.filter(r => 
+          r.payments.length > 0 || r.collections.length > 0 || r.bankBalance > 0 || r.profitWithdrawn > 0
+        ).map(r => r.month).sort((a, b) => b.localeCompare(a))[0];
+        
+        if (latestMonthWithData) {
+          setDetailMonth(latestMonthWithData);
+        }
+      }
+      setIsDetailMonthInitialized(true);
+    }
+  }, [isRecordsLoaded, isDetailMonthInitialized, records]);
   
   const selectedDetailRecord = records.find(r => r.month === detailMonth);
 

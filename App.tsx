@@ -239,7 +239,7 @@ const App: React.FC = () => {
   // Update local incomeData when selected group changes or global settings update
   useEffect(() => {
     if (selectedOrderGroup && allIncomeSettings[selectedOrderGroup]) {
-        setIncomeData(allIncomeSettings[selectedOrderGroup]);
+        setIncomeData({ ...DEFAULT_INCOME_DATA, ...allIncomeSettings[selectedOrderGroup] });
     } else {
         setIncomeData(DEFAULT_INCOME_DATA);
     }
