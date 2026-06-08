@@ -475,7 +475,7 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
           orderIds.sort((a, b) => b.localeCompare(a));
           
           return (
-             <div className="flex-1 flex flex-col min-h-0 bg-white">
+             <div className="flex-1 overflow-y-auto pb-16 bg-white">
                 {latestMonth ? (
                    <div className="p-3 bg-slate-50 border-b border-slate-200 shrink-0 z-10 shadow-sm">
                       <div className="text-sm font-bold text-slate-700 mb-1 flex items-center gap-2">
@@ -490,62 +490,125 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
                       <AlertTriangle size={16} className="inline mr-1" /> 尚未有代購對帳資料
                    </div>
                 )}
-                <div className="overflow-y-auto flex-1 pb-16">
-                   <table className="w-full text-left text-sm">
-                       <thead className="bg-slate-100 text-slate-600 border-b border-slate-200 sticky top-0 z-10 shadow-sm">
+                <table className="w-full text-left text-sm">
+                   <thead className="bg-slate-100 text-slate-600 border-b border-slate-200 sticky top-0 z-10 shadow-sm">
+                       <tr>
+                           <th className="px-2 py-2 font-bold w-1/4">訂單序</th>
+                           <th className="px-2 py-2 font-bold text-right w-1/4">網購收入</th>
+                           <th className="px-2 py-2 font-bold text-right w-1/4 text-orange-700">代購付款</th>
+                           <th className="px-2 py-2 font-bold text-right w-1/4 text-fuchsia-700">出貨代收</th>
+                       </tr>
+                   </thead>
+                   <tbody className="divide-y divide-slate-100">
+                       {orderIds.map(id => {
+                           const eo = ecommerceOrders.find(o => o.id === id);
+                           const paymentAmount = payments.filter(p => p.orderNo === id).reduce((acc, p) => acc + p.amount, 0);
+                           const collectionAmount = collections.filter(c => c.orderNo === id).reduce((acc, c) => acc + c.amount, 0);
+                           
+                           const hasEo = !!eo;
+                           const income = hasEo ? eo.revenue : 0;
+                           
+                           // Check if it's missing from ecommerce but exists in purchasing
+                           const isWarning = !hasEo && (paymentAmount > 0 || collectionAmount > 0);
+                           
+                           return (
+                               <tr key={id} className={`hover:bg-slate-50 transition-colors ${isWarning ? 'bg-amber-50/50' : ''}`}>
+                                   <td className="px-2 py-3 border-r border-slate-100">
+                                       <div className={`font-mono font-bold ${isWarning ? 'text-amber-700' : 'text-slate-700'}`}>{id}</div>
+                                   </td>
+                                   <td className="px-2 py-3 text-right border-r border-slate-100">
+                                       <div className="font-mono font-bold text-blue-600">{hasEo ? formatCurrency(income) : '-'}</div>
+                                   </td>
+                                   <td className="px-2 py-3 text-right border-r border-slate-100 bg-orange-50/30">
+                                       <div className="font-mono font-bold text-orange-600">{paymentAmount > 0 ? formatCurrency(paymentAmount) : '-'}</div>
+                                   </td>
+                                   <td className="px-2 py-3 text-right bg-fuchsia-50/30">
+                                        <div className="font-mono font-bold text-fuchsia-600">{collectionAmount > 0 ? formatCurrency(collectionAmount) : '-'}</div>
+                                   </td>
+                               </tr>
+                           );
+                       })}
+                       {orderIds.length === 0 && (
                            <tr>
-                               <th className="px-2 py-2 font-bold w-1/4">訂單序</th>
-                               <th className="px-2 py-2 font-bold text-right w-1/4">網購收入</th>
-                               <th className="px-2 py-2 font-bold text-right w-1/4 text-orange-700">代購付款</th>
-                               <th className="px-2 py-2 font-bold text-right w-1/4 text-fuchsia-700">出貨代收</th>
+                               <td colSpan={4} className="text-center py-8 text-slate-400 font-bold">目前沒有資料可比對</td>
                            </tr>
-                       </thead>
-                       <tbody className="divide-y divide-slate-100">
-                           {orderIds.map(id => {
-                               const eo = ecommerceOrders.find(o => o.id === id);
-                               const paymentAmount = payments.filter(p => p.orderNo === id).reduce((acc, p) => acc + p.amount, 0);
-                               const collectionAmount = collections.filter(c => c.orderNo === id).reduce((acc, c) => acc + c.amount, 0);
-                               
-                               const hasEo = !!eo;
-                               const income = hasEo ? eo.revenue : 0;
-                               
-                               // Check if it's missing from ecommerce but exists in purchasing
-                               const isWarning = !hasEo && (paymentAmount > 0 || collectionAmount > 0);
-                               
-                               return (
-                                   <tr key={id} className={`hover:bg-slate-50 transition-colors ${isWarning ? 'bg-amber-50/50' : ''}`}>
-                                       <td className="px-2 py-3 border-r border-slate-100">
-                                           <div className={`font-mono font-bold ${isWarning ? 'text-amber-700' : 'text-slate-700'}`}>{id}</div>
-                                       </td>
-                                       <td className="px-2 py-3 text-right border-r border-slate-100">
-                                           <div className="font-mono font-bold text-blue-600">{hasEo ? formatCurrency(income) : '-'}</div>
-                                       </td>
-                                       <td className="px-2 py-3 text-right border-r border-slate-100 bg-orange-50/30">
-                                           <div className="font-mono font-bold text-orange-600">{paymentAmount > 0 ? formatCurrency(paymentAmount) : '-'}</div>
-                                       </td>
-                                       <td className="px-2 py-3 text-right bg-fuchsia-50/30">
-                                            <div className="font-mono font-bold text-fuchsia-600">{collectionAmount > 0 ? formatCurrency(collectionAmount) : '-'}</div>
-                                       </td>
-                                   </tr>
-                               );
-                           })}
-                           {orderIds.length === 0 && (
-                               <tr>
-                                   <td colSpan={4} className="text-center py-8 text-slate-400 font-bold">目前沒有資料可比對</td>
-                               </tr>
-                           )}
-                       </tbody>
-                       {orderIds.length > 0 && (
-                           <tfoot className="bg-slate-100 text-slate-700 font-bold border-t border-slate-200">
-                               <tr>
-                                   <td className="px-2 py-3 border-r border-slate-200">合計</td>
-                                   <td className="px-2 py-3 text-right border-r border-slate-200 text-blue-600">{formatCurrency(orderIds.reduce((sum, id) => sum + (ecommerceOrders.find(o => o.id === id) ? ecommerceOrders.find(o => o.id === id)!.revenue : 0), 0))}</td>
-                                   <td className="px-2 py-3 text-right border-r border-slate-200 text-orange-600">{formatCurrency(orderIds.reduce((sum, id) => sum + payments.filter(p => p.orderNo === id).reduce((acc, p) => acc + p.amount, 0), 0))}</td>
-                                   <td className="px-2 py-3 text-right text-fuchsia-600">{formatCurrency(orderIds.reduce((sum, id) => sum + collections.filter(c => c.orderNo === id).reduce((acc, c) => acc + c.amount, 0), 0))}</td>
-                               </tr>
-                           </tfoot>
                        )}
-                   </table>
+                   </tbody>
+                   {orderIds.length > 0 && (
+                       <tfoot className="bg-slate-100 text-slate-700 font-bold border-t border-slate-200">
+                           <tr>
+                               <td className="px-2 py-3 border-r border-slate-200">合計</td>
+                               <td className="px-2 py-3 text-right border-r border-slate-200 text-blue-600">{formatCurrency(orderIds.reduce((sum, id) => sum + (ecommerceOrders.find(o => o.id === id) ? ecommerceOrders.find(o => o.id === id)!.revenue : 0), 0))}</td>
+                               <td className="px-2 py-3 text-right border-r border-slate-200 text-orange-600">{formatCurrency(orderIds.reduce((sum, id) => sum + payments.filter(p => p.orderNo === id).reduce((acc, p) => acc + p.amount, 0), 0))}</td>
+                               <td className="px-2 py-3 text-right text-fuchsia-600">{formatCurrency(orderIds.reduce((sum, id) => sum + collections.filter(c => c.orderNo === id).reduce((acc, c) => acc + c.amount, 0), 0))}</td>
+                           </tr>
+                       </tfoot>
+                   )}
+               </table>
+                
+                {/* 帳務分析 */}
+                <div className="bg-slate-50 border-t border-slate-200 shrink-0">
+                   <div className="p-3 bg-slate-100 font-bold border-b border-slate-200 text-slate-700 flex items-center justify-between">
+                       <span>帳務分析</span>
+                   </div>
+                   <div className="p-3">
+                       {(() => {
+                           const allWithdrawn = batchData.filter(d => !PREVIOUS_PERIOD_IDS.includes(d.id) && (d.dadReceivable !== 0 || d.sisterReceivable !== 0));
+                           const totalWithdrawnProfit = allWithdrawn.reduce((acc, d) => acc + d.profit, 0);
+                           const sisterWithdrawn = allWithdrawn.reduce((acc, d) => acc + d.sisterReceivable, 0);
+                           const dadUnwithdrawn = totalWithdrawnProfit - sisterWithdrawn;
+                           const purchasingWithdrawn = latestRecord?.profitWithdrawn || 0;
+                           
+                           const totalPayments = payments.reduce((acc, p) => acc + p.amount, 0);
+                           const totalCollections = collections.reduce((acc, c) => acc + c.amount, 0);
+                           const bankBalance = latestRecord?.bankBalance || 0;
+                           
+                           const totalAmount = totalPayments + totalCollections + bankBalance;
+
+                           return (
+                               <>
+                                   <div className="flex items-center text-sm font-bold border-b border-slate-200 pb-1">
+                                       <span className="text-slate-500 w-1/3">項目</span>
+                                       <span className="text-slate-500 w-1/3 text-right">金額</span>
+                                       <span className="text-slate-500 w-1/3 text-right">利潤</span>
+                                   </div>
+                                   <div className="flex items-center text-sm font-bold py-1.5 border-b border-slate-100">
+                                       <span className="text-slate-600 w-1/3">代購付款:</span>
+                                       <span className="text-orange-600 font-mono w-1/3 text-right">{formatCurrency(totalPayments)}</span>
+                                       <span className="text-slate-300 w-1/3 text-right">-</span>
+                                   </div>
+                                   <div className="flex items-center text-sm font-bold py-1.5 border-b border-slate-100">
+                                       <span className="text-slate-600 w-1/3">出貨代收:</span>
+                                       <span className="text-fuchsia-600 font-mono w-1/3 text-right">{formatCurrency(totalCollections)}</span>
+                                       <span className="text-slate-300 w-1/3 text-right">-</span>
+                                   </div>
+                                   <div className="flex items-center text-sm font-bold py-1.5 border-b border-slate-100">
+                                       <span className="text-slate-600 w-1/3">銀行餘額:</span>
+                                       <span className="text-blue-600 font-mono w-1/3 text-right">{formatCurrency(bankBalance)}</span>
+                                       <span className="text-slate-300 w-1/3 text-right">-</span>
+                                   </div>
+                                   <div className="flex items-center text-sm font-bold py-1.5 border-b border-slate-100">
+                                       <span className="text-slate-600 w-1/3">妹妹領現:</span>
+                                       <span className="text-slate-300 w-1/3 text-right">-</span>
+                                       <div className="w-1/3 text-right">
+                                           <span className="text-indigo-600 font-mono block">{formatCurrency(sisterWithdrawn)}</span>
+                                           <span className="text-[10px] text-slate-400 font-normal">代購已領: {formatCurrency(purchasingWithdrawn)}</span>
+                                       </div>
+                                   </div>
+                                   <div className="flex items-center text-sm font-bold py-1.5">
+                                       <span className="text-slate-600 w-1/3">爸爸未領:</span>
+                                       <span className="text-slate-300 w-1/3 text-right">-</span>
+                                       <span className="text-emerald-600 font-mono w-1/3 text-right">{formatCurrency(dadUnwithdrawn)}</span>
+                                   </div>
+                                   <div className="flex items-center text-base font-bold pt-2 border-t border-slate-200 mt-2">
+                                       <span className="text-slate-800 w-1/3">合計金額:</span>
+                                       <span className="text-slate-800 font-mono w-1/3 text-right">{formatCurrency(totalAmount)}</span>
+                                       <span className="text-slate-800 font-mono w-1/3 text-right">{formatCurrency(totalWithdrawnProfit)}</span>
+                                   </div>
+                               </>
+                           );
+                       })()}
+                   </div>
                 </div>
              </div>
           );
