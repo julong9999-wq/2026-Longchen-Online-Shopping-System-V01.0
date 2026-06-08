@@ -506,9 +506,9 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
                        <tr>
                            <th className="px-1 py-2 font-bold w-1/5">訂單序</th>
                            <th className="px-1 py-2 font-bold text-right w-1/5">網購收入</th>
-                           <th className="px-1 py-2 font-bold text-right w-1/5 text-purple-700">預收款</th>
                            <th className="px-1 py-2 font-bold text-right w-1/5 text-orange-700">代購付款</th>
                            <th className="px-1 py-2 font-bold text-right w-1/5 text-fuchsia-700">出貨代收</th>
+                           <th className="px-1 py-2 font-bold text-right w-1/5 text-emerald-600">預收款</th>
                        </tr>
                    </thead>
                    <tbody className="divide-y divide-slate-100">
@@ -545,14 +545,14 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
                                    <td className="px-1 py-3 text-right border-r border-slate-100">
                                        <div className="font-mono font-bold text-blue-600">{hasEo ? formatCurrency(income) : '-'}</div>
                                    </td>
-                                   <td className="px-1 py-3 text-right border-r border-slate-100 bg-purple-50/30">
-                                       <div className="font-mono font-bold text-purple-600">{prepaymentAmount > 0 ? formatCurrency(prepaymentAmount) : '-'}</div>
-                                   </td>
                                    <td className="px-1 py-3 text-right border-r border-slate-100 bg-orange-50/30">
                                        <div className="font-mono font-bold text-orange-600">{paymentAmount > 0 ? formatCurrency(paymentAmount) : '-'}</div>
                                    </td>
-                                   <td className="px-1 py-3 text-right bg-fuchsia-50/30">
+                                   <td className="px-1 py-3 text-right border-r border-slate-100 bg-fuchsia-50/30">
                                         <div className="font-mono font-bold text-fuchsia-600">{collectionAmount > 0 ? formatCurrency(collectionAmount) : '-'}</div>
+                                   </td>
+                                   <td className="px-1 py-3 text-right bg-emerald-50/30">
+                                       <div className="font-mono font-bold text-emerald-600">{prepaymentAmount > 0 ? formatCurrency(prepaymentAmount) : '-'}</div>
                                    </td>
                                </tr>
                            );
@@ -568,7 +568,9 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
                            <tr>
                                <td className="px-1 py-3 border-r border-slate-200">合計</td>
                                <td className="px-1 py-3 text-right border-r border-slate-200 text-blue-600">{formatCurrency(orderIds.reduce((sum, id) => sum + (ecommerceOrders.find(o => o.id === id) ? ecommerceOrders.find(o => o.id === id)!.revenue : 0), 0))}</td>
-                               <td className="px-1 py-3 text-right border-r border-slate-200 text-purple-600">{formatCurrency(orderIds.reduce((sum, id) => {
+                               <td className="px-1 py-3 text-right border-r border-slate-200 text-orange-600">{formatCurrency(orderIds.reduce((sum, id) => sum + payments.filter(p => p.orderNo === id).reduce((acc, p) => acc + p.amount, 0), 0))}</td>
+                               <td className="px-1 py-3 text-right border-r border-slate-200 text-fuchsia-600">{formatCurrency(orderIds.reduce((sum, id) => sum + collections.filter(c => c.orderNo === id).reduce((acc, c) => acc + c.amount, 0), 0))}</td>
+                               <td className="px-1 py-3 text-right text-emerald-600">{formatCurrency(orderIds.reduce((sum, id) => {
                                    let s = 0;
                                    orderItems.filter(i => i.orderGroupId === id).forEach(item => {
                                        const text = `${item.description} ${item.buyer} ${item.remarks} ${item.note}`;
@@ -577,8 +579,6 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
                                    });
                                    return sum + s;
                                }, 0))}</td>
-                               <td className="px-1 py-3 text-right border-r border-slate-200 text-orange-600">{formatCurrency(orderIds.reduce((sum, id) => sum + payments.filter(p => p.orderNo === id).reduce((acc, p) => acc + p.amount, 0), 0))}</td>
-                               <td className="px-1 py-3 text-right text-fuchsia-600">{formatCurrency(orderIds.reduce((sum, id) => sum + collections.filter(c => c.orderNo === id).reduce((acc, c) => acc + c.amount, 0), 0))}</td>
                            </tr>
                        </tfoot>
                    )}
@@ -587,13 +587,19 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
                 {/* 空間區隔 */}
                 <div className="h-6 bg-slate-100 border-t border-slate-200 shadow-inner"></div>
 
-                {/* 帳務分析 */}
                 <div className="bg-slate-50 border-t border-slate-200 shrink-0">
-                   <div className="p-3 bg-slate-100 font-bold border-b border-slate-200 text-slate-700 flex items-center justify-between shadow-sm">
-                       <span>帳務分析</span>
-                   </div>
                    <div className="p-3">
                        {(() => {
+                           const totalPrepaymentAmount = orderIds.reduce((sum, id) => {
+                               let s = 0;
+                               orderItems.filter(i => i.orderGroupId === id).forEach(item => {
+                                   const text = `${item.description} ${item.buyer} ${item.remarks} ${item.note}`;
+                                   const matches = text.match(/(?:以匯款|已匯款|無卡)[^\d]*?(\d+)/g);
+                                   if (matches) matches.forEach(m => { const v = m.match(/\d+/); if(v) s += parseInt(v[0], 10); });
+                               });
+                               return sum + s;
+                           }, 0);
+
                            const allWithdrawn = batchData.filter(d => !PREVIOUS_PERIOD_IDS.includes(d.id) && (d.dadReceivable !== 0 || d.sisterReceivable !== 0));
                            const totalWithdrawnProfit = allWithdrawn.reduce((acc, d) => acc + d.profit, 0);
                            const sisterWithdrawn = allWithdrawn.reduce((acc, d) => acc + d.sisterReceivable, 0);
@@ -609,39 +615,52 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
                            return (
                                <>
                                    <div className="flex items-center text-sm font-bold border-b border-slate-200 pb-1">
-                                       <span className="text-slate-500 w-1/3">項目</span>
-                                       <span className="text-slate-500 w-1/3 text-right">金額</span>
-                                       <span className="text-slate-500 w-1/3 text-right">利潤</span>
+                                       <span className="text-slate-500 w-1/4">項目</span>
+                                       <span className="text-slate-500 w-1/4 text-right">金額</span>
+                                       <span className="text-slate-500 w-1/4 text-right">預收</span>
+                                       <span className="text-slate-500 w-1/4 text-right">利潤</span>
                                    </div>
                                    <div className="flex items-center text-sm font-bold py-1.5 border-b border-slate-100">
-                                       <span className="text-slate-600 w-1/3">代購付款:</span>
-                                       <span className="text-orange-600 font-mono w-1/3 text-right">{formatCurrency(totalPayments)}</span>
-                                       <span className="text-slate-300 w-1/3 text-right">-</span>
+                                       <span className="text-slate-600 w-1/4">代購付款:</span>
+                                       <span className="text-orange-600 font-mono w-1/4 text-right">{formatCurrency(totalPayments)}</span>
+                                       <span className="text-slate-300 w-1/4 text-right">-</span>
+                                       <span className="text-slate-300 w-1/4 text-right">-</span>
                                    </div>
                                    <div className="flex items-center text-sm font-bold py-1.5 border-b border-slate-100">
-                                       <span className="text-slate-600 w-1/3">出貨代收:</span>
-                                       <span className="text-fuchsia-600 font-mono w-1/3 text-right">{formatCurrency(totalCollections)}</span>
-                                       <span className="text-slate-300 w-1/3 text-right">-</span>
+                                       <span className="text-slate-600 w-1/4">出貨代收:</span>
+                                       <span className="text-fuchsia-600 font-mono w-1/4 text-right">{formatCurrency(totalCollections)}</span>
+                                       <span className="text-slate-300 w-1/4 text-right">-</span>
+                                       <span className="text-slate-300 w-1/4 text-right">-</span>
                                    </div>
                                    <div className="flex items-center text-sm font-bold py-1.5 border-b border-slate-100">
-                                       <span className="text-slate-600 w-1/3">銀行餘額:</span>
-                                       <span className="text-blue-600 font-mono w-1/3 text-right">{formatCurrency(bankBalance)}</span>
-                                       <span className="text-slate-300 w-1/3 text-right">-</span>
+                                       <span className="text-slate-600 w-1/4">銀行餘額:</span>
+                                       <span className="text-blue-600 font-mono w-1/4 text-right">{formatCurrency(bankBalance)}</span>
+                                       <span className="text-slate-300 w-1/4 text-right">-</span>
+                                       <span className="text-slate-300 w-1/4 text-right">-</span>
                                    </div>
                                    <div className="flex items-center text-sm font-bold py-1.5 border-b border-slate-100">
-                                       <span className="text-slate-600 w-1/3">妹妹領現:</span>
-                                       <span className="text-slate-500 font-normal w-1/3 text-right text-[11px] truncate px-1">(代購已領: {formatCurrency(purchasingWithdrawn)})</span>
-                                       <span className="text-indigo-600 font-mono w-1/3 text-right">{formatCurrency(sisterWithdrawn)}</span>
+                                       <span className="text-slate-600 w-1/4">妹妹領現:</span>
+                                       <span className="text-slate-500 font-normal w-1/4 text-right text-[11px] truncate px-1">(代購: {formatCurrency(purchasingWithdrawn)})</span>
+                                       <span className="text-slate-300 w-1/4 text-right">-</span>
+                                       <span className="text-indigo-600 font-mono w-1/4 text-right">{formatCurrency(sisterWithdrawn)}</span>
                                    </div>
-                                   <div className="flex items-center text-sm font-bold py-1.5">
-                                       <span className="text-slate-600 w-1/3">爸爸未領:</span>
-                                       <span className="text-slate-300 w-1/3 text-right">-</span>
-                                       <span className="text-emerald-600 font-mono w-1/3 text-right">{formatCurrency(dadUnwithdrawn)}</span>
+                                   <div className="flex items-center text-sm font-bold py-1.5 border-b border-slate-100">
+                                       <span className="text-slate-600 w-1/4">爸爸未領:</span>
+                                       <span className="text-slate-300 w-1/4 text-right">-</span>
+                                       <span className="text-slate-300 w-1/4 text-right">-</span>
+                                       <span className="text-emerald-600 font-mono w-1/4 text-right">{formatCurrency(dadUnwithdrawn)}</span>
+                                   </div>
+                                   <div className="flex items-center text-sm font-bold py-1.5 border-b border-slate-100">
+                                       <span className="text-slate-600 w-1/4">預收款項:</span>
+                                       <span className="text-slate-300 w-1/4 text-right">-</span>
+                                       <span className="text-emerald-600 font-mono w-1/4 text-right">{formatCurrency(totalPrepaymentAmount)}</span>
+                                       <span className="text-slate-300 w-1/4 text-right">-</span>
                                    </div>
                                    <div className="flex items-center text-base font-bold pt-2 border-t border-slate-200 mt-2">
-                                       <span className="text-slate-800 w-1/3">合計金額:</span>
-                                       <span className="text-slate-800 font-mono w-1/3 text-right">{formatCurrency(totalAmount)}</span>
-                                       <span className="text-slate-800 font-mono w-1/3 text-right">{formatCurrency(totalWithdrawnProfit)}</span>
+                                       <span className="text-slate-800 w-1/4">合計金額:</span>
+                                       <span className="text-slate-800 font-mono w-1/4 text-right">{formatCurrency(totalAmount)}</span>
+                                       <span className="text-slate-800 font-mono w-1/4 text-right">{formatCurrency(totalPrepaymentAmount)}</span>
+                                       <span className="text-slate-800 font-mono w-1/4 text-right">{formatCurrency(totalWithdrawnProfit)}</span>
                                    </div>
                                </>
                            );
