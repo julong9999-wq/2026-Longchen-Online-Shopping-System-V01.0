@@ -478,11 +478,8 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
              <div className="flex-1 overflow-y-auto pb-16 bg-white">
                 {latestMonth ? (
                    <div className="p-3 bg-slate-50 border-b border-slate-200 shrink-0 z-10 shadow-sm">
-                      <div className="text-sm font-bold text-slate-700 mb-1 flex items-center gap-2">
+                      <div className="text-sm font-bold text-slate-700 flex items-center gap-2">
                           <CheckCircle size={16} className="text-emerald-500" /> 比對代購月份: <span className="text-blue-600 bg-blue-100 px-2 py-0.5 rounded-md">{latestMonth}</span>
-                      </div>
-                      <div className="text-[11px] text-slate-500 flex items-center gap-1 mt-1 font-bold">
-                          網購對帳 (綠燈 / 紅燈) vs 代購對帳 ({latestMonth})
                       </div>
                    </div>
                 ) : (
@@ -546,9 +543,12 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
                    )}
                </table>
                 
+                {/* 空間區隔 */}
+                <div className="h-6 bg-slate-100 border-t border-slate-200 shadow-inner"></div>
+
                 {/* 帳務分析 */}
                 <div className="bg-slate-50 border-t border-slate-200 shrink-0">
-                   <div className="p-3 bg-slate-100 font-bold border-b border-slate-200 text-slate-700 flex items-center justify-between">
+                   <div className="p-3 bg-slate-100 font-bold border-b border-slate-200 text-slate-700 flex items-center justify-between shadow-sm">
                        <span>帳務分析</span>
                    </div>
                    <div className="p-3">
@@ -589,11 +589,8 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
                                    </div>
                                    <div className="flex items-center text-sm font-bold py-1.5 border-b border-slate-100">
                                        <span className="text-slate-600 w-1/3">妹妹領現:</span>
-                                       <span className="text-slate-300 w-1/3 text-right">-</span>
-                                       <div className="w-1/3 text-right">
-                                           <span className="text-indigo-600 font-mono block">{formatCurrency(sisterWithdrawn)}</span>
-                                           <span className="text-[10px] text-slate-400 font-normal">代購已領: {formatCurrency(purchasingWithdrawn)}</span>
-                                       </div>
+                                       <span className="text-slate-500 font-normal w-1/3 text-right text-[11px] truncate px-1">(代購已領: {formatCurrency(purchasingWithdrawn)})</span>
+                                       <span className="text-indigo-600 font-mono w-1/3 text-right">{formatCurrency(sisterWithdrawn)}</span>
                                    </div>
                                    <div className="flex items-center text-sm font-bold py-1.5">
                                        <span className="text-slate-600 w-1/3">爸爸未領:</span>
