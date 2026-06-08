@@ -391,15 +391,15 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
                      {isWithdrawnView ? (
                         <div className="flex flex-col text-xs font-bold text-slate-500 px-3 py-2 border-b border-slate-200">
                             <div className="flex items-center mb-1">
-                                <span className="w-1/4 text-left">訂單序</span>
-                                <span className="w-1/4 text-right">利潤</span>
-                                <span className="w-1/4 text-right">爸爸應收</span>
-                                <span className="w-1/4 text-right">妹妹應收</span>
+                                <span className="flex-1 text-left">訂單序</span>
+                                <span className="w-16 text-right shrink-0">利潤</span>
+                                <span className="w-20 text-right shrink-0">爸爸應收</span>
+                                <span className="w-20 text-right shrink-0">妹妹應收</span>
                             </div>
                             <div className="flex items-center">
-                                <span className="w-1/2 text-left">收款說明</span>
-                                <span className="w-1/4 text-right">爸爸%</span>
-                                <span className="w-1/4 text-right">妹妹%</span>
+                                <span className="flex-1 text-left">收款說明</span>
+                                <span className="w-20 text-right shrink-0">爸爸%</span>
+                                <span className="w-20 text-right shrink-0">妹妹%</span>
                             </div>
                         </div>
                      ) : (
@@ -424,15 +424,15 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
                              {isWithdrawnView ? (
                                 <>
                                   <div className="flex items-center border-b border-slate-100 pb-1.5 mb-1.5">
-                                     <span className="w-1/4 font-mono font-bold text-slate-700 text-left truncate">{item.id}</span>
-                                     <span className="w-1/4 text-emerald-600 font-mono font-bold text-right">{formatCurrency(item.profit)}</span>
-                                     <span className="w-1/4 text-orange-600 font-mono font-bold text-right">{formatCurrency(item.dadReceivable)}</span>
-                                     <span className="w-1/4 text-fuchsia-600 font-mono font-bold text-right">{formatCurrency(item.sisterReceivable)}</span>
+                                     <span className="flex-1 font-mono font-bold text-slate-700 text-left">{item.id}</span>
+                                     <span className="w-16 shrink-0 text-emerald-600 font-mono font-bold text-right">{formatCurrency(item.profit)}</span>
+                                     <span className="w-20 shrink-0 text-orange-600 font-mono font-bold text-right">{formatCurrency(item.dadReceivable)}</span>
+                                     <span className="w-20 shrink-0 text-fuchsia-600 font-mono font-bold text-right">{formatCurrency(item.sisterReceivable)}</span>
                                   </div>
                                   <div className="flex items-center text-[11px] text-slate-500">
-                                     <span className="w-1/2 truncate font-bold text-left px-1">{item.paymentNote || '-'}</span>
-                                     <span className="w-1/4 text-orange-600 text-right font-mono">{item.profit > 0 ? ((item.dadReceivable / item.profit) * 100).toFixed(1) : 0}%</span>
-                                     <span className="w-1/4 text-fuchsia-600 text-right font-mono">{item.profit > 0 ? ((item.sisterReceivable / item.profit) * 100).toFixed(1) : 0}%</span>
+                                     <span className="flex-1 text-left px-1">{item.paymentNote || '-'}</span>
+                                     <span className="w-20 shrink-0 text-orange-600 text-right font-mono">{item.profit > 0 ? ((item.dadReceivable / item.profit) * 100).toFixed(1) : 0}%</span>
+                                     <span className="w-20 shrink-0 text-fuchsia-600 text-right font-mono">{item.profit > 0 ? ((item.sisterReceivable / item.profit) * 100).toFixed(1) : 0}%</span>
                                   </div>
                                 </>
                              ) : (
@@ -504,10 +504,11 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
                 <table className="w-full text-left text-sm">
                    <thead className="bg-slate-100 text-slate-600 border-b border-slate-200 sticky top-0 z-10 shadow-sm">
                        <tr>
-                           <th className="px-2 py-2 font-bold w-1/4">訂單序</th>
-                           <th className="px-2 py-2 font-bold text-right w-1/4">網購收入</th>
-                           <th className="px-2 py-2 font-bold text-right w-1/4 text-orange-700">代購付款</th>
-                           <th className="px-2 py-2 font-bold text-right w-1/4 text-fuchsia-700">出貨代收</th>
+                           <th className="px-1 py-2 font-bold w-1/5">訂單序</th>
+                           <th className="px-1 py-2 font-bold text-right w-1/5">網購收入</th>
+                           <th className="px-1 py-2 font-bold text-right w-1/5 text-purple-700">預收款</th>
+                           <th className="px-1 py-2 font-bold text-right w-1/5 text-orange-700">代購付款</th>
+                           <th className="px-1 py-2 font-bold text-right w-1/5 text-fuchsia-700">出貨代收</th>
                        </tr>
                    </thead>
                    <tbody className="divide-y divide-slate-100">
@@ -515,6 +516,20 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
                            const eo = ecommerceOrders.find(o => o.id === id);
                            const paymentAmount = payments.filter(p => p.orderNo === id).reduce((acc, p) => acc + p.amount, 0);
                            const collectionAmount = collections.filter(c => c.orderNo === id).reduce((acc, c) => acc + c.amount, 0);
+                           
+                           // Calculate prepayment amount from order items
+                           const items = orderItems.filter(i => i.orderGroupId === id);
+                           let prepaymentAmount = 0;
+                           items.forEach(item => {
+                               const text = `${item.description} ${item.buyer} ${item.remarks} ${item.note}`;
+                               const matches = text.match(/(?:以匯款|已匯款|無卡)[^\d]*?(\d+)/g);
+                               if (matches) {
+                                   matches.forEach(m => {
+                                       const v = m.match(/\d+/);
+                                       if (v) prepaymentAmount += parseInt(v[0], 10);
+                                   });
+                               }
+                           });
                            
                            const hasEo = !!eo;
                            const income = hasEo ? eo.revenue : 0;
@@ -524,16 +539,19 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
                            
                            return (
                                <tr key={id} className={`hover:bg-slate-50 transition-colors ${isWarning ? 'bg-amber-50/50' : ''}`}>
-                                   <td className="px-2 py-3 border-r border-slate-100">
+                                   <td className="px-1 py-3 border-r border-slate-100">
                                        <div className={`font-mono font-bold ${isWarning ? 'text-amber-700' : 'text-slate-700'}`}>{id}</div>
                                    </td>
-                                   <td className="px-2 py-3 text-right border-r border-slate-100">
+                                   <td className="px-1 py-3 text-right border-r border-slate-100">
                                        <div className="font-mono font-bold text-blue-600">{hasEo ? formatCurrency(income) : '-'}</div>
                                    </td>
-                                   <td className="px-2 py-3 text-right border-r border-slate-100 bg-orange-50/30">
+                                   <td className="px-1 py-3 text-right border-r border-slate-100 bg-purple-50/30">
+                                       <div className="font-mono font-bold text-purple-600">{prepaymentAmount > 0 ? formatCurrency(prepaymentAmount) : '-'}</div>
+                                   </td>
+                                   <td className="px-1 py-3 text-right border-r border-slate-100 bg-orange-50/30">
                                        <div className="font-mono font-bold text-orange-600">{paymentAmount > 0 ? formatCurrency(paymentAmount) : '-'}</div>
                                    </td>
-                                   <td className="px-2 py-3 text-right bg-fuchsia-50/30">
+                                   <td className="px-1 py-3 text-right bg-fuchsia-50/30">
                                         <div className="font-mono font-bold text-fuchsia-600">{collectionAmount > 0 ? formatCurrency(collectionAmount) : '-'}</div>
                                    </td>
                                </tr>
@@ -541,17 +559,26 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
                        })}
                        {orderIds.length === 0 && (
                            <tr>
-                               <td colSpan={4} className="text-center py-8 text-slate-400 font-bold">目前沒有資料可比對</td>
+                               <td colSpan={5} className="text-center py-8 text-slate-400 font-bold">目前沒有資料可比對</td>
                            </tr>
                        )}
                    </tbody>
                    {orderIds.length > 0 && (
                        <tfoot className="bg-slate-100 text-slate-700 font-bold border-t border-slate-200">
                            <tr>
-                               <td className="px-2 py-3 border-r border-slate-200">合計</td>
-                               <td className="px-2 py-3 text-right border-r border-slate-200 text-blue-600">{formatCurrency(orderIds.reduce((sum, id) => sum + (ecommerceOrders.find(o => o.id === id) ? ecommerceOrders.find(o => o.id === id)!.revenue : 0), 0))}</td>
-                               <td className="px-2 py-3 text-right border-r border-slate-200 text-orange-600">{formatCurrency(orderIds.reduce((sum, id) => sum + payments.filter(p => p.orderNo === id).reduce((acc, p) => acc + p.amount, 0), 0))}</td>
-                               <td className="px-2 py-3 text-right text-fuchsia-600">{formatCurrency(orderIds.reduce((sum, id) => sum + collections.filter(c => c.orderNo === id).reduce((acc, c) => acc + c.amount, 0), 0))}</td>
+                               <td className="px-1 py-3 border-r border-slate-200">合計</td>
+                               <td className="px-1 py-3 text-right border-r border-slate-200 text-blue-600">{formatCurrency(orderIds.reduce((sum, id) => sum + (ecommerceOrders.find(o => o.id === id) ? ecommerceOrders.find(o => o.id === id)!.revenue : 0), 0))}</td>
+                               <td className="px-1 py-3 text-right border-r border-slate-200 text-purple-600">{formatCurrency(orderIds.reduce((sum, id) => {
+                                   let s = 0;
+                                   orderItems.filter(i => i.orderGroupId === id).forEach(item => {
+                                       const text = `${item.description} ${item.buyer} ${item.remarks} ${item.note}`;
+                                       const matches = text.match(/(?:以匯款|已匯款|無卡)[^\d]*?(\d+)/g);
+                                       if (matches) matches.forEach(m => { const v = m.match(/\d+/); if(v) s += parseInt(v[0], 10); });
+                                   });
+                                   return sum + s;
+                               }, 0))}</td>
+                               <td className="px-1 py-3 text-right border-r border-slate-200 text-orange-600">{formatCurrency(orderIds.reduce((sum, id) => sum + payments.filter(p => p.orderNo === id).reduce((acc, p) => acc + p.amount, 0), 0))}</td>
+                               <td className="px-1 py-3 text-right text-fuchsia-600">{formatCurrency(orderIds.reduce((sum, id) => sum + collections.filter(c => c.orderNo === id).reduce((acc, c) => acc + c.amount, 0), 0))}</td>
                            </tr>
                        </tfoot>
                    )}
