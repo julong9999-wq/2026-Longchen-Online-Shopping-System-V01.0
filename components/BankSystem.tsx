@@ -604,6 +604,82 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
             </table>
           </div>
         </div>
+
+        {(() => {
+            const getAccountBalance = (account: string) => {
+                let bal = 0;
+                transactions.filter(t => t.account === account).forEach(t => {
+                    if (t.type === '收入') bal += t.amount;
+                    else if (t.type === '支出') bal -= t.amount;
+                    else if (t.type === '股票') bal += t.amount;
+                    else if (t.type === '調度') bal += t.amount;
+                });
+                return bal;
+            };
+
+            const yuJunBank = getAccountBalance('禹君');
+            const yuChenBank = getAccountBalance('禹辰');
+
+            const yuJunStock = -(stockSummary['禹君']?.tradeAmount || 0);
+            const yuChenStock = -(stockSummary['禹辰']?.tradeAmount || 0);
+
+            const getUnsettledTransfersSum = (account: string) => {
+                let sum = 0;
+                unsettledTransfers.filter(t => t.account === account).forEach(t => {
+                    sum += t.amount;
+                });
+                return sum;
+            };
+
+            const yuJunTransfer = -(getUnsettledTransfersSum('禹君'));
+            const yuChenTransfer = -(getUnsettledTransfersSum('禹辰'));
+
+            const yuJunTotal = yuJunBank + yuJunStock + yuJunTransfer;
+            const yuChenTotal = yuChenBank + yuChenStock + yuChenTransfer;
+
+            return (
+                <>
+                    <div className="flex items-center gap-3 pt-4">
+                      <h2 className="text-xl font-bold text-slate-800">「帳務金額」分析總表</h2>
+                    </div>
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden shrink-0">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-[14px] whitespace-nowrap">
+                          <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold">
+                            <tr>
+                              <th className="px-4 py-3">項目</th>
+                              <th className="px-4 py-3 text-right text-orange-600">禹君</th>
+                              <th className="px-4 py-3 text-right text-fuchsia-600">禹辰</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            <tr className="hover:bg-slate-50 transition-colors">
+                              <td className="px-4 py-3 font-bold text-slate-700">銀行餘額</td>
+                              <td className={`px-4 py-3 text-right font-mono font-bold ${yuJunBank >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{formatCurrency(yuJunBank)}</td>
+                              <td className={`px-4 py-3 text-right font-mono font-bold ${yuChenBank >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{formatCurrency(yuChenBank)}</td>
+                            </tr>
+                            <tr className="hover:bg-slate-50 transition-colors">
+                              <td className="px-4 py-3 font-bold text-slate-700">股票買賣</td>
+                              <td className={`px-4 py-3 text-right font-mono font-bold ${yuJunStock >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{formatCurrency(yuJunStock)}</td>
+                              <td className={`px-4 py-3 text-right font-mono font-bold ${yuChenStock >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{formatCurrency(yuChenStock)}</td>
+                            </tr>
+                            <tr className="hover:bg-slate-50 transition-colors">
+                              <td className="px-4 py-3 font-bold text-slate-700">資金調度</td>
+                              <td className={`px-4 py-3 text-right font-mono font-bold ${yuJunTransfer >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{formatCurrency(yuJunTransfer)}</td>
+                              <td className={`px-4 py-3 text-right font-mono font-bold ${yuChenTransfer >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{formatCurrency(yuChenTransfer)}</td>
+                            </tr>
+                            <tr className="bg-slate-50 font-bold border-t-2 border-slate-200">
+                              <td className="px-4 py-3 text-slate-800">帳戶價值</td>
+                              <td className={`px-4 py-3 text-right font-mono text-[15px] ${yuJunTotal >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>{formatCurrency(yuJunTotal)}</td>
+                              <td className={`px-4 py-3 text-right font-mono text-[15px] ${yuChenTotal >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>{formatCurrency(yuChenTotal)}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                </>
+            );
+        })()}
       </div>
     );
   };
