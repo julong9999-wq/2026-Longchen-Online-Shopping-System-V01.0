@@ -1345,6 +1345,7 @@ const App: React.FC = () => {
       return <EcommerceAnalysisSystem 
           orderGroups={orderGroups}
           orderItems={orderItems}
+          productGroups={productGroups}
           productItems={productItems}
           allIncomeSettings={allIncomeSettings}
           onNavigateHome={() => setAppMode('home')} 

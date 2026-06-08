@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Home, Truck, DollarSign, Wallet, FileCheck, Edit2, X, Save, AlertTriangle, CheckCircle } from 'lucide-react';
-import { OrderGroup, OrderItem, ProductItem } from '../types';
+import { Home, Truck, DollarSign, Wallet, FileCheck, Edit2, X, Save, AlertTriangle, CheckCircle, ShoppingCart, ChevronDown, ChevronUp } from 'lucide-react';
+import { OrderGroup, OrderItem, ProductItem, ProductGroup } from '../types';
 import { formatCurrency } from '../utils';
 import { db } from '../firebase';
 import { doc, setDoc, collection, onSnapshot } from 'firebase/firestore';
@@ -9,6 +9,7 @@ import { PurchasingRecord } from './PurchasingSystem';
 interface EcommerceAnalysisSystemProps {
   orderGroups: OrderGroup[];
   orderItems: OrderItem[];
+  productGroups: ProductGroup[];
   productItems: ProductItem[];
   allIncomeSettings: Record<string, any>;
   onNavigateHome: () => void;
@@ -19,12 +20,16 @@ const PREVIOUS_PERIOD_IDS = ['202511A', '202511B', '202511C', '202511D'];
 const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
   orderGroups,
   orderItems,
+  productGroups,
   productItems,
   allIncomeSettings,
   onNavigateHome,
 }) => {
-  const [activeTab, setActiveTab] = useState<'shipping' | 'profit' | 'cash' | 'reconciliation'>('shipping');
+  const [activeTab, setActiveTab] = useState<'shipping' | 'profit' | 'cash' | 'reconciliation' | 'purchase'>('shipping');
   const [statusFilter, setStatusFilter] = useState<'processing' | 'preorder' | 'closed'>('processing');
+  
+  const [purchaseFilter, setPurchaseFilter] = useState<'all' | 'unsettled' | 'settled'>('all');
+  const [expandedPurchaseId, setExpandedPurchaseId] = useState<string | null>(null);
   
   // Cash sub-tabs and edit modal states
   const [cashFilter, setCashFilter] = useState<'withdrawn' | 'unwithdrawn' | 'previous'>('withdrawn');
@@ -158,6 +163,14 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
       </button>
 
       <button 
+        onClick={() => setActiveTab('purchase')} 
+        className={`flex-1 flex flex-col items-center justify-center h-full transition-all duration-200 ${activeTab === 'purchase' ? 'text-yellow-300 bg-sky-800/50' : 'text-sky-200 hover:text-white'}`}
+      >
+        <ShoppingCart size={22} strokeWidth={activeTab === 'purchase' ? 2.5 : 2} />
+        <span className="text-[11px] font-bold mt-1 tracking-wide">購買</span>
+      </button>
+
+      <button 
         onClick={onNavigateHome}
         className="flex-1 flex flex-col items-center justify-center h-full transition-all duration-200 text-sky-200 hover:text-white"
       >
@@ -173,6 +186,7 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
           case 'profit': return '利潤分析';
           case 'cash': return '領現分析';
           case 'reconciliation': return '對帳分析';
+          case 'purchase': return '購買分析';
       }
   };
 
@@ -606,6 +620,154 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
                            );
                        })()}
                    </div>
+                </div>
+             </div>
+          );
+      })()}
+
+      {activeTab === 'purchase' && (() => {
+          let validOrderIds = batchData.map(b => b.id);
+          if (purchaseFilter === 'unsettled') {
+              validOrderIds = batchData.filter(b => b.status === 'processing' || b.status === 'preorder').map(b => b.id);
+          } else if (purchaseFilter === 'settled') {
+              validOrderIds = batchData.filter(b => b.status === 'closed').map(b => b.id);
+          }
+          
+          const chenItems = orderItems.filter(i => i.buyer === '陳禹辰' && validOrderIds.includes(i.orderGroupId));
+          
+          const chensOrders = validOrderIds.map(id => {
+              const itemsInOrder = chenItems.filter(i => {
+                  if (i.orderGroupId !== id) return false;
+                  const p = productItems.find(p => p.groupId === i.productGroupId && p.id === i.productItemId);
+                  return p ? !p.name.includes('境內運費') : true;
+              });
+              if (itemsInOrder.length === 0) return null;
+              
+              const batch = batchData.find(b => b.id === id)!;
+              let purchaseTotal = 0;
+              const items = itemsInOrder.map(item => {
+                  const product = productItems.find(p => p.groupId === item.productGroupId && p.id === item.productItemId);
+                  const unitPrice = product ? product.inputPrice : 0;
+                  const lineTotal = unitPrice * item.quantity;
+                  purchaseTotal += lineTotal;
+                  return {
+                      ...item,
+                      productName: product ? product.name : '未知商品',
+                      unitPrice
+                  };
+              });
+              
+              return {
+                  id,
+                  status: batch.status,
+                  orderRevenue: batch.revenue,
+                  itemCount: itemsInOrder.length,
+                  purchaseTotal,
+                  items
+              };
+          }).filter(o => o !== null) as any[];
+
+          chensOrders.sort((a,b) => b.id.localeCompare(a.id));
+          
+          const totalRevenue = chensOrders.reduce((sum, o) => sum + o.orderRevenue, 0);
+          const totalPurchase = chensOrders.reduce((sum, o) => sum + o.purchaseTotal, 0);
+          const percentage = totalRevenue > 0 ? ((totalPurchase / totalRevenue) * 100).toFixed(1) : '0.0';
+
+          return (
+             <div className="flex-1 flex flex-col min-h-0 bg-white">
+                <div className="p-2 border-b border-slate-200 bg-slate-50 shrink-0 z-10 flex gap-2">
+                    <button onClick={() => setPurchaseFilter('all')} className={`flex-1 py-1.5 text-sm font-bold rounded-lg border transition-all ${purchaseFilter === 'all' ? 'bg-indigo-100 text-indigo-800 border-indigo-300 shadow-sm' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>全部</button>
+                    <button onClick={() => setPurchaseFilter('unsettled')} className={`flex-1 py-1.5 text-sm font-bold rounded-lg border transition-all ${purchaseFilter === 'unsettled' ? 'bg-indigo-100 text-indigo-800 border-indigo-300 shadow-sm' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>未結</button>
+                    <button onClick={() => setPurchaseFilter('settled')} className={`flex-1 py-1.5 text-sm font-bold rounded-lg border transition-all ${purchaseFilter === 'settled' ? 'bg-indigo-100 text-indigo-800 border-indigo-300 shadow-sm' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>已結</button>
+                </div>
+                
+                <div className="p-3 bg-indigo-50 border-b border-indigo-100 shrink-0 shadow-sm">
+                    <div className="flex justify-between items-center text-xs font-bold text-indigo-800 mb-1">
+                        <span>訂單總收入</span>
+                        <span>購買總金額</span>
+                        <span>百分比</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                        <span className="font-mono font-bold text-lg text-slate-700">{formatCurrency(totalRevenue)}</span>
+                        <span className="font-mono font-bold text-lg text-indigo-600">{formatCurrency(totalPurchase)}</span>
+                        <span className="font-mono font-bold text-lg text-fuchsia-600">{percentage}%</span>
+                    </div>
+                </div>
+
+                <div className="overflow-y-auto flex-1 pb-16 bg-white">
+                    <table className="w-full text-left text-sm">
+                        <thead className="bg-orange-200 text-orange-900 border-b border-orange-300 sticky top-0 z-10 shadow-sm">
+                            <tr>
+                                <th className="px-2 py-2 font-bold w-1/3">燈號 訂單序</th>
+                                <th className="px-2 py-2 font-bold text-left w-1/3">商品項目</th>
+                                <th className="px-2 py-2 font-bold text-right w-1/3">金額</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-orange-200/50">
+                            {chensOrders.length === 0 && (
+                                <tr>
+                                    <td colSpan={3} className="text-center text-slate-400 font-bold py-8">沒有符合的購買紀錄</td>
+                                </tr>
+                            )}
+                            {chensOrders.map(order => {
+                                const isExpanded = expandedPurchaseId === order.id;
+                                const groupNames = Array.from(new Set(order.items.map((i: any) => {
+                                    const g = productGroups.find(g => g.id === i.productGroupId);
+                                    return g ? g.name : '';
+                                }))).filter(Boolean).join(' / ');
+                                return (
+                                    <React.Fragment key={order.id}>
+                                        <tr 
+                                            className={`cursor-pointer hover:bg-orange-200 transition-colors ${isExpanded ? 'bg-orange-200' : 'bg-orange-100'}`}
+                                            onClick={() => setExpandedPurchaseId(isExpanded ? null : order.id)}
+                                        >
+                                            <td className="px-2 py-3 border-r border-orange-200/50">
+                                                <div className="flex items-center gap-1.5">
+                                                    <div className={`w-2.5 h-2.5 rounded-full shadow-sm shrink-0 ${getStatusColor(order.status || 'processing')}`} />
+                                                    <span className="font-mono font-bold text-slate-800">{order.id}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-2 py-3 border-r border-orange-200/50 text-left">
+                                                <div className="text-slate-800 font-bold text-xs truncate max-w-[150px]">
+                                                    {groupNames || '-'}
+                                                </div>
+                                            </td>
+                                            <td className="px-2 py-3">
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <span className="font-mono font-bold text-indigo-700">{formatCurrency(order.purchaseTotal)}</span>
+                                                    {isExpanded ? <ChevronUp size={16} className="text-slate-500" /> : <ChevronDown size={16} className="text-slate-500" />}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {isExpanded && (
+                                            <tr>
+                                                <td colSpan={3} className="bg-orange-50 p-0 border-t border-orange-200">
+                                                    <table className="w-full text-xs text-left">
+                                                        <tbody className="divide-y divide-orange-100">
+                                                            {order.items.map((item: any) => {
+                                                                const lineTotal = item.quantity * item.unitPrice;
+                                                                return (
+                                                                    <tr key={item.id} className="hover:bg-orange-100/70 transition-colors text-slate-700">
+                                                                        <td className="pl-6 py-2 font-bold truncate max-w-[180px]">
+                                                                            {item.productName}
+                                                                            {item.description && <span className="text-slate-500 font-normal"> : {item.description}</span>}
+                                                                        </td>
+                                                                        <td className="px-2 py-2 text-right font-bold w-12 text-slate-600">x{item.quantity}</td>
+                                                                        <td className="px-2 py-2 text-right font-mono text-slate-500 w-16">{formatCurrency(item.unitPrice)}</td>
+                                                                        <td className="px-2 py-2 text-right font-mono font-bold text-emerald-600 w-16">{formatCurrency(lineTotal)}</td>
+                                                                    </tr>
+                                                                );
+                                                            })}
+                                                        </tbody>
+                                                    </table>
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </React.Fragment>
+                                );
+                            })}
+                        </tbody>
+                    </table>
                 </div>
              </div>
           );
