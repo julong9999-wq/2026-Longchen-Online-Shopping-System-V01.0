@@ -403,11 +403,11 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
                             </div>
                         </div>
                      ) : (
-                        <div className="flex justify-between items-center text-xs font-bold text-slate-500 px-3 py-2 border-b border-slate-200 bg-white">
-                            <span>訂單序</span>
-                            <span>總利潤</span>
-                            <span>利潤率</span>
-                            <span className="w-8 text-center">操作</span>
+                        <div className="flex items-center text-xs font-bold text-slate-500 px-3 py-2 border-b border-slate-200 bg-white">
+                            <span className="flex-1">訂單序</span>
+                            <span className="w-20 text-right">總利潤</span>
+                            <span className="w-16 text-right">利潤率</span>
+                            <span className="w-12 text-right">操作</span>
                         </div>
                      )}
                    </div>
@@ -437,17 +437,17 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
                                 </>
                              ) : (
                                 <>
-                                  <div className="flex justify-between items-center">
-                                     <div className="w-1/4 flex items-center gap-1.5 truncate">
+                                  <div className="flex items-center">
+                                     <div className="flex-1 flex items-center gap-1.5">
                                         <div className={`w-2.5 h-2.5 rounded-full shadow-sm shrink-0 ${getStatusColor(item.status || 'processing')}`} />
-                                        <span className="font-mono font-bold text-slate-700 truncate">{item.id}</span>
+                                        <span className="font-mono font-bold text-slate-700">{item.id}</span>
                                      </div>
-                                     <span className="font-mono font-bold text-emerald-600 text-right w-1/4">{formatCurrency(item.profit)}</span>
-                                     <span className="text-sm font-bold text-slate-500 text-right w-1/4">
+                                     <span className="font-mono font-bold text-emerald-600 text-right w-20 shrink-0">{formatCurrency(item.profit)}</span>
+                                     <span className="text-sm font-bold text-slate-500 text-right w-16 shrink-0">
                                        {item.revenue > 0 ? ((item.profit / item.revenue) * 100).toFixed(1) : 0}%
                                      </span>
-                                     <div className="w-1/4 flex justify-end">
-                                         <button onClick={() => openEditModal(item)} className="p-1 px-1.5 flex items-center justify-center bg-blue-50 text-blue-600 rounded shrink-0 border border-blue-200 hover:bg-blue-100 shadow-sm transition-colors">
+                                     <div className="w-12 flex justify-end shrink-0">
+                                         <button onClick={() => openEditModal(item)} className="p-1 px-1.5 flex items-center justify-center bg-blue-50 text-blue-600 rounded border border-blue-200 hover:bg-blue-100 shadow-sm transition-colors">
                                            <Edit2 size={13} />
                                          </button>
                                      </div>
