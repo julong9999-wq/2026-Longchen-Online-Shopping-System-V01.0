@@ -33,6 +33,15 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
   const [editDad, setEditDad] = useState('');
   const [editSister, setEditSister] = useState('');
   const [editNote, setEditNote] = useState('');
+  const [editStatus, setEditStatus] = useState<string>('processing');
+
+  const getStatusColor = (status: string) => {
+      switch(status) {
+          case 'processing': return 'bg-emerald-500 shadow-emerald-200';
+          case 'closed': return 'bg-yellow-400 shadow-yellow-200';
+          default: return 'bg-rose-500 shadow-rose-200';
+      }
+  };
 
   const [purchasingRecords, setPurchasingRecords] = useState<PurchasingRecord[]>([]);
 
@@ -90,6 +99,7 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
     setEditDad(item.dadReceivable.toString());
     setEditSister(item.sisterReceivable.toString());
     setEditNote(item.paymentNote);
+    setEditStatus(item.status || 'processing');
     setEditModalOpen(true);
   };
 
@@ -101,7 +111,8 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
            ...existingSettings,
            dadReceivable: parseFloat(editDad) || 0,
            sisterReceivable: parseFloat(editSister) || 0,
-           paymentNote: editNote
+           paymentNote: editNote,
+           status: editStatus
        };
        await setDoc(doc(db, 'incomeSettings', editTarget), updatedSettings);
        setEditModalOpen(false);
@@ -182,13 +193,18 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
              if (status === 'preorder') label = '預購';
              if (status === 'closed') label = '結案';
              
+             let activeColor = '';
+             if (status === 'processing') activeColor = 'bg-emerald-100 text-emerald-800 border-emerald-300 shadow-sm';
+             else if (status === 'preorder') activeColor = 'bg-rose-100 text-rose-800 border-rose-300 shadow-sm';
+             else if (status === 'closed') activeColor = 'bg-yellow-100 text-yellow-800 border-yellow-300 shadow-sm';
+             
              return (
                <button
                   key={status}
                   onClick={() => setStatusFilter(status)}
                   className={`flex-1 py-1.5 font-bold text-sm rounded-lg transition-all border
                       ${statusFilter === status 
-                          ? 'bg-sky-100 text-sky-700 border-sky-300 shadow-sm' 
+                          ? activeColor 
                           : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
                       }
                   `}
@@ -334,6 +350,30 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
                         </div>
                      )}
                      
+                     {!isWithdrawnView && (() => {
+                        const sumUnwithProfit = cashData.reduce((acc, item) => acc + item.profit, 0);
+                        const sumUnwithRev = cashData.reduce((acc, item) => acc + item.revenue, 0);
+                        const rate = sumUnwithRev > 0 ? ((sumUnwithProfit / sumUnwithRev) * 100).toFixed(1) : '0';
+                        const estDad = Math.round(sumUnwithProfit * 0.2);
+                        const estSister = Math.round(sumUnwithProfit * 0.8);
+                        
+                        return (
+                          <div className="bg-rose-50 shadow-sm p-3">
+                              <div className="flex items-center border-b border-rose-200 pb-1.5 mb-1.5">
+                                 <span className="w-1/4 font-bold text-slate-900 text-left text-sm border-r border-rose-200">合計</span>
+                                 <span className="w-1/4 text-emerald-800 font-mono font-bold text-right text-sm border-r border-rose-200">{formatCurrency(sumUnwithProfit)}</span>
+                                 <span className="w-1/4 text-orange-800 font-mono font-bold text-right text-sm border-r border-rose-200">{formatCurrency(estDad)}</span>
+                                 <span className="w-1/4 text-fuchsia-800 font-mono font-bold text-right text-sm">{formatCurrency(estSister)}</span>
+                              </div>
+                              <div className="flex items-center text-[10px] text-slate-600">
+                                 <span className="w-1/2 font-bold text-left text-rose-800 border-r border-rose-200 pl-1">未領總利率: {rate}%</span>
+                                 <span className="w-1/4 text-rose-600 text-right font-mono font-bold border-r border-rose-200">(估計爸爸)</span>
+                                 <span className="w-1/4 text-rose-600 text-right font-mono font-bold">(估計妹妹)</span>
+                              </div>
+                          </div>
+                        );
+                     })()}
+                     
                      {isWithdrawnView ? (
                         <div className="flex flex-col text-xs font-bold text-slate-500 px-3 py-2 border-b border-slate-200">
                             <div className="flex items-center mb-1">
@@ -349,7 +389,7 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
                             </div>
                         </div>
                      ) : (
-                        <div className="flex justify-between items-center text-xs font-bold text-slate-500 px-3 py-2 border-b border-slate-200">
+                        <div className="flex justify-between items-center text-xs font-bold text-slate-500 px-3 py-2 border-b border-slate-200 bg-white">
                             <span>訂單序</span>
                             <span>總利潤</span>
                             <span>利潤率</span>
@@ -360,8 +400,13 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
                    
                    <div className="overflow-y-auto flex-1 pb-16 bg-slate-50">
                      <div className="flex flex-col gap-1.5 p-2">
-                       {cashData.map(item => (
-                          <div key={item.id} className="border border-slate-200 bg-white rounded-md p-2 shadow-sm hover:shadow transition-shadow">
+                       {cashData.map(item => {
+                          let cardBg = 'bg-white border-slate-200';
+                          if (cashFilter === 'unwithdrawn') cardBg = 'bg-rose-50 border-rose-200';
+                          if (cashFilter === 'previous') cardBg = 'bg-emerald-50 border-emerald-200';
+                          
+                          return (
+                          <div key={item.id} className={`border rounded-md p-2 shadow-sm hover:shadow transition-shadow ${cardBg}`}>
                              {isWithdrawnView ? (
                                 <>
                                   <div className="flex items-center border-b border-slate-100 pb-1.5 mb-1.5">
@@ -379,7 +424,10 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
                              ) : (
                                 <>
                                   <div className="flex justify-between items-center">
-                                     <span className="font-mono font-bold text-slate-700 w-1/4 truncate">{item.id}</span>
+                                     <div className="w-1/4 flex items-center gap-1.5 truncate">
+                                        <div className={`w-2.5 h-2.5 rounded-full shadow-sm shrink-0 ${getStatusColor(item.status || 'processing')}`} />
+                                        <span className="font-mono font-bold text-slate-700 truncate">{item.id}</span>
+                                     </div>
                                      <span className="font-mono font-bold text-emerald-600 text-right w-1/4">{formatCurrency(item.profit)}</span>
                                      <span className="text-sm font-bold text-slate-500 text-right w-1/4">
                                        {item.revenue > 0 ? ((item.profit / item.revenue) * 100).toFixed(1) : 0}%
@@ -393,7 +441,8 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
                                 </>
                              )}
                           </div>
-                       ))}
+                          );
+                       })}
                      </div>
                    </div>
                  </>
@@ -486,6 +535,16 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
                                </tr>
                            )}
                        </tbody>
+                       {orderIds.length > 0 && (
+                           <tfoot className="bg-slate-100 text-slate-700 font-bold border-t border-slate-200">
+                               <tr>
+                                   <td className="px-2 py-3 border-r border-slate-200">合計</td>
+                                   <td className="px-2 py-3 text-right border-r border-slate-200 text-blue-600">{formatCurrency(orderIds.reduce((sum, id) => sum + (ecommerceOrders.find(o => o.id === id) ? ecommerceOrders.find(o => o.id === id)!.revenue : 0), 0))}</td>
+                                   <td className="px-2 py-3 text-right border-r border-slate-200 text-orange-600">{formatCurrency(orderIds.reduce((sum, id) => sum + payments.filter(p => p.orderNo === id).reduce((acc, p) => acc + p.amount, 0), 0))}</td>
+                                   <td className="px-2 py-3 text-right text-fuchsia-600">{formatCurrency(orderIds.reduce((sum, id) => sum + collections.filter(c => c.orderNo === id).reduce((acc, c) => acc + c.amount, 0), 0))}</td>
+                               </tr>
+                           </tfoot>
+                       )}
                    </table>
                 </div>
              </div>
@@ -503,6 +562,39 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
                     <button onClick={() => setEditModalOpen(false)} className="text-sky-100 hover:text-white"><X size={20}/></button>
                 </div>
                 <div className="p-4 flex flex-col gap-4">
+                    {(() => {
+                        const targetData = batchData.find(d => d.id === editTarget);
+                        const targetProfit = targetData ? targetData.profit : 0;
+                        return (
+                          <div className="flex flex-col gap-4">
+                              <div className="flex gap-2">
+                                  {(['processing', 'preorder', 'closed'] as const).map(opt => {
+                                      let label = '進行';
+                                      if (opt === 'preorder') label = '預購';
+                                      if (opt === 'closed') label = '結案';
+                                      let activeColor = '';
+                                      if (opt === 'processing') activeColor = 'bg-emerald-100 text-emerald-800 border-emerald-300 shadow-sm';
+                                      else if (opt === 'preorder') activeColor = 'bg-rose-100 text-rose-800 border-rose-300 shadow-sm';
+                                      else if (opt === 'closed') activeColor = 'bg-yellow-100 text-yellow-800 border-yellow-300 shadow-sm';
+                                      return (
+                                          <button 
+                                              key={opt}
+                                              onClick={() => setEditStatus(opt)}
+                                              className={`flex-1 py-1.5 font-bold text-sm rounded-lg border transition-all ${editStatus === opt ? activeColor : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'}`}
+                                          >
+                                              {label}
+                                          </button>
+                                      );
+                                  })}
+                              </div>
+                              <div className="flex gap-2 text-[11px] font-bold text-slate-400 select-none px-1">
+                                  <div className="flex-1 text-left whitespace-nowrap overflow-hidden text-ellipsis">總利潤: {formatCurrency(targetProfit)}</div>
+                                  <div className="flex-1 text-center whitespace-nowrap overflow-hidden text-ellipsis">預計爸爸: {formatCurrency(Math.round(targetProfit * 0.2))}</div>
+                                  <div className="flex-1 text-right whitespace-nowrap overflow-hidden text-ellipsis">預計妹妹: {formatCurrency(Math.round(targetProfit * 0.8))}</div>
+                              </div>
+                          </div>
+                        );
+                    })()}
                     <div>
                         <label className="block text-sm font-bold text-slate-700 mb-1">爸爸應收</label>
                         <input type="number" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-lg font-mono focus:ring-2 focus:ring-sky-500 focus:outline-none" value={editDad} onChange={e => setEditDad(e.target.value)} />
