@@ -490,6 +490,88 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
           
           return (
              <div className="flex-1 overflow-y-auto pb-16 bg-white">
+<div className="bg-slate-50 border-t border-slate-200 shrink-0">
+                   <div className="p-3">
+                       {(() => {
+                           const totalPrepaymentAmount = orderIds.reduce((sum, id) => {
+                               let s = 0;
+                               orderItems.filter(i => i.orderGroupId === id).forEach(item => {
+                                   const text = `${item.description} ${item.buyer} ${item.remarks} ${item.note}`;
+                                   const matches = text.match(/(?:以匯款|已匯款|無卡)[^\d]*?(\d+)/g);
+                                   if (matches) matches.forEach(m => { const v = m.match(/\d+/); if(v) s += parseInt(v[0], 10); });
+                               });
+                               return sum + s;
+                           }, 0);
+
+                           const allWithdrawn = batchData.filter(d => !PREVIOUS_PERIOD_IDS.includes(d.id) && (d.dadReceivable !== 0 || d.sisterReceivable !== 0));
+                           const totalWithdrawnProfit = allWithdrawn.reduce((acc, d) => acc + d.profit, 0);
+                           const sisterWithdrawn = allWithdrawn.reduce((acc, d) => acc + d.sisterReceivable, 0);
+                           const dadUnwithdrawn = totalWithdrawnProfit - sisterWithdrawn;
+                           const purchasingWithdrawn = latestRecord?.profitWithdrawn || 0;
+                           
+                           const totalPayments = payments.reduce((acc, p) => acc + p.amount, 0);
+                           const totalCollections = collections.reduce((acc, c) => acc + c.amount, 0);
+                           const bankBalance = latestRecord?.bankBalance || 0;
+                           
+                           const totalAmount = totalPayments + totalCollections + bankBalance;
+
+                           return (
+                               <>
+                                   <div className="flex items-center text-sm font-bold border-b border-slate-200 pb-1">
+                                       <span className="text-slate-500 w-1/4">項目</span>
+                                       <span className="text-slate-500 w-1/4 text-right">金額</span>
+                                       <span className="text-slate-500 w-1/4 text-right">預收</span>
+                                       <span className="text-slate-500 w-1/4 text-right">利潤</span>
+                                   </div>
+                                   <div className="flex items-center text-sm font-bold py-1.5 border-b border-slate-100">
+                                       <span className="text-slate-600 w-1/4">代購付款:</span>
+                                       <span className="text-orange-600 font-mono w-1/4 text-right">{formatCurrency(totalPayments)}</span>
+                                       <span className="text-slate-300 w-1/4 text-right">-</span>
+                                       <span className="text-slate-300 w-1/4 text-right">-</span>
+                                   </div>
+                                   <div className="flex items-center text-sm font-bold py-1.5 border-b border-slate-100">
+                                       <span className="text-slate-600 w-1/4">出貨代收:</span>
+                                       <span className="text-fuchsia-600 font-mono w-1/4 text-right">{formatCurrency(totalCollections)}</span>
+                                       <span className="text-slate-300 w-1/4 text-right">-</span>
+                                       <span className="text-slate-300 w-1/4 text-right">-</span>
+                                   </div>
+                                   <div className="flex items-center text-sm font-bold py-1.5 border-b border-slate-100">
+                                       <span className="text-slate-600 w-1/4">銀行餘額:</span>
+                                       <span className="text-blue-600 font-mono w-1/4 text-right">{formatCurrency(bankBalance)}</span>
+                                       <span className="text-slate-300 w-1/4 text-right">-</span>
+                                       <span className="text-slate-300 w-1/4 text-right">-</span>
+                                   </div>
+                                   <div className="flex items-center text-sm font-bold py-1.5 border-b border-slate-100">
+                                       <span className="text-slate-600 w-1/4">妹妹領現:</span>
+                                       <span className="text-slate-500 font-normal w-1/4 text-right text-[11px] truncate px-1">(代購: {formatCurrency(purchasingWithdrawn)})</span>
+                                       <span className="text-slate-300 w-1/4 text-right">-</span>
+                                       <span className="text-indigo-600 font-mono w-1/4 text-right">{formatCurrency(sisterWithdrawn)}</span>
+                                   </div>
+                                   <div className="flex items-center text-sm font-bold py-1.5 border-b border-slate-100">
+                                       <span className="text-slate-600 w-1/4">爸爸未領:</span>
+                                       <span className="text-slate-300 w-1/4 text-right">-</span>
+                                       <span className="text-slate-300 w-1/4 text-right">-</span>
+                                       <span className="text-emerald-600 font-mono w-1/4 text-right">{formatCurrency(dadUnwithdrawn)}</span>
+                                   </div>
+                                   <div className="flex items-center text-sm font-bold py-1.5 border-b border-slate-100">
+                                       <span className="text-slate-600 w-1/4">預收款項:</span>
+                                       <span className="text-slate-300 w-1/4 text-right">-</span>
+                                       <span className="text-emerald-600 font-mono w-1/4 text-right">{formatCurrency(totalPrepaymentAmount)}</span>
+                                       <span className="text-slate-300 w-1/4 text-right">-</span>
+                                   </div>
+                                   <div className="flex items-center text-base font-bold pt-2 border-t border-slate-200 mt-2">
+                                       <span className="text-slate-800 w-1/4">合計金額:</span>
+                                       <span className="text-slate-800 font-mono w-1/4 text-right">{formatCurrency(totalAmount)}</span>
+                                       <span className="text-slate-800 font-mono w-1/4 text-right">{formatCurrency(totalPrepaymentAmount)}</span>
+                                       <span className="text-slate-800 font-mono w-1/4 text-right">{formatCurrency(totalWithdrawnProfit)}</span>
+                                   </div>
+                               </>
+                           );
+                       })()}
+                   </div>
+                </div>{/* 空間區隔 */}
+                <div className="h-6 bg-slate-100 border-t border-slate-200 shadow-inner"></div>
+
                 {latestMonth ? (
                    <div className="p-3 bg-slate-50 border-b border-slate-200 shrink-0 z-10 shadow-sm">
                       <div className="text-sm font-bold text-slate-700 flex items-center gap-2">
@@ -584,89 +666,7 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
                    )}
                </table>
                 
-                {/* 空間區隔 */}
-                <div className="h-6 bg-slate-100 border-t border-slate-200 shadow-inner"></div>
-
-                <div className="bg-slate-50 border-t border-slate-200 shrink-0">
-                   <div className="p-3">
-                       {(() => {
-                           const totalPrepaymentAmount = orderIds.reduce((sum, id) => {
-                               let s = 0;
-                               orderItems.filter(i => i.orderGroupId === id).forEach(item => {
-                                   const text = `${item.description} ${item.buyer} ${item.remarks} ${item.note}`;
-                                   const matches = text.match(/(?:以匯款|已匯款|無卡)[^\d]*?(\d+)/g);
-                                   if (matches) matches.forEach(m => { const v = m.match(/\d+/); if(v) s += parseInt(v[0], 10); });
-                               });
-                               return sum + s;
-                           }, 0);
-
-                           const allWithdrawn = batchData.filter(d => !PREVIOUS_PERIOD_IDS.includes(d.id) && (d.dadReceivable !== 0 || d.sisterReceivable !== 0));
-                           const totalWithdrawnProfit = allWithdrawn.reduce((acc, d) => acc + d.profit, 0);
-                           const sisterWithdrawn = allWithdrawn.reduce((acc, d) => acc + d.sisterReceivable, 0);
-                           const dadUnwithdrawn = totalWithdrawnProfit - sisterWithdrawn;
-                           const purchasingWithdrawn = latestRecord?.profitWithdrawn || 0;
-                           
-                           const totalPayments = payments.reduce((acc, p) => acc + p.amount, 0);
-                           const totalCollections = collections.reduce((acc, c) => acc + c.amount, 0);
-                           const bankBalance = latestRecord?.bankBalance || 0;
-                           
-                           const totalAmount = totalPayments + totalCollections + bankBalance;
-
-                           return (
-                               <>
-                                   <div className="flex items-center text-sm font-bold border-b border-slate-200 pb-1">
-                                       <span className="text-slate-500 w-1/4">項目</span>
-                                       <span className="text-slate-500 w-1/4 text-right">金額</span>
-                                       <span className="text-slate-500 w-1/4 text-right">預收</span>
-                                       <span className="text-slate-500 w-1/4 text-right">利潤</span>
-                                   </div>
-                                   <div className="flex items-center text-sm font-bold py-1.5 border-b border-slate-100">
-                                       <span className="text-slate-600 w-1/4">代購付款:</span>
-                                       <span className="text-orange-600 font-mono w-1/4 text-right">{formatCurrency(totalPayments)}</span>
-                                       <span className="text-slate-300 w-1/4 text-right">-</span>
-                                       <span className="text-slate-300 w-1/4 text-right">-</span>
-                                   </div>
-                                   <div className="flex items-center text-sm font-bold py-1.5 border-b border-slate-100">
-                                       <span className="text-slate-600 w-1/4">出貨代收:</span>
-                                       <span className="text-fuchsia-600 font-mono w-1/4 text-right">{formatCurrency(totalCollections)}</span>
-                                       <span className="text-slate-300 w-1/4 text-right">-</span>
-                                       <span className="text-slate-300 w-1/4 text-right">-</span>
-                                   </div>
-                                   <div className="flex items-center text-sm font-bold py-1.5 border-b border-slate-100">
-                                       <span className="text-slate-600 w-1/4">銀行餘額:</span>
-                                       <span className="text-blue-600 font-mono w-1/4 text-right">{formatCurrency(bankBalance)}</span>
-                                       <span className="text-slate-300 w-1/4 text-right">-</span>
-                                       <span className="text-slate-300 w-1/4 text-right">-</span>
-                                   </div>
-                                   <div className="flex items-center text-sm font-bold py-1.5 border-b border-slate-100">
-                                       <span className="text-slate-600 w-1/4">妹妹領現:</span>
-                                       <span className="text-slate-500 font-normal w-1/4 text-right text-[11px] truncate px-1">(代購: {formatCurrency(purchasingWithdrawn)})</span>
-                                       <span className="text-slate-300 w-1/4 text-right">-</span>
-                                       <span className="text-indigo-600 font-mono w-1/4 text-right">{formatCurrency(sisterWithdrawn)}</span>
-                                   </div>
-                                   <div className="flex items-center text-sm font-bold py-1.5 border-b border-slate-100">
-                                       <span className="text-slate-600 w-1/4">爸爸未領:</span>
-                                       <span className="text-slate-300 w-1/4 text-right">-</span>
-                                       <span className="text-slate-300 w-1/4 text-right">-</span>
-                                       <span className="text-emerald-600 font-mono w-1/4 text-right">{formatCurrency(dadUnwithdrawn)}</span>
-                                   </div>
-                                   <div className="flex items-center text-sm font-bold py-1.5 border-b border-slate-100">
-                                       <span className="text-slate-600 w-1/4">預收款項:</span>
-                                       <span className="text-slate-300 w-1/4 text-right">-</span>
-                                       <span className="text-emerald-600 font-mono w-1/4 text-right">{formatCurrency(totalPrepaymentAmount)}</span>
-                                       <span className="text-slate-300 w-1/4 text-right">-</span>
-                                   </div>
-                                   <div className="flex items-center text-base font-bold pt-2 border-t border-slate-200 mt-2">
-                                       <span className="text-slate-800 w-1/4">合計金額:</span>
-                                       <span className="text-slate-800 font-mono w-1/4 text-right">{formatCurrency(totalAmount)}</span>
-                                       <span className="text-slate-800 font-mono w-1/4 text-right">{formatCurrency(totalPrepaymentAmount)}</span>
-                                       <span className="text-slate-800 font-mono w-1/4 text-right">{formatCurrency(totalWithdrawnProfit)}</span>
-                                   </div>
-                               </>
-                           );
-                       })()}
-                   </div>
-                </div>
+                
              </div>
           );
       })()}

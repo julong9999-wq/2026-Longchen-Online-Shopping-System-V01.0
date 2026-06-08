@@ -517,94 +517,6 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
     // To allow negative bars to render from 0, recharts handles it automatically with CartesianGrid, but we can add ReferenceLine
     return (
       <div className="p-3 max-w-lg mxauto animate-in fade-in flex flex-col gap-3 pb-20">
-         <div className="flex items-center justify-between pt-1 w-full">
-           <h2 className="text-xl font-bold text-slate-800">收入 減 支出 之 餘額分析</h2>
-           <div className="flex items-center gap-3 text-[13px] font-bold text-slate-600">
-             <div className="flex items-center gap-1"><div className="w-3 h-3 rounded-full bg-[#fed7aa]"></div>禹君</div>
-             <div className="flex items-center gap-1"><div className="w-3 h-3 rounded-full bg-[#d8b4e2]"></div>禹辰</div>
-           </div>
-         </div>
-         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 mt-1 shrink-0 h-[450px]">
-           <ResponsiveContainer width="100%" height="100%">
-             <BarChart data={data} layout="vertical" margin={{ top: 5, right: 20, left: 5, bottom: 5 }} barGap={2} barCategoryGap="25%">
-               <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={true} />
-               <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(val) => Math.round(val/1000) + 'k'} />
-               <YAxis dataKey="month" type="category" width={65} tick={{ fontSize: 12, fill: '#475569', fontWeight: 'bold' }} />
-               <Tooltip cursor={{fill: '#f8fafc'}} formatter={(value: number) => [formatCurrency(value), '餘額']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-               <ReferenceLine x={0} stroke="#94a3b8" />
-               <Bar dataKey="禹君" fill="#fed7aa" name="禹君" radius={[0, 4, 4, 0]} barSize={12} />
-               <Bar dataKey="禹辰" fill="#d8b4e2" name="禹辰" radius={[0, 4, 4, 0]} barSize={12} />
-             </BarChart>
-           </ResponsiveContainer>
-         </div>
-
-         <div className="flex items-center gap-3 pt-4">
-           <h2 className="text-xl font-bold text-slate-800">「資金調度」分析總表</h2>
-         </div>
-         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden shrink-0">
-          <div className="flex flex-col">
-            {unsettledTransfers.length === 0 ? (
-                <div className="px-4 py-8 text-center text-slate-400 font-bold">目前無未抵銷項目</div>
-            ) : (
-                unsettledTransfers.map(row => (
-                    <div key={row.id} className="p-3 border-b border-slate-100 last:border-0 hover:bg-slate-50 flex flex-col gap-1.5 transition-colors">
-                        <div className="flex justify-between items-center">
-                            <div className="flex items-center gap-3">
-                                <span className={`px-2 py-0.5 rounded text-xs font-bold text-white shadow-sm ${row.account === '禹君' ? 'bg-[#fed7aa] text-orange-900 border border-orange-200' : 'bg-[#d8b4e2] text-fuchsia-900 border border-fuchsia-200'}`}>
-                                    {row.account}
-                                </span>
-                                <span className="text-[13px] font-bold text-slate-600 font-mono">{row.date}</span>
-                            </div>
-                            <span className={`font-mono font-bold text-[15px] ${row.amount > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                {formatCurrency(row.amount)}
-                            </span>
-                        </div>
-                        <div className="flex justify-between items-center text-[13px] text-slate-500 px-1">
-                            <span className="font-bold flex-shrink-0">{row.category}</span>
-                            <span className="truncate max-w-[200px] text-right ml-4 text-slate-400">{row.remarks}</span>
-                        </div>
-                    </div>
-                ))
-            )}
-          </div>
-        </div>
-
-         <div className="flex items-center gap-3 pt-4">
-           <h2 className="text-xl font-bold text-slate-800">「股票買賣」分析總表</h2>
-         </div>
-         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden shrink-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-[14px] whitespace-nowrap">
-              <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold">
-                <tr>
-                  <th className="px-4 py-3">帳戶</th>
-                  <th className="px-4 py-3 text-right">買賣金額合計</th>
-                  <th className="px-4 py-3 text-right">獲利領取合計</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {stockSummaryArray.length === 0 ? (
-                  <tr>
-                    <td colSpan={3} className="px-4 py-8 text-center text-slate-400 font-bold">尚無股票買賣紀錄</td>
-                  </tr>
-                ) : (
-                  stockSummaryArray.map(row => (
-                    <tr key={row.account} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-4 py-3 font-bold text-slate-700">{row.account}</td>
-                      <td className={`px-4 py-3 text-right font-mono font-bold ${row.tradeAmount > 0 ? 'text-emerald-600' : (row.tradeAmount < 0 ? 'text-rose-600' : 'text-slate-700')}`}>
-                        {formatCurrency(row.tradeAmount)}
-                      </td>
-                      <td className={`px-4 py-3 text-right font-mono font-bold text-emerald-600`}>
-                        {formatCurrency(Math.abs(row.profitAmount))}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
         {(() => {
             const getAccountBalance = (account: string) => {
                 let bal = 0;
@@ -639,7 +551,7 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
 
             return (
                 <>
-                    <div className="flex items-center gap-3 pt-4">
+                    <div className="flex items-center gap-3 pt-1">
                       <h2 className="text-xl font-bold text-slate-800">「帳務金額」分析總表</h2>
                     </div>
                     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden shrink-0">
@@ -680,6 +592,95 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
                 </>
             );
         })()}
+
+         <div className="flex items-center gap-3 pt-4">
+           <h2 className="text-xl font-bold text-slate-800">「股票買賣」分析總表</h2>
+         </div>
+         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden shrink-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-[14px] whitespace-nowrap">
+              <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold">
+                <tr>
+                  <th className="px-4 py-3">帳戶</th>
+                  <th className="px-4 py-3 text-right">買賣金額合計</th>
+                  <th className="px-4 py-3 text-right">獲利領取合計</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {stockSummaryArray.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} className="px-4 py-8 text-center text-slate-400 font-bold">尚無股票買賣紀錄</td>
+                  </tr>
+                ) : (
+                  stockSummaryArray.map(row => (
+                    <tr key={row.account} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-4 py-3 font-bold text-slate-700">{row.account}</td>
+                      <td className={`px-4 py-3 text-right font-mono font-bold ${row.tradeAmount > 0 ? 'text-emerald-600' : (row.tradeAmount < 0 ? 'text-rose-600' : 'text-slate-700')}`}>
+                        {formatCurrency(row.tradeAmount)}
+                      </td>
+                      <td className={`px-4 py-3 text-right font-mono font-bold text-emerald-600`}>
+                        {formatCurrency(Math.abs(row.profitAmount))}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+         <div className="flex items-center gap-3 pt-4">
+           <h2 className="text-xl font-bold text-slate-800">「資金調度」分析總表</h2>
+         </div>
+         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden shrink-0">
+          <div className="flex flex-col">
+            {unsettledTransfers.length === 0 ? (
+                <div className="px-4 py-8 text-center text-slate-400 font-bold">目前無未抵銷項目</div>
+            ) : (
+                unsettledTransfers.map(row => (
+                    <div key={row.id} className="p-3 border-b border-slate-100 last:border-0 hover:bg-slate-50 flex flex-col gap-1.5 transition-colors">
+                        <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                                <span className={`px-2 py-0.5 rounded text-xs font-bold text-white shadow-sm ${row.account === '禹君' ? 'bg-[#fed7aa] text-orange-900 border border-orange-200' : 'bg-[#d8b4e2] text-fuchsia-900 border border-fuchsia-200'}`}>
+                                    {row.account}
+                                </span>
+                                <span className="text-[13px] font-bold text-slate-600 font-mono">{row.date}</span>
+                            </div>
+                            <span className={`font-mono font-bold text-[15px] ${row.amount > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                {formatCurrency(row.amount)}
+                            </span>
+                        </div>
+                        <div className="flex justify-between items-center text-[13px] text-slate-500 px-1">
+                            <span className="font-bold flex-shrink-0">{row.category}</span>
+                            <span className="truncate max-w-[200px] text-right ml-4 text-slate-400">{row.remarks}</span>
+                        </div>
+                    </div>
+                ))
+            )}
+          </div>
+        </div>
+
+         <div className="flex items-center justify-between pt-4 w-full">
+           <h2 className="text-xl font-bold text-slate-800">收入 減 支出 之 餘額分析</h2>
+           <div className="flex items-center gap-3 text-[13px] font-bold text-slate-600">
+             <div className="flex items-center gap-1"><div className="w-3 h-3 rounded-full bg-[#fed7aa]"></div>禹君</div>
+             <div className="flex items-center gap-1"><div className="w-3 h-3 rounded-full bg-[#d8b4e2]"></div>禹辰</div>
+           </div>
+         </div>
+         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 mt-1 shrink-0 h-[450px]">
+           <ResponsiveContainer width="100%" height="100%">
+             <BarChart data={data} layout="vertical" margin={{ top: 5, right: 20, left: 5, bottom: 5 }} barGap={2} barCategoryGap="25%">
+               <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={true} />
+               <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(val) => Math.round(val/1000) + 'k'} />
+               <YAxis dataKey="month" type="category" width={65} tick={{ fontSize: 12, fill: '#475569', fontWeight: 'bold' }} />
+               <Tooltip cursor={{fill: '#f8fafc'}} formatter={(value: number) => [formatCurrency(value), '餘額']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+               <ReferenceLine x={0} stroke="#94a3b8" />
+               <Bar dataKey="禹君" fill="#fed7aa" name="禹君" radius={[0, 4, 4, 0]} barSize={12} />
+               <Bar dataKey="禹辰" fill="#d8b4e2" name="禹辰" radius={[0, 4, 4, 0]} barSize={12} />
+             </BarChart>
+           </ResponsiveContainer>
+         </div>
+
       </div>
     );
   };
