@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Home, Truck, DollarSign, Wallet, FileCheck, Edit2, X, Save, AlertTriangle, CheckCircle, ShoppingCart, ChevronDown, ChevronUp } from 'lucide-react';
+import { Home, Truck, DollarSign, Wallet, FileCheck, Edit2, X, Save, AlertTriangle, CheckCircle, ShoppingCart, ChevronDown, ChevronUp, Clock } from 'lucide-react';
 import { OrderGroup, OrderItem, ProductItem, ProductGroup } from '../types';
 import { formatCurrency } from '../utils';
 import { db } from '../firebase';
@@ -25,7 +25,7 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
   allIncomeSettings,
   onNavigateHome,
 }) => {
-  const [activeTab, setActiveTab] = useState<'shipping' | 'profit' | 'cash' | 'reconciliation' | 'purchase'>('shipping');
+  const [activeTab, setActiveTab] = useState<'shipping' | 'profit' | 'turnover' | 'cash' | 'reconciliation' | 'purchase'>('shipping');
   const [statusFilter, setStatusFilter] = useState<'processing' | 'preorder' | 'closed'>('processing');
   
   const [purchaseFilter, setPurchaseFilter] = useState<'all' | 'unsettled' | 'settled'>('all');
@@ -147,6 +147,14 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
       </button>
 
       <button 
+        onClick={() => setActiveTab('turnover')} 
+        className={`flex-1 flex flex-col items-center justify-center h-full transition-all duration-200 ${activeTab === 'turnover' ? 'text-yellow-300 bg-sky-800/50' : 'text-sky-200 hover:text-white'}`}
+      >
+        <Clock size={22} strokeWidth={activeTab === 'turnover' ? 2.5 : 2} />
+        <span className="text-[11px] font-bold mt-1 tracking-wide">週期</span>
+      </button>
+
+      <button 
         onClick={() => setActiveTab('cash')} 
         className={`flex-1 flex flex-col items-center justify-center h-full transition-all duration-200 ${activeTab === 'cash' ? 'text-yellow-300 bg-sky-800/50' : 'text-sky-200 hover:text-white'}`}
       >
@@ -184,6 +192,7 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
       switch (activeTab) {
           case 'shipping': return '國際運費分析';
           case 'profit': return '利潤分析';
+          case 'turnover': return '週期分析';
           case 'cash': return '領現分析';
           case 'reconciliation': return '對帳分析';
           case 'purchase': return '購買分析';
@@ -200,7 +209,7 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
       </div>
 
       {/* Filter Tabs */}
-      {(activeTab === 'shipping' || activeTab === 'profit') && (
+      {(activeTab === 'shipping' || activeTab === 'profit' || activeTab === 'turnover') && (
         <div className="bg-white p-2 shadow-sm border-b border-slate-200 shrink-0 z-10 flex gap-1">
           {(['processing', 'preorder', 'closed'] as const).map(status => {
              let label = '進行';
@@ -233,7 +242,7 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
       {activeTab === 'cash' && (
         <div className="bg-white p-2 shadow-sm border-b border-slate-200 shrink-0 z-10 flex gap-1">
           {(['withdrawn', 'unwithdrawn', 'previous'] as const).map(mode => {
-             let label = mode === 'withdrawn' ? '已領' : mode === 'unwithdrawn' ? '未領' : '前期';
+             let label = mode === 'withdrawn' ? '領現' : mode === 'unwithdrawn' ? '未領' : '前期';
              let count = 0;
              if (mode === 'previous') {
                  count = batchData.filter(d => PREVIOUS_PERIOD_IDS.includes(d.id)).length;
@@ -261,11 +270,12 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
       )}
 
       {/* Data views based on activeTab */}
-      {(activeTab === 'shipping' || activeTab === 'profit') && (
+      {(activeTab === 'shipping' || activeTab === 'profit' || activeTab === 'turnover') && (
         <div className="flex-1 flex flex-col min-h-0 bg-white">
            <div className="overflow-y-auto flex-1 pb-16">
+              {activeTab !== 'turnover' ? (
               <table className="w-full text-left text-sm">
-                  <thead className="bg-slate-100 text-slate-600 border-b border-slate-200 sticky top-0 z-10 shadow-sm">
+                  <thead className={`sticky top-0 z-10 shadow-sm border-b ${statusFilter === 'processing' ? 'bg-emerald-600 text-white border-emerald-700' : statusFilter === 'preorder' ? 'bg-rose-600 text-white border-rose-700' : 'bg-yellow-500 text-white border-yellow-600'}`}>
                       <tr>
                           <th className="px-2 py-2 font-bold w-1/4">訂單序</th>
                           <th className="px-2 py-2 font-bold text-right w-1/4">收入</th>
@@ -285,7 +295,7 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
                               if (item.revenue > 0) percentage = (val / item.revenue) * 100;
   
                               return (
-                                  <tr key={item.id} className="hover:bg-slate-50">
+                                  <tr key={item.id} className={`${item.status === 'processing' ? 'bg-emerald-50/80 hover:bg-emerald-100/80' : item.status === 'preorder' ? 'bg-rose-50/80 hover:bg-rose-100/80' : 'bg-yellow-50/80 hover:bg-yellow-100/80'}`}>
                                       <td className="px-2 py-2 font-mono font-bold text-slate-600 truncate">{item.id}</td>
                                       <td className="px-2 py-2 text-right font-mono font-bold text-blue-600">{formatCurrency(item.revenue)}</td>
                                       <td className={`px-2 py-2 text-right font-mono font-bold ${activeTab === 'shipping' ? 'text-amber-600' : (val > 0 ? 'text-emerald-600' : 'text-rose-600')}`}>
@@ -300,16 +310,16 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
                       )}
                   </tbody>
                   {filteredData.length > 0 && (
-                      <tfoot className="bg-sky-100 border-t-2 border-sky-300 sticky bottom-0 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+                      <tfoot className={`sticky bottom-0 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] border-t-2 ${statusFilter === 'processing' ? 'bg-emerald-200 border-emerald-400 text-emerald-900' : statusFilter === 'preorder' ? 'bg-rose-200 border-rose-400 text-rose-900' : 'bg-yellow-200 border-yellow-400 text-yellow-900'}`}>
                           <tr>
-                              <td className="px-2 py-2 font-bold text-slate-900 border-r border-sky-200">合計</td>
-                              <td className="px-2 py-2 text-right font-mono font-bold text-blue-800 border-r border-sky-200">
+                              <td className={`px-2 py-2 font-bold border-r ${statusFilter === 'processing' ? 'border-emerald-300 text-emerald-900' : statusFilter === 'preorder' ? 'border-rose-300 text-rose-900' : 'border-yellow-300 text-yellow-900'}`}>合計</td>
+                              <td className={`px-2 py-2 text-right font-mono font-bold border-r ${statusFilter === 'processing' ? 'border-emerald-300 text-emerald-900' : statusFilter === 'preorder' ? 'border-rose-300 text-rose-900' : 'border-yellow-300 text-yellow-900'}`}>
                                   {formatCurrency(filteredData.reduce((acc, item) => acc + item.revenue, 0))}
                               </td>
-                              <td className={`px-2 py-2 text-right font-mono font-bold border-r border-sky-200 ${activeTab === 'shipping' ? 'text-amber-800' : 'text-emerald-800'}`}>
+                              <td className={`px-2 py-2 text-right font-mono font-bold border-r ${statusFilter === 'processing' ? 'border-emerald-300 text-emerald-900' : statusFilter === 'preorder' ? 'border-rose-300 text-rose-900' : 'border-yellow-300 text-yellow-900'}`}>
                                   {formatCurrency(filteredData.reduce((acc, item) => acc + (activeTab === 'shipping' ? item.intlShip : item.profit), 0))}
                               </td>
-                              <td className="px-2 py-2 text-right font-mono font-bold text-slate-900">
+                              <td className={`px-2 py-2 text-right font-mono font-bold ${statusFilter === 'processing' ? 'text-emerald-900' : statusFilter === 'preorder' ? 'text-rose-900' : 'text-yellow-900'}`}>
                                   {(() => {
                                       const sumRev = filteredData.reduce((acc, item) => acc + item.revenue, 0);
                                       const sumVal = filteredData.reduce((acc, item) => acc + (activeTab === 'shipping' ? item.intlShip : item.profit), 0);
@@ -321,6 +331,122 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
                       </tfoot>
                   )}
               </table>
+           ) : (
+              <table className="w-full text-left text-sm whitespace-nowrap">
+                  <thead className={`sticky top-0 z-10 shadow-sm border-b ${statusFilter === 'processing' ? 'bg-emerald-600 text-white border-emerald-700' : statusFilter === 'preorder' ? 'bg-rose-600 text-white border-rose-700' : 'bg-yellow-500 text-white border-yellow-600'}`}>
+                      <tr>
+                          <th className="px-2 py-2 font-bold">訂單序</th>
+                          <th className="px-2 py-2 font-bold text-center">訂單日</th>
+                          <th className="px-2 py-2 font-bold text-center">結案日</th>
+                          <th className="px-2 py-2 font-bold text-right">天數</th>
+                      </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                      {filteredData.length === 0 ? (
+                          <tr>
+                              <td colSpan={4} className="px-2 py-6 text-center text-slate-400">沒有符合的資料</td>
+                          </tr>
+                      ) : (
+                          filteredData.map(item => {
+                              // Calculate date and days
+                              const items = orderItems.filter(i => i.orderGroupId === item.id);
+                              
+                              let orderDate = '';
+                              let dStart: Date | null = null;
+                              const currentYear = new Date().getFullYear();
+                              
+                              if (items.length > 0) {
+                                  // extract from items.date
+                                  const dates = items.map(i => i.date).filter(Boolean);
+                                  
+                                  if (dates.length > 0) {
+                                      const sorted = dates.sort((a,b) => {
+                                          let da = new Date(a).getTime();
+                                          let db = new Date(b).getTime();
+                                          if (!isNaN(da) && !isNaN(db)) return da - db;
+                                          return a.localeCompare(b);
+                                      });
+                                      
+                                      const dObj = new Date(sorted[0]);
+                                      if (!isNaN(dObj.getTime())) {
+                                          dStart = dObj;
+                                      } else {
+                                          let m = sorted[0].match(/(?:(\d{4})[-\/])?(\d{1,2})[-\/](\d{1,2})/);
+                                          if (m) {
+                                              dStart = new Date(m[1] ? parseInt(m[1]) : currentYear, parseInt(m[2])-1, parseInt(m[3]));
+                                          }
+                                      }
+                                  }
+                              }
+
+                              let closedDate = '';
+                              let dEnd: Date = new Date();
+                              let hasClosedDate = false;
+                              
+                              if (item.status === 'closed') {
+                                  let foundMatch = null;
+                                  const m = item.paymentNote?.match(/(?:(\d{4})[-\/])?(\d{1,2})[-\/](\d{1,2})/);
+                                  if (m) foundMatch = m;
+                                  if (!foundMatch) {
+                                      const m2 = items.map(i => i.remarks).join(' ').match(/(?:(\d{4})[-\/])?(\d{1,2})[-\/](\d{1,2})/);
+                                      if (m2) foundMatch = m2;
+                                  }
+                                  if (!foundMatch) {
+                                      const m3 = items.map(i => i.note).join(' ').match(/(?:(\d{4})[-\/])?(\d{1,2})[-\/](\d{1,2})/);
+                                      if (m3) foundMatch = m3;
+                                  }
+                                  
+                                  if (foundMatch) {
+                                      dEnd = new Date(foundMatch[1] ? parseInt(foundMatch[1]) : currentYear, parseInt(foundMatch[2])-1, parseInt(foundMatch[3]));
+                                      hasClosedDate = true;
+                                  }
+                              }
+                              
+                              let days = 0;
+                              if (dStart) {
+                                  if (!isNaN(dStart.getTime()) && !isNaN(dEnd.getTime())) {
+                                      days = Math.max(0, Math.floor((dEnd.getTime() - dStart.getTime()) / (1000 * 3600 * 24)));
+                                  }
+                                  // Assign computed days to item object so we can use it in Footer reducing
+                                  (item as any).turnoverDays = days;
+                                  
+                                  orderDate = `${dStart.getFullYear()}/${String(dStart.getMonth()+1).padStart(2, '0')}/${String(dStart.getDate()).padStart(2, '0')}`;
+                              }
+                              if (hasClosedDate) {
+                                  closedDate = `${dEnd.getFullYear()}/${String(dEnd.getMonth()+1).padStart(2, '0')}/${String(dEnd.getDate()).padStart(2, '0')}`;
+                              }
+
+                              return (
+                                  <tr key={item.id} className={`${item.status === 'processing' ? 'bg-emerald-50/80 hover:bg-emerald-100/80' : item.status === 'preorder' ? 'bg-rose-50/80 hover:bg-rose-100/80' : 'bg-yellow-50/80 hover:bg-yellow-100/80'}`}>
+                                      <td className="px-2 py-2 font-mono font-bold text-slate-600 truncate">{item.id}</td>
+                                      <td className="px-2 py-2 text-center font-mono font-bold text-slate-500">{orderDate || '-'}</td>
+                                      <td className="px-2 py-2 text-center font-mono font-bold text-slate-500">{closedDate || '-'}</td>
+                                      <td className={`px-2 py-2 text-right font-mono font-bold ${days > 14 ? 'text-rose-600' : 'text-slate-700'}`}>
+                                          {days > 0 ? days : '-'}
+                                      </td>
+                                  </tr>
+                              );
+                          })
+                      )}
+                  </tbody>
+                  {filteredData.length > 0 && (
+                      <tfoot className={`sticky bottom-0 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] border-t-2 ${statusFilter === 'processing' ? 'bg-emerald-200 border-emerald-400 text-emerald-900' : statusFilter === 'preorder' ? 'bg-rose-200 border-rose-400 text-rose-900' : 'bg-yellow-200 border-yellow-400 text-yellow-900'}`}>
+                          <tr>
+                              <td className={`px-2 py-2 font-bold border-r ${statusFilter === 'processing' ? 'border-emerald-300' : statusFilter === 'preorder' ? 'border-rose-300' : 'border-yellow-300'}`}>平均天數</td>
+                              <td colSpan={2} className={`px-2 py-2 font-bold text-center border-r ${statusFilter === 'processing' ? 'border-emerald-300' : statusFilter === 'preorder' ? 'border-rose-300' : 'border-yellow-300'}`}></td>
+                              <td className="px-2 py-2 text-right font-mono font-bold">
+                                  {(() => {
+                                      const validItems = filteredData.filter(d => (d as any).turnoverDays > 0);
+                                      if (validItems.length === 0) return '-';
+                                      const sumDays = validItems.reduce((acc, obj) => acc + (obj as any).turnoverDays, 0);
+                                      return (sumDays / validItems.length).toFixed(1);
+                                  })()}
+                              </td>
+                          </tr>
+                      </tfoot>
+                  )}
+              </table>
+           )}
            </div>
         </div>
       )}
@@ -349,16 +475,16 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
                  <>
                    <div className="shrink-0 bg-white z-10 relative shadow-sm">
                      {isWithdrawnView && (
-                        <div className="bg-sky-50 shadow-sm p-3">
-                            <div className="flex items-center border-b border-sky-200 pb-1.5 mb-1.5">
-                               <span className="w-1/4 font-bold text-slate-900 text-left text-sm border-r border-sky-200">合計</span>
-                               <span className="w-1/4 text-emerald-800 font-mono font-bold text-right text-sm border-r border-sky-200">{formatCurrency(sumProfit)}</span>
-                               <span className="w-1/4 text-orange-800 font-mono font-bold text-right text-sm border-r border-sky-200">{formatCurrency(sumDad)}</span>
-                               <span className="w-1/4 text-fuchsia-800 font-mono font-bold text-right text-sm">{formatCurrency(sumSister)}</span>
+                        <div className={`shadow-sm p-3 border-b ${cashFilter === 'withdrawn' ? 'bg-blue-100 border-blue-200' : 'bg-emerald-100 border-emerald-200'}`}>
+                            <div className={`flex items-center border-b pb-1.5 mb-1.5 ${cashFilter === 'withdrawn' ? 'border-blue-300' : 'border-emerald-300'}`}>
+                               <span className={`w-1/4 font-bold text-left text-sm border-r ${cashFilter === 'withdrawn' ? 'text-blue-900 border-blue-300' : 'text-emerald-900 border-emerald-300'}`}>合計</span>
+                               <span className={`w-1/4 font-mono font-bold text-right text-sm border-r ${cashFilter === 'withdrawn' ? 'text-blue-900 border-blue-300' : 'text-emerald-900 border-emerald-300'}`}>{formatCurrency(sumProfit)}</span>
+                               <span className={`w-1/4 font-mono font-bold text-right text-sm border-r ${cashFilter === 'withdrawn' ? 'text-blue-900 border-blue-300' : 'text-emerald-900 border-emerald-300'}`}>{formatCurrency(sumDad)}</span>
+                               <span className={`w-1/4 font-mono font-bold text-right text-sm ${cashFilter === 'withdrawn' ? 'text-blue-900' : 'text-emerald-900'}`}>{formatCurrency(sumSister)}</span>
                             </div>
                             <div className="flex items-center text-[10px] text-slate-600">
-                               <span className="w-1/2 font-bold text-left text-sky-800 border-r border-sky-200 pl-1">-</span>
-                               <span className="w-1/4 text-orange-700 text-right font-mono font-bold border-r border-sky-200">{sumProfit > 0 ? ((sumDad / sumProfit) * 100).toFixed(1) : 0}%</span>
+                               <span className={`w-1/2 font-bold text-left border-r pl-1 ${cashFilter === 'withdrawn' ? 'text-blue-800 border-blue-300' : 'text-emerald-800 border-emerald-300'}`}>-</span>
+                               <span className={`w-1/4 text-orange-700 text-right font-mono font-bold border-r ${cashFilter === 'withdrawn' ? 'border-blue-300' : 'border-emerald-300'}`}>{sumProfit > 0 ? ((sumDad / sumProfit) * 100).toFixed(1) : 0}%</span>
                                <span className="w-1/4 text-fuchsia-700 text-right font-mono font-bold">{sumProfit > 0 ? ((sumSister / sumProfit) * 100).toFixed(1) : 0}%</span>
                             </div>
                         </div>
@@ -372,16 +498,16 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
                         const estSister = Math.round(sumUnwithProfit * 0.8);
                         
                         return (
-                          <div className="bg-rose-50 shadow-sm p-3">
-                              <div className="flex items-center border-b border-rose-200 pb-1.5 mb-1.5">
-                                 <span className="w-1/4 font-bold text-slate-900 text-left text-sm border-r border-rose-200">合計</span>
-                                 <span className="w-1/4 text-emerald-800 font-mono font-bold text-right text-sm border-r border-rose-200">{formatCurrency(sumUnwithProfit)}</span>
-                                 <span className="w-1/4 text-orange-800 font-mono font-bold text-right text-sm border-r border-rose-200">{formatCurrency(estDad)}</span>
-                                 <span className="w-1/4 text-fuchsia-800 font-mono font-bold text-right text-sm">{formatCurrency(estSister)}</span>
+                          <div className="bg-rose-100 shadow-sm p-3 border-b border-rose-300">
+                              <div className="flex items-center border-b border-rose-300 pb-1.5 mb-1.5">
+                                 <span className="w-1/4 font-bold text-rose-900 text-left text-sm border-r border-rose-300">合計</span>
+                                 <span className="w-1/4 text-rose-900 font-mono font-bold text-right text-sm border-r border-rose-300">{formatCurrency(sumUnwithProfit)}</span>
+                                 <span className="w-1/4 text-rose-900 font-mono font-bold text-right text-sm border-r border-rose-300">{formatCurrency(estDad)}</span>
+                                 <span className="w-1/4 text-blue-900 font-mono font-bold text-right text-sm">{formatCurrency(estSister)}</span>
                               </div>
                               <div className="flex items-center text-[10px] text-slate-600">
-                                 <span className="w-1/2 font-bold text-left text-rose-800 border-r border-rose-200 pl-1">未領總利率: {rate}%</span>
-                                 <span className="w-1/4 text-rose-600 text-right font-mono font-bold border-r border-rose-200">(估計爸爸)</span>
+                                 <span className="w-1/2 font-bold text-left text-rose-800 border-r border-rose-300 pl-1">未領總利率: {rate}%</span>
+                                 <span className="w-1/4 text-rose-600 text-right font-mono font-bold border-r border-rose-300">(估計爸爸)</span>
                                  <span className="w-1/4 text-rose-600 text-right font-mono font-bold">(估計妹妹)</span>
                               </div>
                           </div>
@@ -415,9 +541,7 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
                    <div className="overflow-y-auto flex-1 pb-16 bg-slate-50">
                      <div className="flex flex-col gap-1.5 p-2">
                        {cashData.map(item => {
-                          let cardBg = 'bg-white border-slate-200';
-                          if (cashFilter === 'unwithdrawn') cardBg = 'bg-rose-50 border-rose-200';
-                          if (cashFilter === 'previous') cardBg = 'bg-emerald-50 border-emerald-200';
+                          let cardBg = cashFilter === 'withdrawn' ? 'bg-blue-50/50 border-blue-200' : cashFilter === 'unwithdrawn' ? 'bg-rose-50/50 border-rose-200' : 'bg-emerald-50/50 border-emerald-200';
                           
                           return (
                           <div key={item.id} className={`border rounded-md p-2 shadow-sm hover:shadow transition-shadow ${cardBg}`}>
@@ -722,27 +846,31 @@ const EcommerceAnalysisSystem: React.FC<EcommerceAnalysisSystemProps> = ({
           return (
              <div className="flex-1 flex flex-col min-h-0 bg-white">
                 <div className="p-2 border-b border-slate-200 bg-slate-50 shrink-0 z-10 flex gap-2">
-                    <button onClick={() => setPurchaseFilter('all')} className={`flex-1 py-1.5 text-sm font-bold rounded-lg border transition-all ${purchaseFilter === 'all' ? 'bg-indigo-100 text-indigo-800 border-indigo-300 shadow-sm' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>全部</button>
-                    <button onClick={() => setPurchaseFilter('unsettled')} className={`flex-1 py-1.5 text-sm font-bold rounded-lg border transition-all ${purchaseFilter === 'unsettled' ? 'bg-indigo-100 text-indigo-800 border-indigo-300 shadow-sm' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>未結</button>
-                    <button onClick={() => setPurchaseFilter('settled')} className={`flex-1 py-1.5 text-sm font-bold rounded-lg border transition-all ${purchaseFilter === 'settled' ? 'bg-indigo-100 text-indigo-800 border-indigo-300 shadow-sm' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>已結</button>
+                    <button onClick={() => setPurchaseFilter('all')} className={`flex-1 py-1.5 text-sm font-bold rounded-lg border transition-all ${purchaseFilter === 'all' ? 'bg-orange-100 text-orange-800 border-orange-300 shadow-sm' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>全部</button>
+                    <button onClick={() => setPurchaseFilter('unsettled')} className={`flex-1 py-1.5 text-sm font-bold rounded-lg border transition-all ${purchaseFilter === 'unsettled' ? 'bg-orange-100 text-orange-800 border-orange-300 shadow-sm' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>未結</button>
+                    <button onClick={() => setPurchaseFilter('settled')} className={`flex-1 py-1.5 text-sm font-bold rounded-lg border transition-all ${purchaseFilter === 'settled' ? 'bg-orange-100 text-orange-800 border-orange-300 shadow-sm' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>已結</button>
                 </div>
                 
-                <div className="p-3 bg-indigo-50 border-b border-indigo-100 shrink-0 shadow-sm">
-                    <div className="flex justify-between items-center text-xs font-bold text-indigo-800 mb-1">
-                        <span>訂單總收入</span>
-                        <span>購買總金額</span>
-                        <span>百分比</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                        <span className="font-mono font-bold text-lg text-slate-700">{formatCurrency(totalRevenue)}</span>
-                        <span className="font-mono font-bold text-lg text-indigo-600">{formatCurrency(totalPurchase)}</span>
-                        <span className="font-mono font-bold text-lg text-fuchsia-600">{percentage}%</span>
+                <div className="px-3 py-3 bg-slate-50 border-b border-slate-200 shrink-0 shadow-sm">
+                    <div className="flex justify-between items-center font-bold">
+                        <div className="w-1/3 text-left flex flex-col items-start gap-0.5">
+                            <span className="text-slate-500 text-xs">訂單總收入</span>
+                            <span className="font-mono text-xl font-bold text-slate-700">{formatCurrency(totalRevenue)}</span>
+                        </div>
+                        <div className="w-1/3 text-center flex flex-col items-center gap-0.5">
+                            <span className="text-slate-500 text-xs">購買總金額</span>
+                            <span className="font-mono text-xl font-bold text-slate-700">{formatCurrency(totalPurchase)}</span>
+                        </div>
+                        <div className="w-1/3 text-right flex flex-col items-end gap-0.5">
+                            <span className="text-slate-500 text-xs">百分比</span>
+                            <span className="font-mono text-xl font-bold text-slate-700">{percentage}%</span>
+                        </div>
                     </div>
                 </div>
 
                 <div className="overflow-y-auto flex-1 pb-16 bg-white">
                     <table className="w-full text-left text-sm">
-                        <thead className="bg-orange-200 text-orange-900 border-b border-orange-300 sticky top-0 z-10 shadow-sm">
+                        <thead className="bg-slate-100 text-slate-600 border-b border-slate-200 sticky top-0 z-10 shadow-sm">
                             <tr>
                                 <th className="px-2 py-2 font-bold w-1/3">燈號 訂單序</th>
                                 <th className="px-2 py-2 font-bold text-left w-1/3">商品項目</th>
