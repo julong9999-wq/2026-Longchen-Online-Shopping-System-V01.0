@@ -70,11 +70,13 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
   };
   const [addForm, setAddForm] = useState<Partial<BankTransaction>>(defaultFormState);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const [txToDelete, setTxToDelete] = useState<BankTransaction | null>(null);
 
   const handleSaveTransaction = async () => {
-    if (!addForm.category || !addForm.amount) return;
+    if (!addForm.category || !addForm.amount || isSaving) return;
+    setIsSaving(true);
     
     let finalAmount = Number(addForm.amount) || 0;
     
@@ -98,6 +100,7 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
 
     try {
       await setDoc(doc(db, 'transactions', newTx.id), newTx);
+      setIsSaving(false);
       setAddForm({...defaultFormState, account: addForm.account as BankAccount, type: addForm.type as BankTransactionType});
       setShowSaveConfirm(false);
       setSaveSuccess(true);
@@ -108,6 +111,7 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
       }
     } catch (e) {
       console.error("error saving transaction", e);
+      setIsSaving(false);
     }
   };
 
@@ -977,7 +981,7 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
               </div>
               <div className="flex gap-2 justify-end">
                 <button type="button" onClick={() => setShowSaveConfirm(false)} className="px-4 py-2 text-sm font-bold text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors">取消</button>
-                <button type="button" onClick={handleSaveTransaction} className="px-4 py-2 text-sm font-bold text-white bg-[#408f61] rounded-lg hover:bg-[#347a51] transition-colors shadow-sm">確定儲存</button>
+                <button type="button" onClick={handleSaveTransaction} disabled={isSaving} className={`px-4 py-2 text-sm font-bold text-white rounded-lg transition-colors shadow-sm ${isSaving ? 'bg-slate-400 cursor-not-allowed' : 'bg-[#408f61] hover:bg-[#347a51]'}`}>{isSaving ? '儲存中...' : '確定儲存'}</button>
               </div>
             </div>
           </div>
