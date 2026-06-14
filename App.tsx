@@ -1310,7 +1310,7 @@ const App: React.FC = () => {
 
                   <button 
                       onClick={() => setAppMode('travel')}
-                      className="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 px-5 rounded-xl shadow-lg border border-indigo-400 transition-all active:scale-95 flex items-center justify-between"
+                      className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-5 rounded-xl shadow-lg border border-purple-500 transition-all active:scale-95 flex items-center justify-between"
                   >
                       <div className="flex items-center gap-4">
                           <MapIcon size={24} />

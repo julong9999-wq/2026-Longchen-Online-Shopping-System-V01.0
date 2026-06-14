@@ -213,24 +213,24 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
 
   // Nav Renderer
   const renderNav = () => (
-      <div className="bg-slate-800 flex shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] overflow-x-auto shrink-0 z-50 text-indigo-100">
+      <div className="bg-purple-600 flex shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] overflow-x-auto shrink-0 z-50 text-purple-100">
         <button
             onClick={() => setView('detail')}
-            className={`flex-1 flex flex-col items-center justify-center py-3 transition-opacity ${view === 'detail' ? 'text-white bg-slate-700' : 'hover:text-white hover:bg-slate-700/50'}`}
+            className={`flex-1 flex flex-col items-center justify-center py-3 transition-opacity ${view === 'detail' ? 'text-white bg-purple-700' : 'hover:text-white hover:bg-purple-700/50'}`}
         >
             <List size={22} className="mb-1" />
             <span className="text-xs font-bold tracking-wide">明細</span>
         </button>
         <button
             onClick={() => setView('record')}
-            className={`flex-1 flex flex-col items-center justify-center py-3 transition-opacity ${view === 'record' ? 'text-indigo-400 bg-slate-700' : 'hover:text-white hover:bg-slate-700/50'}`}
+            className={`flex-1 flex flex-col items-center justify-center py-3 transition-opacity ${view === 'record' ? 'text-white bg-purple-700' : 'hover:text-white hover:bg-purple-700/50'}`}
         >
             <FileText size={22} className="mb-1" />
             <span className="text-xs font-bold tracking-wide">紀錄</span>
         </button>
         <button 
             onClick={onNavigateHome}
-            className="flex-1 flex flex-col items-center justify-center py-3 transition-opacity hover:text-white hover:bg-slate-700/50"
+            className="flex-1 flex flex-col items-center justify-center py-3 transition-opacity hover:text-white hover:bg-purple-700/50"
         >
             <Home size={22} className="mb-1" />
             <span className="text-xs font-bold tracking-wide">返回</span>
@@ -245,11 +245,11 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
              {view === 'record' && (
                  <div className="flex flex-col h-full bg-slate-50">
                     {/* Top Area: Slogan Selector */}
-                    <div className="bg-indigo-600 text-white p-3 shadow shrink-0 flex items-center gap-2">
+                    <div className="bg-purple-600 text-white p-3 shadow shrink-0 flex items-center gap-2">
                         <select 
                            value={activeTripId} 
                            onChange={(e) => setActiveTripId(e.target.value)}
-                           className="flex-1 bg-indigo-700 border border-indigo-500 rounded-lg px-2 py-2 text-sm font-bold shadow-sm outline-none cursor-pointer appearance-none"
+                           className="flex-1 bg-purple-700 border border-purple-500 rounded-lg px-2 py-2 text-sm font-bold shadow-sm outline-none cursor-pointer appearance-none"
                         >
                            {trips.length === 0 && <option value="">無標語，請新增</option>}
                            {trips.map(t => (
@@ -265,7 +265,7 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
                                }
                                setShowTripModal(true);
                            }} 
-                           className="w-10 h-10 shrink-0 flex items-center justify-center bg-indigo-500 hover:bg-indigo-400 rounded-lg transition-colors shadow-sm"
+                           className="w-10 h-10 shrink-0 flex items-center justify-center bg-purple-500 hover:bg-purple-400 rounded-lg transition-colors shadow-sm"
                         >
                             <PenTool size={18} />
                         </button>
@@ -281,7 +281,7 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
                                  {summaryByCurrency.map(([curr, sum]) => (
                                      <div key={curr} className="bg-slate-50 border border-slate-100 rounded-lg px-3 py-1.5 flex flex-col items-center min-w-[80px]">
                                          <span className="text-xs font-bold text-slate-500 mb-0.5">{curr}</span>
-                                         <span className="text-sm font-mono font-bold text-indigo-700">{formatCurrency(sum)}</span>
+                                         <span className="text-sm font-mono font-bold text-purple-700">{formatCurrency(sum)}</span>
                                      </div>
                                  ))}
                              </div>
@@ -309,7 +309,7 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
                                                 });
                                                 setShowExpenseModal(true);
                                             }}
-                                            className="bg-indigo-100 text-indigo-700 p-1.5 rounded-lg hover:bg-indigo-200 transition-colors shadow-sm"
+                                            className="bg-purple-100 text-purple-700 p-1.5 rounded-lg hover:bg-purple-200 transition-colors shadow-sm"
                                          >
                                              <Plus size={18} />
                                          </button>
@@ -323,7 +323,7 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
                                                  <div className="flex-1 min-w-0 flex flex-col gap-1">
                                                      <div className="flex justify-between items-center text-sm font-bold">
                                                          <span className="text-slate-800 truncate pr-2">{exp.location}</span>
-                                                         <span className="font-mono text-indigo-700 text-base shrink-0">{exp.currency} {formatCurrency(exp.amount)}</span>
+                                                         <span className="font-mono text-purple-700 text-base shrink-0">{exp.currency} {formatCurrency(exp.amount)}</span>
                                                      </div>
                                                      <div className="flex justify-between items-center text-xs text-slate-500 font-medium">
                                                          <div className="flex gap-2 items-center truncate">
@@ -333,7 +333,7 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
                                                          <div className="flex gap-1.5 shrink-0 ml-2">
                                                              <button 
                                                                 onClick={() => { setExpenseForm(exp); setShowExpenseModal(true); }}
-                                                                className="text-slate-400 hover:text-indigo-600 transition-colors bg-slate-50 p-1 rounded-md border border-slate-100"
+                                                                className="text-slate-400 hover:text-purple-600 transition-colors bg-slate-50 p-1 rounded-md border border-slate-100"
                                                              >
                                                                  <Edit size={14} />
                                                              </button>
@@ -395,7 +395,7 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
                                          <tr key={exp.id} className="hover:bg-slate-50 transition-colors">
                                              <td className="px-3 py-2.5 font-mono text-slate-500 text-xs">
                                                  {exp.date}
-                                                 <div className="text-indigo-500 font-bold">{exp.category}</div>
+                                                 <div className="text-purple-500 font-bold">{exp.category}</div>
                                              </td>
                                              <td className="px-3 py-2.5">
                                                  <div className="font-bold text-slate-800">{exp.location}</div>
@@ -419,31 +419,31 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
           {showTripModal && (
               <div className="absolute inset-0 z-[100] bg-slate-900/50 flex items-center justify-center p-4">
                  <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm animate-in zoom-in-95 flex flex-col overflow-hidden">
-                     <div className="bg-indigo-600 px-4 py-3 flex justify-between items-center text-white">
+                     <div className="bg-purple-600 px-4 py-3 flex justify-between items-center text-white">
                          <h3 className="font-bold text-lg">{tripForm.id ? '修改標語' : '新增標語設定'}</h3>
                          <button onClick={() => setShowTripModal(false)} className="hover:bg-white/20 p-1 rounded-lg transition-colors"><X size={20}/></button>
                      </div>
                      <div className="p-4 flex flex-col gap-4 overflow-y-auto max-h-[70vh]">
                          <div>
                              <label className="block text-xs font-bold text-slate-500 mb-1">日期</label>
-                             <input type="date" value={tripForm.startDate || ''} onChange={e => setTripForm({...tripForm, startDate: e.target.value})} className="w-full border border-slate-300 rounded-xl px-3 py-2 font-bold focus:ring-2 focus:ring-indigo-500 outline-none text-slate-700 bg-slate-50" />
+                             <input type="date" value={tripForm.startDate || ''} onChange={e => setTripForm({...tripForm, startDate: e.target.value})} className="w-full border border-slate-300 rounded-xl px-3 py-2 font-bold focus:ring-2 focus:ring-purple-500 outline-none text-slate-700 bg-slate-50" />
                          </div>
                          <div>
                              <label className="block text-xs font-bold text-slate-500 mb-1">天數</label>
-                             <input type="number" min="1" value={tripForm.days || ''} onChange={e => setTripForm({...tripForm, days: parseInt(e.target.value) || 1})} className="w-full border border-slate-300 rounded-xl px-3 py-2 font-bold focus:ring-2 focus:ring-indigo-500 outline-none text-slate-700 bg-slate-50" />
+                             <input type="number" min="1" value={tripForm.days || ''} onChange={e => setTripForm({...tripForm, days: parseInt(e.target.value) || 1})} className="w-full border border-slate-300 rounded-xl px-3 py-2 font-bold focus:ring-2 focus:ring-purple-500 outline-none text-slate-700 bg-slate-50" />
                          </div>
                          <div>
                              <label className="block text-xs font-bold text-slate-500 mb-1">地點</label>
-                             <input type="text" value={tripForm.location || ''} onChange={e => setTripForm({...tripForm, location: e.target.value})} placeholder="例如: 宜蘭縣" className="w-full border border-slate-300 rounded-xl px-3 py-2 font-bold focus:ring-2 focus:ring-indigo-500 outline-none text-slate-700 bg-slate-50" />
+                             <input type="text" value={tripForm.location || ''} onChange={e => setTripForm({...tripForm, location: e.target.value})} placeholder="例如: 宜蘭縣" className="w-full border border-slate-300 rounded-xl px-3 py-2 font-bold focus:ring-2 focus:ring-purple-500 outline-none text-slate-700 bg-slate-50" />
                          </div>
                          <div>
                              <label className="block text-xs font-bold text-slate-500 mb-1">備註 (可選)</label>
-                             <input type="text" value={tripForm.remarks || ''} onChange={e => setTripForm({...tripForm, remarks: e.target.value})} placeholder="例如: 音樂饗宴" className="w-full border border-slate-300 rounded-xl px-3 py-2 font-bold focus:ring-2 focus:ring-indigo-500 outline-none text-slate-700 bg-slate-50" />
+                             <input type="text" value={tripForm.remarks || ''} onChange={e => setTripForm({...tripForm, remarks: e.target.value})} placeholder="例如: 音樂饗宴" className="w-full border border-slate-300 rounded-xl px-3 py-2 font-bold focus:ring-2 focus:ring-purple-500 outline-none text-slate-700 bg-slate-50" />
                          </div>
                      </div>
                      <div className="p-4 bg-slate-50 border-t border-slate-200 flex gap-2 justify-end">
                          <button onClick={() => setShowTripModal(false)} className="px-4 py-2 font-bold text-slate-600 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 transition-colors">取消</button>
-                         <button onClick={handleSaveTrip} disabled={!tripForm.startDate || !tripForm.days || !tripForm.location} className="px-5 py-2 font-bold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">存檔</button>
+                         <button onClick={handleSaveTrip} disabled={!tripForm.startDate || !tripForm.days || !tripForm.location} className="px-5 py-2 font-bold text-white bg-purple-600 rounded-xl hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">存檔</button>
                      </div>
                  </div>
               </div>
@@ -453,7 +453,7 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
           {showExpenseModal && (
               <div className="absolute inset-0 z-[100] bg-slate-900/50 flex items-center flex-col justify-end sm:justify-center p-0 sm:p-4">
                  <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-md animate-in slide-in-from-bottom-5 sm:zoom-in-95 flex flex-col flex-1 sm:max-h-[85vh]">
-                     <div className="bg-indigo-600 px-4 py-3 flex justify-between items-center text-white shrink-0 sm:rounded-t-2xl">
+                     <div className="bg-purple-600 px-4 py-3 flex justify-between items-center text-white shrink-0 sm:rounded-t-2xl">
                          <h3 className="font-bold text-lg">{expenseForm.id ? '修改記帳' : '新增記帳功能'}</h3>
                          <button onClick={() => setShowExpenseModal(false)} className="hover:bg-white/20 p-1 rounded-lg transition-colors"><X size={20}/></button>
                      </div>
@@ -462,11 +462,11 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
                          <div className="flex gap-3">
                              <div className="flex-1">
                                  <label className="block text-xs font-bold text-slate-500 mb-1">日期</label>
-                                 <input type="date" value={expenseForm.date || ''} onChange={e => setExpenseForm({...expenseForm, date: e.target.value})} className="w-full border border-slate-300 rounded-xl px-2 py-2.5 font-bold focus:ring-2 focus:ring-indigo-500 outline-none text-slate-700 bg-white text-sm" />
+                                 <input type="date" value={expenseForm.date || ''} onChange={e => setExpenseForm({...expenseForm, date: e.target.value})} className="w-full border border-slate-300 rounded-xl px-2 py-2.5 font-bold focus:ring-2 focus:ring-purple-500 outline-none text-slate-700 bg-white text-sm" />
                              </div>
                              <div className="w-1/2">
                                  <label className="block text-xs font-bold text-slate-500 mb-1">分類</label>
-                                 <select value={expenseForm.category || ''} onChange={e => setExpenseForm({...expenseForm, category: e.target.value as any})} className="w-full border border-slate-300 rounded-xl px-2 py-2.5 font-bold focus:ring-2 focus:ring-indigo-500 outline-none text-slate-700 bg-white text-sm appearance-none cursor-pointer">
+                                 <select value={expenseForm.category || ''} onChange={e => setExpenseForm({...expenseForm, category: e.target.value as any})} className="w-full border border-slate-300 rounded-xl px-2 py-2.5 font-bold focus:ring-2 focus:ring-purple-500 outline-none text-slate-700 bg-white text-sm appearance-none cursor-pointer">
                                      {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                                  </select>
                              </div>
@@ -475,27 +475,27 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
                          {/* Location */}
                          <div>
                              <label className="block text-xs font-bold text-slate-500 mb-1">地點</label>
-                             <input type="text" value={expenseForm.location || ''} onChange={e => setExpenseForm({...expenseForm, location: e.target.value})} placeholder="如: 餐廳名稱、車站" className="w-full border border-slate-300 rounded-xl px-3 py-2.5 font-bold focus:ring-2 focus:ring-indigo-500 outline-none text-slate-700 bg-white" />
+                             <input type="text" value={expenseForm.location || ''} onChange={e => setExpenseForm({...expenseForm, location: e.target.value})} placeholder="如: 餐廳名稱、車站" className="w-full border border-slate-300 rounded-xl px-3 py-2.5 font-bold focus:ring-2 focus:ring-purple-500 outline-none text-slate-700 bg-white" />
                          </div>
 
                          {/* Amount & Currency */}
                          <div className="flex gap-3 items-end">
                              <div className="w-1/3">
                                  <label className="block text-xs font-bold text-slate-500 mb-1">幣別</label>
-                                 <select value={expenseForm.currency || 'TWD'} onChange={e => setExpenseForm({...expenseForm, currency: e.target.value})} className="w-full border border-slate-300 rounded-xl px-2 py-2.5 font-bold focus:ring-2 focus:ring-indigo-500 outline-none text-slate-700 bg-white sm:text-sm appearance-none cursor-pointer">
+                                 <select value={expenseForm.currency || 'TWD'} onChange={e => setExpenseForm({...expenseForm, currency: e.target.value})} className="w-full border border-slate-300 rounded-xl px-2 py-2.5 font-bold focus:ring-2 focus:ring-purple-500 outline-none text-slate-700 bg-white sm:text-sm appearance-none cursor-pointer">
                                      {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
                                  </select>
                              </div>
                              <div className="flex-1">
                                  <label className="block text-xs font-bold text-slate-500 mb-1">金額</label>
-                                 <input type="number" min="0" value={expenseForm.amount || ''} onChange={e => setExpenseForm({...expenseForm, amount: parseInt(e.target.value) || 0})} placeholder="0" className="w-full border border-slate-300 rounded-xl px-3 py-2.5 font-bold font-mono focus:ring-2 focus:ring-indigo-500 outline-none text-slate-700 bg-white text-lg" />
+                                 <input type="number" min="0" value={expenseForm.amount || ''} onChange={e => setExpenseForm({...expenseForm, amount: parseInt(e.target.value) || 0})} placeholder="0" className="w-full border border-slate-300 rounded-xl px-3 py-2.5 font-bold font-mono focus:ring-2 focus:ring-purple-500 outline-none text-slate-700 bg-white text-lg" />
                              </div>
                          </div>
                          
                          {/* Description */}
                          <div>
                              <label className="block text-xs font-bold text-slate-500 mb-1">說明</label>
-                             <input type="text" value={expenseForm.description || ''} onChange={e => setExpenseForm({...expenseForm, description: e.target.value})} placeholder="簡短敘述" className="w-full border border-slate-300 rounded-xl px-3 py-2.5 font-bold focus:ring-2 focus:ring-indigo-500 outline-none text-slate-700 bg-white" />
+                             <input type="text" value={expenseForm.description || ''} onChange={e => setExpenseForm({...expenseForm, description: e.target.value})} placeholder="簡短敘述" className="w-full border border-slate-300 rounded-xl px-3 py-2.5 font-bold focus:ring-2 focus:ring-purple-500 outline-none text-slate-700 bg-white" />
                          </div>
 
                          {/* Payer */}
@@ -506,7 +506,7 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
                                      <button 
                                         key={p} 
                                         onClick={() => setExpenseForm({...expenseForm, payer: p})}
-                                        className={`flex-1 py-2 font-bold rounded-xl border text-sm transition-all ${expenseForm.payer === p ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-100'}`}
+                                        className={`flex-1 py-2 font-bold rounded-xl border text-sm transition-all ${expenseForm.payer === p ? 'bg-purple-600 text-white border-purple-600 shadow-md' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-100'}`}
                                      >
                                          {p}
                                      </button>
@@ -516,7 +516,7 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
                      </div>
                      <div className="p-4 bg-white border-t border-slate-200 flex gap-3 shrink-0">
                          <button onClick={() => setShowExpenseModal(false)} className="flex-1 py-3 font-bold text-slate-600 bg-slate-100 border border-slate-200 rounded-xl hover:bg-slate-200 transition-colors">取消</button>
-                         <button onClick={handleSaveExpense} disabled={!expenseForm.date || !expenseForm.location || !expenseForm.amount} className="flex-1 py-3 font-bold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                         <button onClick={handleSaveExpense} disabled={!expenseForm.date || !expenseForm.location || !expenseForm.amount} className="flex-1 py-3 font-bold text-white bg-purple-600 rounded-xl hover:bg-purple-700 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                              <Save size={18}/> 存檔
                          </button>
                      </div>
