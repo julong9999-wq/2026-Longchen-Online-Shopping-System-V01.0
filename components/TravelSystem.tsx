@@ -146,7 +146,7 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
           let dStr = tripForm.startDate.replace(/-/g, '');
           if (tripForm.days > 1) {
               const d = new Date(tripForm.startDate);
-              d.setDate(d.getDate() + (tripForm.days > 1 ? tripForm.days : 0)); // modified to match user example
+              d.setDate(d.getDate() + tripForm.days - 1);
               const endDay = String(d.getDate()).padStart(2, '0');
               dStr += `-${endDay}`;
           }
@@ -273,18 +273,16 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
 
                     {/* Secondary Area: Totals */}
                     {summaryByCurrency.length > 0 && (
-                        <div className="bg-white p-3 shrink-0 shadow-sm border-b border-slate-200">
-                             <div className="flex justify-between items-center px-1 mb-1 border-b border-slate-100 pb-1">
-                                 <span className="font-bold text-slate-500 text-xs">合計欄位</span>
-                             </div>
-                             <div className="flex gap-2 overflow-x-auto py-1 hide-scrollbar">
-                                 {summaryByCurrency.map(([curr, sum]) => (
-                                     <div key={curr} className="bg-slate-50 border border-slate-100 rounded-lg px-3 py-1.5 flex flex-col items-center min-w-[80px]">
-                                         <span className="text-xs font-bold text-slate-500 mb-0.5">{curr}</span>
-                                         <span className="text-sm font-mono font-bold text-purple-700">{formatCurrency(sum)}</span>
+                        <div className="px-2 pt-2 shrink-0">
+                             {summaryByCurrency.map(([curr, sum]) => (
+                                 <div key={curr} className="mb-2 bg-purple-100 rounded-xl shadow-sm border border-purple-200 overflow-hidden flex justify-between items-center px-3 py-2">
+                                     <span className="font-bold text-purple-800 text-sm">合計</span>
+                                     <div className="flex gap-3 items-baseline">
+                                         <span className="text-xs font-bold text-purple-600">{curr}</span>
+                                         <span className="text-sm font-mono font-bold text-purple-900">{formatCurrency(sum)}</span>
                                      </div>
-                                 ))}
-                             </div>
+                                 </div>
+                             ))}
                         </div>
                     )}
 
