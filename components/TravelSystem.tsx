@@ -142,10 +142,14 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
       const newTripId = tripForm.id || generateUUID();
       let slgStr = '';
       if (tripForm.remarks) {
-          // If days > 1, show range? The user said: "2026-07-15, 3, 宜蘭縣, 音樂饗宴" -> "20260715-18 宜蘭縣三日之音樂饗宴"
+          // If days > 1, show range: "2026-06-12", length 2 -> "20260612-13"
           let dStr = tripForm.startDate.replace(/-/g, '');
           if (tripForm.days > 1) {
-              const d = new Date(tripForm.startDate);
+              const parts = tripForm.startDate.split('-');
+              const y = parseInt(parts[0], 10);
+              const m = parseInt(parts[1], 10) - 1;
+              const dt = parseInt(parts[2], 10);
+              const d = new Date(y, m, dt);
               d.setDate(d.getDate() + Number(tripForm.days) - 1);
               const endDay = String(d.getDate()).padStart(2, '0');
               dStr += `-${endDay}`;
@@ -249,26 +253,37 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
                         <select 
                            value={activeTripId} 
                            onChange={(e) => setActiveTripId(e.target.value)}
-                           className="flex-1 bg-purple-700 border border-purple-500 rounded-lg px-2 py-2 text-sm font-bold shadow-sm outline-none cursor-pointer appearance-none"
+                           className="flex-1 min-w-0 bg-purple-700 border border-purple-500 rounded-lg px-2 py-2 text-sm font-bold shadow-sm outline-none cursor-pointer appearance-none truncate"
                         >
                            {trips.length === 0 && <option value="">無標語，請新增</option>}
                            {trips.map(t => (
                                <option key={t.id} value={t.id}>{t.sloganString}</option>
                            ))}
                         </select>
-                        <button 
-                           onClick={() => {
-                               if (activeTrip) {
-                                   setTripForm(activeTrip);
-                               } else {
+                        <div className="flex gap-1 shrink-0">
+                            <button 
+                               onClick={() => {
+                                   if (activeTrip) {
+                                       setTripForm(activeTrip);
+                                   } else {
+                                       setTripForm({ startDate: new Date().toISOString().split('T')[0], days: 1 });
+                                   }
+                                   setShowTripModal(true);
+                               }} 
+                               className="w-10 h-10 flex items-center justify-center bg-purple-500 hover:bg-purple-400 rounded-lg transition-colors shadow-sm"
+                            >
+                                <PenTool size={18} />
+                            </button>
+                            <button 
+                               onClick={() => {
                                    setTripForm({ startDate: new Date().toISOString().split('T')[0], days: 1 });
-                               }
-                               setShowTripModal(true);
-                           }} 
-                           className="w-10 h-10 shrink-0 flex items-center justify-center bg-purple-500 hover:bg-purple-400 rounded-lg transition-colors shadow-sm"
-                        >
-                            <PenTool size={18} />
-                        </button>
+                                   setShowTripModal(true);
+                               }} 
+                               className="w-10 h-10 flex items-center justify-center bg-purple-500 hover:bg-purple-400 rounded-lg transition-colors shadow-sm"
+                            >
+                                <Plus size={18} />
+                            </button>
+                        </div>
                     </div>
 
                     {/* Secondary Area: Totals */}
