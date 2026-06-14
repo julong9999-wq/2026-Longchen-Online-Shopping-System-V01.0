@@ -4,9 +4,10 @@ import { INITIAL_PRODUCT_GROUPS, INITIAL_PRODUCT_ITEMS, INITIAL_ORDER_GROUPS, IN
 import { getNextGroupId, getNextItemId, getNextOrderGroupId, calculateProductStats, formatCurrency, generateUUID, cleanProductName } from './utils';
 import ProductForm from './components/ProductForm';
 import BankSystem from './components/BankSystem';
+import TravelSystem from './components/TravelSystem';
 import PurchasingSystem from './components/PurchasingSystem';
 import EcommerceAnalysisSystem from './components/EcommerceAnalysisSystem';
-import { Trash2, Edit, Plus, Package, ShoppingCart, List, BarChart2, ChevronRight, ChevronDown, User, Box, X, Calculator, Download, Save, Wallet, ArrowUpCircle, ArrowDownCircle, Grid, PieChart, Check, Database, Upload, AlertTriangle, Home } from 'lucide-react';
+import { Trash2, Edit, Plus, Package, ShoppingCart, List, BarChart2, ChevronRight, ChevronDown, User, Box, X, Calculator, Download, Save, Wallet, ArrowUpCircle, ArrowDownCircle, Grid, PieChart, Map as MapIcon, Check, Database, Upload, AlertTriangle, Home } from 'lucide-react';
 import { db } from './firebase';
 import { 
   collection, 
@@ -108,7 +109,7 @@ const IncomeField = ({ label, value, isInput = false, onChange, colorClass = "te
 
 const App: React.FC = () => {
   // --- State ---
-  const [appMode, setAppMode] = useState<'home' | 'ecommerce' | 'bank' | 'purchasing' | 'ecommerce_analysis'>('home');
+  const [appMode, setAppMode] = useState<'home' | 'ecommerce' | 'bank' | 'purchasing' | 'ecommerce_analysis' | 'travel'>('home');
   const [view, setView] = useState<ViewState>('products');
   const [dbError, setDbError] = useState<string | null>(null);
   
@@ -1281,52 +1282,63 @@ const App: React.FC = () => {
 
   if (appMode === 'home') {
       return (
-          <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6">
-              <img src="/logo.png" alt="龍辰系統" className="w-24 h-24 mb-6 rounded-2xl object-cover shadow-sm bg-white" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-              <h1 className="text-3xl font-bold text-slate-800 mb-10 tracking-tight text-center">龍辰系統</h1>
-              <div className="w-full max-w-sm space-y-6">
+          <div className="min-h-screen fixed inset-0 overflow-hidden bg-slate-50 flex flex-col items-center justify-center p-6">
+              <img src="/logo.png" alt="龍辰系統" className="w-20 h-20 mb-4 rounded-xl object-cover shadow-sm bg-white" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+              <h1 className="text-2xl font-bold text-slate-800 mb-6 tracking-tight text-center">龍辰系統</h1>
+              <div className="w-full max-w-sm space-y-3">
                   <button 
                       onClick={() => setAppMode('ecommerce')}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-5 px-6 rounded-2xl shadow-lg border border-blue-500 transition-all active:scale-95 flex items-center justify-between"
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-5 rounded-xl shadow-lg border border-blue-500 transition-all active:scale-95 flex items-center justify-between"
                   >
                       <div className="flex items-center gap-4">
-                          <ShoppingCart size={28} />
-                          <span className="text-2xl mt-1 tracking-wider">網購系統</span>
+                          <ShoppingCart size={24} />
+                          <span className="text-xl tracking-wider">網購系統</span>
                       </div>
-                      <ChevronRight size={28} className="opacity-70" />
+                      <ChevronRight size={24} className="opacity-70" />
                   </button>
 
                   <button 
                       onClick={() => setAppMode('ecommerce_analysis')}
-                      className="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-5 px-6 rounded-2xl shadow-lg border border-sky-400 transition-all active:scale-95 flex items-center justify-between"
+                      className="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-3 px-5 rounded-xl shadow-lg border border-sky-400 transition-all active:scale-95 flex items-center justify-between"
                   >
                       <div className="flex items-center gap-4">
-                          <PieChart size={28} />
-                          <span className="text-2xl mt-1 tracking-wider">網購分析</span>
+                          <PieChart size={24} />
+                          <span className="text-xl tracking-wider">網購分析</span>
                       </div>
-                      <ChevronRight size={28} className="opacity-70" />
+                      <ChevronRight size={24} className="opacity-70" />
+                  </button>
+
+                  <button 
+                      onClick={() => setAppMode('travel')}
+                      className="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 px-5 rounded-xl shadow-lg border border-indigo-400 transition-all active:scale-95 flex items-center justify-between"
+                  >
+                      <div className="flex items-center gap-4">
+                          <MapIcon size={24} />
+                          <span className="text-xl tracking-wider">旅遊記帳</span>
+                      </div>
+                      <ChevronRight size={24} className="opacity-70" />
                   </button>
 
                   <button 
                       onClick={() => setAppMode('bank')}
-                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-5 px-6 rounded-2xl shadow border border-emerald-500 transition-all active:scale-95 flex items-center justify-between"
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-5 rounded-xl shadow border border-emerald-500 transition-all active:scale-95 flex items-center justify-between"
                   >
                       <div className="flex items-center gap-4">
-                          <Database size={28} className="text-white text-opacity-90" />
-                          <span className="text-2xl mt-1 tracking-wider">銀行明細</span>
+                          <Database size={24} className="text-white text-opacity-90" />
+                          <span className="text-xl tracking-wider">銀行明細</span>
                       </div>
-                      <ChevronRight size={28} className="opacity-70" />
+                      <ChevronRight size={24} className="opacity-70" />
                   </button>
 
                   <button 
                       onClick={() => setAppMode('purchasing')}
-                      className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-5 px-6 rounded-2xl shadow border border-orange-500 transition-all active:scale-95 flex items-center justify-between"
+                      className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-5 rounded-xl shadow border border-orange-500 transition-all active:scale-95 flex items-center justify-between"
                   >
                       <div className="flex items-center gap-4">
-                          <List size={28} className="text-white text-opacity-90" />
-                          <span className="text-2xl mt-1 tracking-wider">代購對帳</span>
+                          <List size={24} className="text-white text-opacity-90" />
+                          <span className="text-xl tracking-wider">代購對帳</span>
                       </div>
-                      <ChevronRight size={28} className="opacity-70" />
+                      <ChevronRight size={24} className="opacity-70" />
                   </button>
               </div>
           </div>
@@ -1340,6 +1352,8 @@ const App: React.FC = () => {
   if (appMode === 'purchasing') {
       return <PurchasingSystem onNavigateHome={() => setAppMode('home')} />;
   }
+
+  if (appMode === 'travel') { return <TravelSystem onNavigateHome={() => setAppMode('home')} />; }
 
   if (appMode === 'ecommerce_analysis') {
       return <EcommerceAnalysisSystem 

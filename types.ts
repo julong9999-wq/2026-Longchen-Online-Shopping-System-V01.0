@@ -60,3 +60,25 @@ export interface BankVocabulary {
   word: string;
   parentId?: string; // 全新加入：指向父項目 (如股息收益) 的 ID
 }
+export interface TripSlogan {
+  id: string;
+  startDate: string;
+  days: number;
+  location: string;
+  remarks: string;
+  sloganString: string;
+  createdAt: number;
+}
+
+export interface TripExpense {
+  id: string;
+  tripId: string;
+  date: string;
+  category: string;
+  description: string;
+  currency: string;
+  amount: number;
+  location: string;
+  payer: string;
+  createdAt: number;
+}
