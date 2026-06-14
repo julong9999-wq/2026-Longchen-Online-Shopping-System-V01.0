@@ -72,6 +72,7 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
   });
 
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [deleteTripConfirm, setDeleteTripConfirm] = useState<string | null>(null);
 
   // Firestore Subscriptions
   useEffect(() => {
@@ -135,6 +136,14 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
       return Array.from(map.entries()).sort((a,b) => a[0].localeCompare(b[0]));
   }, [activeExpenses]);
 
+
+  const handleDeleteTrip = async (id: string) => {
+      const hasExps = expenses.some(e => e.tripId === id);
+      if (!hasExps) {
+          await deleteDoc(doc(db, 'trip_slogans', id));
+          setDeleteTripConfirm(null);
+      }
+  };
 
   const handleSaveTrip = async () => {
       if (!tripForm.startDate || !tripForm.days || !tripForm.location) return;
@@ -282,6 +291,16 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
                                className="w-10 h-10 flex items-center justify-center bg-purple-500 hover:bg-purple-400 rounded-lg transition-colors shadow-sm"
                             >
                                 <Plus size={18} />
+                            </button>
+                            <button 
+                               onClick={() => {
+                                   if (activeTrip && activeExpenses.length === 0) setDeleteTripConfirm(activeTripId);
+                               }}
+                               disabled={!activeTrip || activeExpenses.length > 0}
+                               title={activeTrip && activeExpenses.length > 0 ? '內部有計帳資料不可刪除標語' : '刪除標語'}
+                               className="w-10 h-10 flex items-center justify-center bg-rose-500 hover:bg-rose-400 disabled:bg-purple-400/50 disabled:text-white/50 rounded-lg transition-colors shadow-sm"
+                            >
+                                <Trash2 size={18} />
                             </button>
                         </div>
                     </div>
@@ -540,6 +559,23 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
               </div>
           )}
 
+          {/* Delete Trip Confirm Modal */}
+          {deleteTripConfirm && (
+              <div className="absolute inset-0 z-[150] bg-slate-900/50 flex items-center justify-center p-4">
+                  <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm animate-in zoom-in-95 p-5 flex flex-col items-center text-center">
+                      <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mb-3">
+                          <AlertCircle size={24} />
+                      </div>
+                      <h3 className="font-bold text-lg text-slate-800 mb-2">確認刪除此旅遊標語？</h3>
+                      <p className="text-sm text-slate-500 mb-5">此操作無法復原。</p>
+                      <div className="flex gap-3 w-full">
+                          <button onClick={() => setDeleteTripConfirm(null)} className="flex-1 py-2.5 font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">取消</button>
+                          <button onClick={() => handleDeleteTrip(deleteTripConfirm)} className="flex-1 py-2.5 font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl transition-colors">確認刪除</button>
+                      </div>
+                  </div>
+              </div>
+          )}
+          
           {/* Delete Confirm Modal */}
           {deleteConfirm && (
              <div className="absolute inset-0 z-[200] bg-slate-900/40 flex items-center justify-center p-4">
