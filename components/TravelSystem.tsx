@@ -146,7 +146,7 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
           let dStr = tripForm.startDate.replace(/-/g, '');
           if (tripForm.days > 1) {
               const d = new Date(tripForm.startDate);
-              d.setDate(d.getDate() + tripForm.days - 1);
+              d.setDate(d.getDate() + Number(tripForm.days) - 1);
               const endDay = String(d.getDate()).padStart(2, '0');
               dStr += `-${endDay}`;
           }
@@ -275,12 +275,10 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
                     {summaryByCurrency.length > 0 && (
                         <div className="px-2 pt-2 shrink-0">
                              {summaryByCurrency.map(([curr, sum]) => (
-                                 <div key={curr} className="mb-2 bg-purple-100 rounded-xl shadow-sm border border-purple-200 overflow-hidden flex justify-between items-center px-3 py-2">
-                                     <span className="font-bold text-purple-800 text-sm">合計</span>
-                                     <div className="flex gap-3 items-baseline">
-                                         <span className="text-xs font-bold text-purple-600">{curr}</span>
-                                         <span className="text-sm font-mono font-bold text-purple-900">{formatCurrency(sum)}</span>
-                                     </div>
+                                 <div key={curr} className="mb-2 bg-purple-100 rounded-xl shadow-sm border border-purple-200 overflow-hidden flex items-center px-4 py-3.5 gap-3">
+                                     <span className="font-bold text-purple-800 text-base shrink-0">合計</span>
+                                     <span className="text-lg font-bold text-purple-600 shrink-0">{curr}</span>
+                                     <span className="text-xl font-mono font-bold text-purple-900 flex-1 min-w-0 break-all text-right">{formatCurrency(sum)}</span>
                                  </div>
                              ))}
                         </div>
@@ -296,7 +294,12 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
                             groupedExpenses.map(([date, exps]) => (
                                 <div key={date} className="mb-4 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                                      <div className="bg-slate-100 px-3 py-2 flex justify-between items-center border-b border-slate-200">
-                                         <span className="font-bold text-slate-700 text-sm">{date}</span>
+                                         <div className="flex items-center gap-2 flex-wrap">
+                                             <span className="font-bold text-slate-700 text-sm">{date}</span>
+                                             <span className="text-xs font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded border border-purple-100">
+                                                 {Object.entries(exps.reduce((acc, exp) => { acc[exp.currency] = (acc[exp.currency] || 0) + exp.amount; return acc; }, {} as Record<string, number>)).map(([c, a]) => `${c} ${formatCurrency(a)}`).join(', ')}
+                                             </span>
+                                         </div>
                                          <button 
                                             onClick={() => {
                                                 setExpenseForm({ 
