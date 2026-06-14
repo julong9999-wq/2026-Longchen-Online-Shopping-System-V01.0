@@ -73,6 +73,7 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
 
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deleteTripConfirm, setDeleteTripConfirm] = useState<string | null>(null);
+  const [isSavingExp, setIsSavingExp] = useState(false);
 
   // Firestore Subscriptions
   useEffect(() => {
@@ -191,7 +192,9 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
 
   const handleSaveExpense = async () => {
       if (!expenseForm.date || !expenseForm.category || !expenseForm.amount || !expenseForm.location || !activeTripId) return;
+      if (isSavingExp) return;
 
+      setIsSavingExp(true);
       const newId = expenseForm.id || generateUUID();
       const expObj: TripExpense = {
           id: newId,
@@ -212,6 +215,8 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
           setExpenseForm({ currency: 'TWD', category: '餐飲', payer: '俊龍' });
       } catch (e) {
           console.error("error saving expense", e);
+      } finally {
+          setIsSavingExp(false);
       }
   };
 
@@ -440,7 +445,7 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
                      <div className="p-4 flex flex-col gap-4 overflow-y-auto max-h-[70vh]">
                          <div>
                              <label className="block text-xs font-bold text-slate-500 mb-1">日期</label>
-                             <input type="date" value={tripForm.startDate || ''} onChange={e => setTripForm({...tripForm, startDate: e.target.value})} className="w-full block box-border border border-slate-300 rounded-xl px-3 py-2 font-bold focus:ring-2 focus:ring-purple-500 outline-none text-slate-700 bg-slate-50" />
+                             <input type="date" value={tripForm.startDate || ''} onChange={e => setTripForm({...tripForm, startDate: e.target.value})} className="w-full min-w-0 block border border-slate-300 rounded-xl px-3 py-2 font-bold focus:ring-2 focus:ring-purple-500 outline-none text-slate-700 bg-slate-50 appearance-none" />
                          </div>
                          <div>
                              <label className="block text-xs font-bold text-slate-500 mb-1">天數</label>
@@ -500,19 +505,19 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
                          {/* Date */}
                          <div>
                              <label className="block text-xs font-bold text-slate-500 mb-1">日期</label>
-                             <input type="date" value={expenseForm.date || ''} onChange={e => setExpenseForm({...expenseForm, date: e.target.value})} className="block w-full box-border border border-slate-300 rounded-xl px-3 py-2.5 font-bold focus:ring-2 focus:ring-purple-500 outline-none text-slate-700 bg-white" />
+                             <input type="date" value={expenseForm.date || ''} onChange={e => setExpenseForm({...expenseForm, date: e.target.value})} className="w-full min-w-0 block border border-slate-300 rounded-xl px-3 py-2.5 font-bold focus:ring-2 focus:ring-purple-500 outline-none text-slate-700 bg-white appearance-none" />
                          </div>
                          
                          {/* Category */}
                          <div>
                              <label className="block text-xs font-bold text-slate-500 mb-1">分類</label>
-                             <div className="flex flex-wrap gap-2">
+                             <div className="grid grid-cols-6 gap-1">
                                  {CATEGORIES.map(c => (
                                      <button
                                          key={c}
                                          type="button"
                                          onClick={() => setExpenseForm({...expenseForm, category: c})}
-                                         className={'flex-1 min-w-[70px] py-2 px-1 text-sm font-bold rounded-xl border transition-colors ' + (expenseForm.category === c ? 'bg-purple-600 border-purple-600 text-white shadow-sm' : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50')}
+                                         className={'py-2 px-0 text-xs font-bold rounded-lg border transition-colors flex items-center justify-center ' + (expenseForm.category === c ? 'bg-purple-600 border-purple-600 text-white shadow-sm' : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50')}
                                      >
                                          {c}
                                      </button>
@@ -564,7 +569,7 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
                      </div>
                      <div className="p-4 bg-white border-t border-slate-200 flex gap-3 shrink-0">
                          <button onClick={() => setShowExpenseModal(false)} className="flex-1 py-3 font-bold text-slate-600 bg-slate-100 border border-slate-200 rounded-xl hover:bg-slate-200 transition-colors">取消</button>
-                         <button onClick={handleSaveExpense} disabled={!expenseForm.date || !expenseForm.location || !expenseForm.amount} className="flex-1 py-3 font-bold text-white bg-purple-600 rounded-xl hover:bg-purple-700 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                         <button onClick={handleSaveExpense} disabled={!expenseForm.date || !expenseForm.location || !expenseForm.amount || isSavingExp} className="flex-1 py-3 font-bold text-white bg-purple-600 rounded-xl hover:bg-purple-700 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                              <Save size={18}/> 存檔
                          </button>
                      </div>
