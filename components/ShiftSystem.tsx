@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Home, Calendar as CalendarIcon, FileText, Calculator, Edit, Trash2, X, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { ShiftPerson, ShiftLocation, ShiftWage, ShiftRecord } from '../types';
 import { db } from '../firebase';
-import { collection, onSnapshot, doc, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { collection, onSnapshot, doc, setDoc, deleteDoc, writeBatch, updateDoc } from 'firebase/firestore';
 import { generateUUID } from '../utils';
 
 interface ShiftSystemProps {
@@ -37,11 +37,30 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
     }, []);
 
     // -------- Plan View State --------
-    const [planLocationId, setPlanLocationId] = useState('');
+        const [planLocationId, setPlanLocationId] = useState('');
     const [planDate, setPlanDate] = useState('');
     const [planStartTime, setPlanStartTime] = useState('');
     const [planEndTime, setPlanEndTime] = useState('');
     const [planRemarks, setPlanRemarks] = useState('');
+    const [editPlanId, setEditPlanId] = useState<string | null>(null);
+
+    const timeOptions = useMemo(() => {
+        const opts = [];
+        for(let h=0; h<24; h++) {
+            opts.push(`${h.toString().padStart(2, '0')}:00`);
+            opts.push(`${h.toString().padStart(2, '0')}:30`);
+        }
+        return opts;
+    }, []);
+
+    useEffect(() => {
+        const currentLocsForActive = locations.filter(l => l.person === activePerson && l.isActive);
+        if (!planLocationId || !currentLocsForActive.find(l => l.id === planLocationId)) {
+            if (currentLocsForActive.length > 0) {
+                setPlanLocationId(currentLocsForActive[0].id);
+            }
+        }
+    }, [locations, activePerson, planLocationId]);
     
     // -------- Dictionary View State --------
     const [showLocModal, setShowLocModal] = useState(false);
@@ -66,25 +85,45 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
     const handleSavePlan = async () => {
         if (!planLocationId || !planDate || !planStartTime || !planEndTime) return;
         
-        // Check duplicate
-        const isDuplicate = records.some(r => r.person === activePerson && r.date === planDate && r.startTime === planStartTime && r.endTime === planEndTime && r.locationId === planLocationId);
+        // Check duplicate (exclude current edit)
+        const isDuplicate = records.some(r => r.id !== editPlanId && r.person === activePerson && r.date === planDate && r.startTime === planStartTime && r.endTime === planEndTime && r.locationId === planLocationId);
         if (isDuplicate) {
             alert('已有重複的排班資料（日期、時間、地點皆相同）！請確認後再存檔。');
             return;
         }
 
-        const newRec: ShiftRecord = {
-            id: generateUUID(),
-            person: activePerson,
-            locationId: planLocationId,
-            date: planDate,
-            startTime: planStartTime,
-            endTime: planEndTime,
-            remarks: planRemarks,
-            createdAt: Date.now()
-        };
-        await setDoc(doc(collection(db, 'shiftRecords'), newRec.id), newRec);
-        setPlanDate(''); setPlanStartTime(''); setPlanEndTime(''); setPlanRemarks('');
+        if (editPlanId) {
+            await updateDoc(doc(collection(db, 'shiftRecords'), editPlanId), {
+                locationId: planLocationId,
+                date: planDate,
+                startTime: planStartTime,
+                endTime: planEndTime,
+                remarks: planRemarks
+            });
+        } else {
+            const newRec: ShiftRecord = {
+                id: generateUUID(),
+                person: activePerson,
+                locationId: planLocationId,
+                date: planDate,
+                startTime: planStartTime,
+                endTime: planEndTime,
+                remarks: planRemarks,
+                createdAt: Date.now()
+            };
+            await setDoc(doc(collection(db, 'shiftRecords'), newRec.id), newRec);
+        }
+        setPlanDate(''); setPlanStartTime(''); setPlanEndTime(''); setPlanRemarks(''); setEditPlanId(null);
+    };
+
+    const handleEditRecord = (r: ShiftRecord) => {
+        setPlanLocationId(r.locationId);
+        setPlanDate(r.date);
+        setPlanStartTime(r.startTime);
+        setPlanEndTime(r.endTime);
+        setPlanRemarks(r.remarks);
+        setEditPlanId(r.id);
+        setView('plan');
     };
 
     const handleDeleteRecord = async (id: string) => {
@@ -214,7 +253,7 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
     return (
         <div className="flex flex-col h-screen bg-slate-50 font-sans mx-auto max-w-lg lg:max-w-4xl shadow-xl border-x">
             {/* Main Tabs Navigation (Bottom) */}
-            <div className="flex items-center bg-white border-t border-slate-200 mt-auto order-last shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-20">
+            <div className="flex items-center bg-pink-100 border-t border-pink-200 mt-auto order-last shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-20 pb-safe">
                 <button onClick={() => setView('schedule')} className={`flex-1 py-3 flex flex-col items-center gap-1 ${view === 'schedule' ? 'text-pink-500' : 'text-slate-400'}`}>
                     <CalendarIcon size={20} /><span className="text-[10px] font-bold">排班表</span>
                 </button>
@@ -242,7 +281,6 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                         {renderPersonToggle()}
                         <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col gap-3">
                             <div>
-                                <div className="text-xs font-bold text-slate-500 mb-2">打工地點</div>
                                 <div className="flex flex-wrap gap-2">
                                     {activeCurrentLocs.map(l => (
                                         <button 
@@ -257,23 +295,27 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                                 </div>
                             </div>
                             <div>
-                                <div className="text-xs font-bold text-slate-500 mb-1">日期與時間</div>
                                 <div className="flex gap-2 mb-2">
                                     <input type="date" className="flex-1 h-10 px-3 border rounded-lg bg-slate-50 font-mono text-sm" value={planDate} onChange={e => setPlanDate(e.target.value)} />
                                 </div>
                                 <div className="flex gap-2 items-center">
-                                    <input type="time" className="flex-1 h-10 px-3 border rounded-lg bg-slate-50 font-mono text-sm" value={planStartTime} onChange={e => setPlanStartTime(e.target.value)} />
+                                    <select className="flex-1 h-10 px-3 border rounded-lg bg-slate-50 font-mono text-sm" value={planStartTime} onChange={e => setPlanStartTime(e.target.value)}>
+                                        <option value="">開始時間</option>
+                                        {timeOptions.map(t => <option key={t} value={t}>{t}</option>)}
+                                    </select>
                                     <span className="text-slate-400">~</span>
-                                    <input type="time" className="flex-1 h-10 px-3 border rounded-lg bg-slate-50 font-mono text-sm" value={planEndTime} onChange={e => setPlanEndTime(e.target.value)} />
+                                    <select className="flex-1 h-10 px-3 border rounded-lg bg-slate-50 font-mono text-sm" value={planEndTime} onChange={e => setPlanEndTime(e.target.value)}>
+                                        <option value="">結束時間</option>
+                                        {timeOptions.map(t => <option key={t} value={t}>{t}</option>)}
+                                    </select>
                                 </div>
                             </div>
                             <div>
-                                <div className="text-xs font-bold text-slate-500 mb-1">備註說明</div>
-                                <input type="text" className="w-full h-10 px-3 border rounded-lg bg-slate-50 text-sm" value={planRemarks} onChange={e => setPlanRemarks(e.target.value)} placeholder="可填寫備註" />
+                                <input type="text" className="w-full h-10 px-3 border rounded-lg bg-slate-50 text-sm" value={planRemarks} onChange={e => setPlanRemarks(e.target.value)} placeholder="備註說明" />
                             </div>
                             <div className="flex gap-2 mt-2">
-                                <button onClick={() => {setPlanLocationId(''); setPlanDate(''); setPlanStartTime(''); setPlanEndTime(''); setPlanRemarks('');}} className="flex-1 h-10 rounded-lg border border-slate-300 font-bold text-slate-600">取消</button>
-                                <button onClick={handleSavePlan} disabled={!planLocationId || !planDate || !planStartTime || !planEndTime} className={`flex-1 h-10 rounded-lg font-bold text-white transition-opacity ${!planLocationId || !planDate || !planStartTime || !planEndTime ? 'opacity-50' : ''} ${mainColorClass}`}>存檔</button>
+                                <button onClick={() => {setPlanDate(''); setPlanStartTime(''); setPlanEndTime(''); setPlanRemarks(''); setEditPlanId(null);}} className="flex-1 h-10 rounded-lg border border-slate-300 font-bold text-slate-600">取消</button>
+                                <button onClick={handleSavePlan} disabled={!planLocationId || !planDate || !planStartTime || !planEndTime} className={`flex-1 h-10 rounded-lg font-bold text-white transition-opacity ${!planLocationId || !planDate || !planStartTime || !planEndTime ? 'opacity-50' : ''} ${mainColorClass}`}>{editPlanId ? '更新' : '存檔'}</button>
                             </div>
                         </div>
 
@@ -281,15 +323,17 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                             <h3 className="font-bold text-slate-700 mb-3 flex items-center gap-2"><div className={`w-1.5 h-4 rounded-full bg-${mainColor}-500`}></div>即將到來的排班</h3>
                             <div className="flex flex-col gap-2">
                                 {upcomingRecords.map(r => (
-                                    <div key={r.id} className="bg-white p-3 rounded-lg border border-slate-100 flex justify-between items-center shadow-sm">
-                                        <div>
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <span className="font-mono text-sm text-slate-600 font-bold">{r.date}</span>
-                                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full bg-${mainColor}-100 text-${mainColor}-700 font-bold`}>{currentLocs.find(l=>l.id===r.locationId)?.name || '未知'}</span>
-                                            </div>
-                                            <div className="text-sm text-slate-800"><span className="font-mono font-bold text-slate-600">{r.startTime} - {r.endTime}</span> {r.remarks && <span className="text-slate-400 text-xs ml-2">({r.remarks})</span>}</div>
+                                    <div key={r.id} className="bg-white p-2 rounded-lg border border-slate-100 flex justify-between items-center shadow-sm text-sm overflow-hidden">
+                                        <div className="flex items-center gap-2 flex-1 overflow-hidden whitespace-nowrap">
+                                            <span className="font-mono text-slate-800 font-bold shrink-0">{r.date.substring(5)}</span>
+                                            <span className={`text-[10px] px-1.5 py-0.5 rounded bg-${mainColor}-100 text-${mainColor}-700 font-bold shrink-0`}>{currentLocs.find(l=>l.id===r.locationId)?.name || '未知'}</span>
+                                            <span className="font-mono font-bold text-slate-600 shrink-0">{r.startTime}-{r.endTime}</span>
+                                            {r.remarks && <span className="text-slate-400 text-xs truncate ml-1">{r.remarks}</span>}
                                         </div>
-                                        <button onClick={() => handleDeleteRecord(r.id)} className="text-rose-400 hover:text-rose-600 p-2"><Trash2 size={16}/></button>
+                                        <div className="flex gap-1 shrink-0 ml-2">
+                                            <button onClick={() => handleEditRecord(r)} className="text-blue-400 hover:text-blue-600 p-1"><Edit size={16}/></button>
+                                            <button onClick={() => handleDeleteRecord(r.id)} className="text-rose-400 hover:text-rose-600 p-1"><Trash2 size={16}/></button>
+                                        </div>
                                     </div>
                                 ))}
                                 {upcomingRecords.length === 0 && <div className="text-center py-6 text-slate-400 text-sm bg-white rounded-lg border border-slate-100">尚無即將到來的排班</div>}
