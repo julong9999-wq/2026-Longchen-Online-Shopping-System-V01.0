@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Home, Calendar as CalendarIcon, FileText, Calculator, Edit, Trash2, X, ChevronLeft, ChevronRight, Plus, BarChart2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { ShiftPerson, ShiftLocation, ShiftWage, ShiftRecord } from '../types';
+import { TimePickerModal } from './TimePickerModal';
 import { db } from '../firebase';
 import { collection, onSnapshot, doc, setDoc, deleteDoc, writeBatch, updateDoc } from 'firebase/firestore';
 import { generateUUID } from '../utils';
@@ -44,6 +45,34 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
     const [planEndTime, setPlanEndTime] = useState('');
     const [planRemarks, setPlanRemarks] = useState('');
     const [editPlanId, setEditPlanId] = useState<string | null>(null);
+    const [timePickerTarget, setTimePickerTarget] = useState<'start' | 'end' | null>(null);
+    const [quickEditDate, setQuickEditDate] = useState<string | null>(null);
+    const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+    const handlePointerDownDay = (dateStr: string) => {
+        longPressTimerRef.current = setTimeout(() => {
+            setQuickEditDate(dateStr);
+            setPlanDate(dateStr);
+            setPlanStartTime('');
+            setPlanEndTime('');
+            setPlanRemarks('');
+            setPlanLocationId('');
+            setEditPlanId(null);
+            // Optionally auto-populate if there's an existing record
+            const existing = records.filter(r => r.person === activePerson && r.date === dateStr);
+            if (existing.length > 0) {
+                const r = existing[0];
+                setPlanLocationId(r.locationId);
+                setPlanStartTime(r.startTime);
+                setPlanEndTime(r.endTime);
+                setPlanRemarks(r.remarks || '');
+                setEditPlanId(r.id);
+            }
+        }, 500);
+    };
+    const handlePointerUpDay = () => {
+        if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    };
 
 
 
@@ -329,9 +358,13 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                                     <input type="date" className="flex-1 h-10 px-3 border rounded-lg bg-slate-50 font-mono text-sm" value={planDate} onChange={e => setPlanDate(e.target.value)} />
                                 </div>
                                 <div className="flex gap-2 items-center">
-                                    <input type="time" step="1800" className="flex-1 h-10 px-3 border rounded-lg bg-slate-50 font-mono text-sm" value={planStartTime} onChange={e => setPlanStartTime(e.target.value)} />
+                                    <button onClick={() => setTimePickerTarget('start')} className={`flex-1 h-10 px-3 border rounded-lg font-mono text-sm flex items-center justify-center ${planStartTime ? 'bg-slate-50 text-slate-800' : 'bg-slate-50 text-slate-400'}`}>
+                                        {planStartTime || '開始時間'}
+                                    </button>
                                     <span className="text-slate-400">~</span>
-                                    <input type="time" step="1800" className="flex-1 h-10 px-3 border rounded-lg bg-slate-50 font-mono text-sm" value={planEndTime} onChange={e => setPlanEndTime(e.target.value)} />
+                                    <button onClick={() => setTimePickerTarget('end')} className={`flex-1 h-10 px-3 border rounded-lg font-mono text-sm flex items-center justify-center ${planEndTime ? 'bg-slate-50 text-slate-800' : 'bg-slate-50 text-slate-400'}`}>
+                                        {planEndTime || '結束時間'}
+                                    </button>
                                 </div>
                             </div>
                             <div>
@@ -443,12 +476,20 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                     const handleCurrentMonth = () => setCurrentDate(new Date());
 
                     // Map locations to shades based on standard color array
-                    const colorShades = mainColor === 'orange' ? ['bg-orange-100', 'bg-orange-200', 'bg-orange-300', 'bg-orange-400', 'bg-orange-500'] : ['bg-purple-100', 'bg-purple-200', 'bg-purple-300', 'bg-purple-400', 'bg-purple-500'];
+                    const colorPalette = [
+                        'bg-red-200 text-red-900 border-red-300',
+                        'bg-blue-200 text-blue-900 border-blue-300',
+                        'bg-emerald-200 text-emerald-900 border-emerald-300',
+                        'bg-amber-200 text-amber-900 border-amber-300',
+                        'bg-indigo-200 text-indigo-900 border-indigo-300',
+                        'bg-rose-200 text-rose-900 border-rose-300',
+                        'bg-cyan-200 text-cyan-900 border-cyan-300',
+                        'bg-fuchsia-200 text-fuchsia-900 border-fuchsia-300',
+                    ];
                     const locColors: Record<string, string> = {};
                     currentLocs.forEach((l, i) => {
-                         locColors[l.id] = colorShades[i % colorShades.length];
+                         locColors[l.id] = colorPalette[i % colorPalette.length];
                     });
-                    const getTextColor = (shade: string) => parseInt(shade.split('-')[2]) > 300 ? 'text-white' : `text-${mainColor}-900`;
 
                     return (
                         <div className="p-2 md:p-4 flex-1 flex flex-col gap-2 overflow-hidden">
@@ -478,14 +519,21 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                                         const isToday = dStr === new Date().toISOString().split('T')[0];
                                         const isPast = dStr < new Date().toISOString().split('T')[0];
                                         return (
-                                            <div key={d} className={`border-r border-b flex flex-col overflow-hidden ${isToday ? `bg-${mainColor}-50` : isPast ? 'bg-slate-100' : 'bg-white'}`}>
+                                            <div 
+                                                key={d} 
+                                                onPointerDown={() => handlePointerDownDay(dStr)}
+                                                onPointerUp={handlePointerUpDay}
+                                                onPointerCancel={handlePointerUpDay}
+                                                onPointerLeave={handlePointerUpDay}
+                                                className={`border-r border-b flex flex-col overflow-hidden select-none cursor-pointer hover:opacity-80 transition-opacity ${isToday ? `bg-${mainColor}-50` : isPast ? 'bg-slate-100' : 'bg-white'}`}
+                                            >
                                                 <div className={`text-[10px] md:text-sm font-mono font-bold text-center py-0.5 ${isToday ? `text-${mainColor}-700 bg-${mainColor}-100/50` : 'text-slate-700 bg-slate-50/50'}`}>{d}</div>
                                                 <div className="flex-1 flex flex-col p-px md:p-0.5 gap-px">
                                                     {dayRecs.map(r => {
-                                                        const bClass = locColors[r.locationId] || `bg-${mainColor}-100`;
-                                                        const tClass = getTextColor(bClass);
+                                                        const bClass = locColors[r.locationId] || `bg-${mainColor}-100 text-${mainColor}-900`;
                                                         return (
-                                                        <div key={r.id} className={`${bClass} ${tClass} flex flex-col items-center justify-around flex-1 min-h-[0] rounded-sm py-px overflow-hidden`} title={`${currentLocs.find(l=>l.id===r.locationId)?.name}`}>
+                                                        <div key={r.id} className={`${bClass} border flex flex-col items-center justify-around flex-1 min-h-[0] rounded-sm p-0.5 overflow-hidden`} title={`${currentLocs.find(l=>l.id===r.locationId)?.name}`}>
+                                                            <div className="text-[8px] md:text-[10px] truncate leading-none mb-0.5 opacity-90">{currentLocs.find(l=>l.id===r.locationId)?.name}</div>
                                                             <div className="text-[9px] md:text-xs font-bold leading-none">{r.startTime}</div>
                                                             <div className="text-[9px] md:text-xs font-bold leading-none">{r.endTime}</div>
                                                         </div>
@@ -628,6 +676,62 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                     </div>
                 )}
             </div>
+
+            {/* Quick Edit Modal */}
+            {quickEditDate && (
+                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm sm:p-4 pb-safe animate-in fade-in duration-150">
+                    <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full max-w-sm flex flex-col overflow-hidden shadow-2xl animate-in slide-in-from-bottom sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-150 border border-slate-200">
+                        <div className="flex items-center justify-between p-4 border-b bg-slate-50">
+                            <h3 className="text-lg font-bold text-slate-800">{editPlanId ? '編輯排班' : '新增排班'} - {quickEditDate}</h3>
+                            <button onClick={()=>setQuickEditDate(null)} className="p-1 rounded-full text-slate-400 hover:bg-slate-200"><X size={20}/></button>
+                        </div>
+                        <div className="p-4 flex flex-col gap-4">
+                            <div className="flex flex-wrap gap-2">
+                                {activeCurrentLocs.map(l => (
+                                    <button 
+                                        key={l.id} 
+                                        onClick={() => setPlanLocationId(l.id)}
+                                        className={`px-3 py-1.5 rounded-lg border text-sm font-bold transition-colors ${planLocationId === l.id ? activeBtnClass : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
+                                    >
+                                        {l.name}
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="flex gap-2 items-center">
+                                <button onClick={() => setTimePickerTarget('start')} className={`flex-1 h-10 px-3 border rounded-lg font-mono text-sm flex items-center justify-center ${planStartTime ? 'bg-slate-50 text-slate-800' : 'bg-slate-50 text-slate-400'}`}>
+                                    {planStartTime || '開始時間'}
+                                </button>
+                                <span className="text-slate-400">~</span>
+                                <button onClick={() => setTimePickerTarget('end')} className={`flex-1 h-10 px-3 border rounded-lg font-mono text-sm flex items-center justify-center ${planEndTime ? 'bg-slate-50 text-slate-800' : 'bg-slate-50 text-slate-400'}`}>
+                                    {planEndTime || '結束時間'}
+                                </button>
+                            </div>
+                            <div>
+                                <input type="text" className="w-full h-10 px-3 border rounded-lg bg-slate-50 text-sm" value={planRemarks} onChange={e => setPlanRemarks(e.target.value)} placeholder="備註說明" />
+                            </div>
+                            <button onClick={() => { handleSavePlan(); setQuickEditDate(null); }} disabled={!planLocationId || !planStartTime || !planEndTime} className={`w-full py-2.5 rounded-lg font-bold text-white transition-opacity ${(!planLocationId || !planStartTime || !planEndTime) ? 'opacity-50' : ''} ${mainColorClass}`}>
+                                {editPlanId ? '更新' : '存檔'}
+                            </button>
+                            {editPlanId && (
+                                <button onClick={() => { handleDeleteRecord(editPlanId); setQuickEditDate(null); }} className="w-full py-2.5 rounded-lg font-bold text-rose-500 bg-rose-50 border border-rose-200 mt-2">
+                                    刪除此排班
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <TimePickerModal
+                isOpen={timePickerTarget !== null}
+                initialTime={timePickerTarget === 'start' ? planStartTime : timePickerTarget === 'end' ? planEndTime : ''}
+                onClose={() => setTimePickerTarget(null)}
+                onConfirm={(t) => {
+                    if (timePickerTarget === 'start') setPlanStartTime(t);
+                    if (timePickerTarget === 'end') setPlanEndTime(t);
+                    setTimePickerTarget(null);
+                }}
+            />
 
             {/* Modals for Dictionary */}
             {showLocModal && (
