@@ -82,3 +82,33 @@ export interface TripExpense {
   payer: string;
   createdAt: number;
 }
+
+export type ShiftPerson = '禹君' | '禹辰';
+
+export interface ShiftLocation {
+  id: string;
+  person: ShiftPerson;
+  name: string;
+  isActive: boolean;
+  createdAt: number;
+}
+
+export interface ShiftWage {
+  id: string;
+  locationId: string;
+  effectiveDate: string;
+  hourlyWage: number;
+  remarks: string;
+  createdAt: number;
+}
+
+export interface ShiftRecord {
+  id: string;
+  person: ShiftPerson;
+  locationId: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  remarks: string;
+  createdAt: number;
+}

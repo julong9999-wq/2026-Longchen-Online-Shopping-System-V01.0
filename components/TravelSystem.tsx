@@ -10,6 +10,8 @@ import {
   List, 
   PenTool, 
   X,
+  ChevronDown,
+  ChevronUp,
   
   Utensils,
   Bed,
@@ -18,8 +20,11 @@ import {
   ShoppingBag,
   MoreHorizontal,
   FileText,
-  AlertCircle
+  AlertCircle,
+  PieChart as PieChartIcon,
+  BarChart as BarChartIcon
 } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { TripSlogan, TripExpense } from '../types';
 import { db } from '../firebase';
 import { 
@@ -40,7 +45,7 @@ const CATEGORIES = ['餐飲', '住宿', '交通', '門票', '購物', '其他'] 
 const PAYERS = ['俊龍', '美慧', '禹君', '禹辰'] as const;
 const CURRENCIES = ['TWD', 'JPY', 'USD', 'KRW', 'EUR', 'CNY'] as const;
 
-type AppView = 'detail' | 'record';
+type AppView = 'detail' | 'record' | 'analysis';
 
 const getCategoryIcon = (category: string) => {
     switch (category) {
@@ -73,6 +78,7 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
 
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deleteTripConfirm, setDeleteTripConfirm] = useState<string | null>(null);
+  const [expandedDetails, setExpandedDetails] = useState<Record<string, boolean>>({});
   const [isSavingExp, setIsSavingExp] = useState(false);
 
   // Firestore Subscriptions
@@ -246,6 +252,13 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
             <FileText size={22} className="mb-1" />
             <span className="text-xs font-bold tracking-wide">紀錄</span>
         </button>
+        <button
+            onClick={() => setView('analysis')}
+            className={`flex-1 flex flex-col items-center justify-center py-3 transition-opacity ${view === 'analysis' ? 'text-white bg-purple-700' : 'hover:text-white hover:bg-purple-700/50'}`}
+        >
+            <PieChartIcon size={22} className="mb-1" />
+            <span className="text-xs font-bold tracking-wide">分析</span>
+        </button>
         <button 
             onClick={onNavigateHome}
             className="flex-1 flex flex-col items-center justify-center py-3 transition-opacity hover:text-white hover:bg-purple-700/50"
@@ -397,37 +410,252 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
              {view === 'detail' && (
                  <div className="flex flex-col h-full bg-slate-50 p-4">
                      <h2 className="text-xl font-bold text-slate-800 mb-4">全部花費明細</h2>
-                     <div className="flex-1 overflow-y-auto bg-white rounded-xl shadow-sm border border-slate-200">
-                         {expenses.length === 0 ? (
-                             <div className="text-center py-10 text-slate-400">目前無任何記帳紀錄</div>
+                     <div className="flex-1 overflow-y-auto">
+                         {trips.length === 0 && expenses.length === 0 ? (
+                             <div className="text-center py-10 text-slate-400 bg-white rounded-xl shadow-sm border border-slate-200">目前無任何記帳紀錄</div>
                          ) : (
-                             <table className="w-full text-sm text-left">
-                                 <thead className="bg-slate-100 text-slate-600 sticky top-0 z-10">
-                                     <tr>
-                                         <th className="px-3 py-2 font-bold w-24">日期</th>
-                                         <th className="px-3 py-2 font-bold">項目</th>
-                                         <th className="px-3 py-2 font-bold text-right">金額</th>
-                                     </tr>
-                                 </thead>
-                                 <tbody className="divide-y divide-slate-100">
-                                     {expenses.map(exp => (
-                                         <tr key={exp.id} className="hover:bg-slate-50 transition-colors">
-                                             <td className="px-3 py-2.5 font-mono text-slate-500 text-xs">
-                                                 {exp.date}
-                                                 <div className="text-purple-500 font-bold">{exp.category}</div>
-                                             </td>
-                                             <td className="px-3 py-2.5">
-                                                 <div className="font-bold text-slate-800">{exp.location}</div>
-                                                 <div className="text-xs text-slate-500 mt-0.5">{exp.description}</div>
-                                             </td>
-                                             <td className="px-3 py-2.5 text-right">
-                                                 <div className="font-bold text-slate-700">{exp.currency} {formatCurrency(exp.amount)}</div>
-                                                 <div className="text-xs text-slate-400 mt-0.5">{exp.payer}</div>
-                                             </td>
-                                         </tr>
-                                     ))}
-                                 </tbody>
-                             </table>
+                             <div className="flex flex-col gap-4 pb-6">
+                                 {trips.map(trip => {
+                                     const tripExpenses = expenses.filter(e => e.tripId === trip.id);
+                                     if(tripExpenses.length === 0) return null;
+                                     const tripTotal = tripExpenses.reduce((sum, e) => sum + e.amount, 0);
+                                     const isExpanded = expandedDetails[trip.id!] || false;
+                                     
+                                     return (
+                                         <div key={trip.id} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                                             <div 
+                                                 className="p-4 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
+                                                 onClick={() => setExpandedDetails(prev => ({...prev, [trip.id!]: !prev[trip.id!]}))}
+                                             >
+                                                 <div>
+                                                     <h3 className="font-bold text-slate-800 text-lg">{trip.location}</h3>
+                                                     <div className="text-xs text-slate-500 mt-1">{trip.startDate} ({trip.days}天)</div>
+                                                 </div>
+                                                 <div className="flex items-center gap-4">
+                                                     <div className="text-right">
+                                                         <div className="text-xs text-slate-500 mb-0.5">合計</div>
+                                                         <div className="font-bold text-purple-700">{formatCurrency(tripTotal)}</div>
+                                                     </div>
+                                                     <div className="text-slate-400">
+                                                         {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                                     </div>
+                                                 </div>
+                                             </div>
+                                             {isExpanded && (
+                                                 <div className="border-t border-slate-100 bg-slate-50 px-2 pb-2 pt-1">
+                                                     <table className="w-full text-sm text-left">
+                                                         <thead className="text-slate-500 border-b border-slate-200">
+                                                             <tr>
+                                                                 <th className="px-2 py-2 font-bold w-20">日期</th>
+                                                                 <th className="px-2 py-2 font-bold">項目</th>
+                                                                 <th className="px-2 py-2 font-bold text-right">金額</th>
+                                                             </tr>
+                                                         </thead>
+                                                         <tbody className="divide-y divide-slate-100">
+                                                             {[...tripExpenses].sort((a,b) => {
+                                                                 if (a.date === b.date) return b.createdAt - a.createdAt;
+                                                                 return b.date.localeCompare(a.date);
+                                                             }).map(exp => (
+                                                                 <tr key={exp.id} className="hover:bg-white transition-colors bg-white/50">
+                                                                     <td className="px-2 py-2 font-mono text-slate-500 text-xs">
+                                                                         {exp.date}
+                                                                         <div className="text-purple-500 font-bold mt-0.5">{exp.category}</div>
+                                                                     </td>
+                                                                     <td className="px-2 py-2">
+                                                                         <div className="font-bold text-slate-800">{exp.location}</div>
+                                                                         {exp.description && <div className="text-xs text-slate-500 mt-0.5">{exp.description}</div>}
+                                                                     </td>
+                                                                     <td className="px-2 py-2 text-right">
+                                                                         <div className="font-bold text-slate-700">{exp.currency} {formatCurrency(exp.amount)}</div>
+                                                                         <div className="text-xs text-slate-400 mt-0.5">{exp.payer}</div>
+                                                                     </td>
+                                                                 </tr>
+                                                             ))}
+                                                         </tbody>
+                                                     </table>
+                                                 </div>
+                                             )}
+                                         </div>
+                                     );
+                                 })}
+
+                                 {/* Orphaned Expenses */}
+                                 {(() => {
+                                     const orphanExpenses = expenses.filter(e => !trips.find(t => t.id === e.tripId));
+                                     if(orphanExpenses.length === 0) return null;
+                                     const orphanTotal = orphanExpenses.reduce((sum, e) => sum + e.amount, 0);
+                                     const isExpanded = expandedDetails['orphan'] || false;
+                                     return (
+                                         <div key="orphan" className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                                             <div 
+                                                 className="p-4 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
+                                                 onClick={() => setExpandedDetails(prev => ({...prev, orphan: !prev.orphan}))}
+                                             >
+                                                 <div>
+                                                     <h3 className="font-bold text-slate-800 text-lg">未知標語</h3>
+                                                     <div className="text-xs text-slate-500 mt-1">已刪除的旅遊或異常資料</div>
+                                                 </div>
+                                                 <div className="flex items-center gap-4">
+                                                     <div className="text-right">
+                                                         <div className="text-xs text-slate-500 mb-0.5">合計</div>
+                                                         <div className="font-bold text-purple-700">{formatCurrency(orphanTotal)}</div>
+                                                     </div>
+                                                     <div className="text-slate-400">
+                                                         {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                                     </div>
+                                                 </div>
+                                             </div>
+                                             {isExpanded && (
+                                                 <div className="border-t border-slate-100 bg-slate-50 px-2 pb-2 pt-1">
+                                                     <table className="w-full text-sm text-left">
+                                                         <thead className="text-slate-500 border-b border-slate-200">
+                                                             <tr>
+                                                                 <th className="px-2 py-2 font-bold w-20">日期</th>
+                                                                 <th className="px-2 py-2 font-bold">項目</th>
+                                                                 <th className="px-2 py-2 font-bold text-right">金額</th>
+                                                             </tr>
+                                                         </thead>
+                                                         <tbody className="divide-y divide-slate-100">
+                                                             {[...orphanExpenses].sort((a,b) => {
+                                                                 if (a.date === b.date) return b.createdAt - a.createdAt;
+                                                                 return b.date.localeCompare(a.date);
+                                                             }).map(exp => (
+                                                                 <tr key={exp.id} className="hover:bg-white transition-colors bg-white/50">
+                                                                     <td className="px-2 py-2 font-mono text-slate-500 text-xs">
+                                                                         {exp.date}
+                                                                         <div className="text-purple-500 font-bold mt-0.5">{exp.category}</div>
+                                                                     </td>
+                                                                     <td className="px-2 py-2">
+                                                                         <div className="font-bold text-slate-800">{exp.location}</div>
+                                                                         {exp.description && <div className="text-xs text-slate-500 mt-0.5">{exp.description}</div>}
+                                                                     </td>
+                                                                     <td className="px-2 py-2 text-right">
+                                                                         <div className="font-bold text-slate-700">{exp.currency} {formatCurrency(exp.amount)}</div>
+                                                                         <div className="text-xs text-slate-400 mt-0.5">{exp.payer}</div>
+                                                                     </td>
+                                                                 </tr>
+                                                             ))}
+                                                         </tbody>
+                                                     </table>
+                                                 </div>
+                                             )}
+                                         </div>
+                                     );
+                                 })()}
+                             </div>
+                         )}
+                     </div>
+                 </div>
+             )}
+             
+             {view === 'analysis' && (
+                 <div className="flex flex-col h-full bg-slate-50 p-4">
+                     <h2 className="text-xl font-bold text-slate-800 mb-4">全部花費分析</h2>
+                     <div className="flex-1 overflow-y-auto">
+                         {expenses.length === 0 ? (
+                             <div className="text-center py-10 text-slate-400 bg-white rounded-xl shadow-sm border border-slate-200">目前無任何記帳紀錄</div>
+                         ) : (
+                             <div className="flex flex-col gap-5 pb-6">
+                                 {/* 年月金額 Table & Bar Chart */}
+                                 <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                                     <h3 className="font-bold text-slate-700 mb-4 flex items-center gap-2">
+                                         <BarChartIcon size={18} className="text-purple-600" /> 年月金額
+                                     </h3>
+                                     <div className="h-44 mb-3">
+                                         <ResponsiveContainer width="100%" height="100%">
+                                             <BarChart data={Object.entries(expenses.reduce((acc, exp) => {
+                                                 const ym = exp.date.substring(0, 7);
+                                                 acc[ym] = (acc[ym] || 0) + exp.amount;
+                                                 return acc;
+                                             }, {} as Record<string, number>)).map(([name, value]) => ({name, value}))}>
+                                                 <XAxis dataKey="name" fontSize={12} tickMargin={5} />
+                                                 <YAxis fontSize={12} width={50} />
+                                                 <Tooltip formatter={(value) => formatCurrency(value as number)} />
+                                                 <Bar dataKey="value" fill="#8b5cf6" radius={[4,4,0,0]} />
+                                             </BarChart>
+                                         </ResponsiveContainer>
+                                     </div>
+                                     <table className="w-full text-sm text-left border">
+                                         <thead className="bg-slate-50 text-slate-500 border-b"><tr><th className="p-2 font-bold">年月</th><th className="p-2 text-right font-bold">金額</th></tr></thead>
+                                         <tbody className="divide-y divide-slate-100">
+                                             {Object.entries(expenses.reduce((acc, exp) => {
+                                                 const ym = exp.date.substring(0, 7);
+                                                 acc[ym] = (acc[ym] || 0) + exp.amount;
+                                                 return acc;
+                                             }, {} as Record<string, number>)).sort().map(([ym, total]) => (
+                                                 <tr key={ym} className="hover:bg-slate-50"><td className="p-2 text-slate-600 font-mono">{ym}</td><td className="p-2 text-right font-bold text-slate-800">{formatCurrency(total as number)}</td></tr>
+                                             ))}
+                                         </tbody>
+                                     </table>
+                                 </div>
+
+                                 {/* 分類金額 Pie Chart & Table */}
+                                 <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                                     <h3 className="font-bold text-slate-700 mb-4 flex items-center gap-2">
+                                         <PieChartIcon size={18} className="text-orange-500" /> 分類金額
+                                     </h3>
+                                     <div className="h-44 mb-3">
+                                         <ResponsiveContainer width="100%" height="100%">
+                                             <PieChart>
+                                                 <Pie data={Object.entries(expenses.reduce((acc, exp) => {
+                                                     acc[exp.category] = (acc[exp.category] || 0) + exp.amount;
+                                                     return acc;
+                                                 }, {} as Record<string, number>)).map(([name, value]) => ({name, value}))} cx="50%" cy="50%" innerRadius={40} outerRadius={70} dataKey="value" stroke="none">
+                                                     {Object.entries(expenses.reduce((acc, exp) => {
+                                                         acc[exp.category] = (acc[exp.category] || 0) + exp.amount;
+                                                         return acc;
+                                                     }, {} as Record<string, number>)).map((_, index) => (
+                                                         <Cell key={`cell-${index}`} fill={['#f97316', '#3b82f6', '#10b981', '#f43f5e', '#ec4899', '#6366f1'][index % 6]} />
+                                                     ))}
+                                                 </Pie>
+                                                 <Tooltip formatter={(value) => formatCurrency(value as number)} />
+                                             </PieChart>
+                                         </ResponsiveContainer>
+                                     </div>
+                                     <table className="w-full text-sm text-left border">
+                                         <thead className="bg-slate-50 text-slate-500 border-b"><tr><th className="p-2 font-bold">分類</th><th className="p-2 text-right font-bold">金額</th></tr></thead>
+                                         <tbody className="divide-y divide-slate-100">
+                                             {Object.entries(expenses.reduce((acc, exp) => {
+                                                 acc[exp.category] = (acc[exp.category] || 0) + exp.amount;
+                                                 return acc;
+                                             }, {} as Record<string, number>)).sort((a,b)=>b[1]-a[1]).map(([cat, total], idx) => (
+                                                 <tr key={cat} className="hover:bg-slate-50"><td className="p-2 text-slate-600"><span className="inline-block w-2.5 h-2.5 rounded-full mr-2" style={{backgroundColor: ['#f97316', '#3b82f6', '#10b981', '#f43f5e', '#ec4899', '#6366f1'][idx % 6]}}></span>{cat}</td><td className="p-2 text-right font-bold text-slate-800">{formatCurrency(total as number)}</td></tr>
+                                             ))}
+                                         </tbody>
+                                     </table>
+                                 </div>
+
+                                 {/* 付款人金額 Table & Bar Chart */}
+                                 <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                                     <h3 className="font-bold text-slate-700 mb-4 flex items-center gap-2">
+                                         <BarChartIcon size={18} className="text-emerald-500" /> 付款人金額
+                                     </h3>
+                                      <div className="h-44 mb-3">
+                                         <ResponsiveContainer width="100%" height="100%">
+                                             <BarChart data={Object.entries(expenses.reduce((acc, exp) => {
+                                                 acc[exp.payer] = (acc[exp.payer] || 0) + exp.amount;
+                                                 return acc;
+                                             }, {} as Record<string, number>)).map(([name, value]) => ({name, value}))} layout="vertical">
+                                                 <XAxis type="number" fontSize={12} />
+                                                 <YAxis dataKey="name" type="category" fontSize={12} width={40} />
+                                                 <Tooltip formatter={(value) => formatCurrency(value as number)} />
+                                                 <Bar dataKey="value" fill="#10b981" radius={[0,4,4,0]} />
+                                             </BarChart>
+                                         </ResponsiveContainer>
+                                     </div>
+                                     <table className="w-full text-sm text-left border">
+                                         <thead className="bg-slate-50 text-slate-500 border-b"><tr><th className="p-2 font-bold">付款人</th><th className="p-2 text-right font-bold">金額</th></tr></thead>
+                                         <tbody className="divide-y divide-slate-100">
+                                             {Object.entries(expenses.reduce((acc, exp) => {
+                                                 acc[exp.payer] = (acc[exp.payer] || 0) + exp.amount;
+                                                 return acc;
+                                             }, {} as Record<string, number>)).sort((a,b)=>b[1]-a[1]).map(([payer, total]) => (
+                                                 <tr key={payer} className="hover:bg-slate-50"><td className="p-2 text-slate-600 font-bold">{payer}</td><td className="p-2 text-right font-bold text-slate-800">{formatCurrency(total as number)}</td></tr>
+                                             ))}
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
                          )}
                      </div>
                  </div>
@@ -456,7 +684,7 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
                              <input type="text" value={tripForm.location || ''} onChange={e => setTripForm({...tripForm, location: e.target.value})} placeholder="例如: 宜蘭縣" className="w-full border border-slate-300 rounded-xl px-3 py-2 font-bold focus:ring-2 focus:ring-purple-500 outline-none text-slate-700 bg-slate-50" />
                          </div>
                          <div>
-                             <label className="block text-xs font-bold text-slate-500 mb-1">備註 (可選)</label>
+                             <label className="block text-xs font-bold text-slate-500 mb-1">備註 (可空白)</label>
                              <input type="text" value={tripForm.remarks || ''} onChange={e => setTripForm({...tripForm, remarks: e.target.value})} placeholder="例如: 音樂饗宴" className="w-full border border-slate-300 rounded-xl px-3 py-2 font-bold focus:ring-2 focus:ring-purple-500 outline-none text-slate-700 bg-slate-50" />
                          </div>
                      </div>

@@ -7,7 +7,8 @@ import BankSystem from './components/BankSystem';
 import TravelSystem from './components/TravelSystem';
 import PurchasingSystem from './components/PurchasingSystem';
 import EcommerceAnalysisSystem from './components/EcommerceAnalysisSystem';
-import { Trash2, Edit, Plus, Package, ShoppingCart, List, BarChart2, ChevronRight, ChevronDown, User, Box, X, Calculator, Download, Save, Wallet, ArrowUpCircle, ArrowDownCircle, Grid, PieChart, Map as MapIcon, Check, Database, Upload, AlertTriangle, Home } from 'lucide-react';
+import ShiftSystem from './components/ShiftSystem';
+import { Trash2, Edit, Plus, Package, ShoppingCart, List, BarChart2, ChevronRight, ChevronDown, User, Box, X, Calculator, Download, Save, Wallet, ArrowUpCircle, ArrowDownCircle, Grid, PieChart, Map as MapIcon, Check, Database, Upload, AlertTriangle, Home, Calendar } from 'lucide-react';
 import { db } from './firebase';
 import { 
   collection, 
@@ -109,7 +110,7 @@ const IncomeField = ({ label, value, isInput = false, onChange, colorClass = "te
 
 const App: React.FC = () => {
   // --- State ---
-  const [appMode, setAppMode] = useState<'home' | 'ecommerce' | 'bank' | 'purchasing' | 'ecommerce_analysis' | 'travel'>('home');
+  const [appMode, setAppMode] = useState<'home' | 'ecommerce' | 'bank' | 'purchasing' | 'ecommerce_analysis' | 'travel' | 'shift'>('home');
   const [view, setView] = useState<ViewState>('products');
   const [dbError, setDbError] = useState<string | null>(null);
   
@@ -1320,6 +1321,17 @@ const App: React.FC = () => {
                   </button>
 
                   <button 
+                      onClick={() => setAppMode('shift')}
+                      className="w-full bg-pink-400 hover:bg-pink-500 text-white font-bold py-3 px-5 rounded-xl shadow-lg border border-pink-300 transition-all active:scale-95 flex items-center justify-between"
+                  >
+                      <div className="flex items-center gap-4">
+                          <Calendar size={24} />
+                          <span className="text-xl tracking-wider">排班計畫</span>
+                      </div>
+                      <ChevronRight size={24} className="opacity-70" />
+                  </button>
+
+                  <button 
                       onClick={() => setAppMode('bank')}
                       className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-5 rounded-xl shadow border border-emerald-500 transition-all active:scale-95 flex items-center justify-between"
                   >
@@ -1354,6 +1366,8 @@ const App: React.FC = () => {
   }
 
   if (appMode === 'travel') { return <TravelSystem onNavigateHome={() => setAppMode('home')} />; }
+
+  if (appMode === 'shift') { return <ShiftSystem onNavigateHome={() => setAppMode('home')} />; }
 
   if (appMode === 'ecommerce_analysis') {
       return <EcommerceAnalysisSystem 
