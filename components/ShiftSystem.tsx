@@ -45,14 +45,7 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
     const [planRemarks, setPlanRemarks] = useState('');
     const [editPlanId, setEditPlanId] = useState<string | null>(null);
 
-    const timeOptions = useMemo(() => {
-        const opts = [];
-        for(let h=0; h<24; h++) {
-            opts.push(`${h.toString().padStart(2, '0')}:00`);
-            opts.push(`${h.toString().padStart(2, '0')}:30`);
-        }
-        return opts;
-    }, []);
+
 
     useEffect(() => {
         const currentLocsForActive = locations.filter(l => l.person === activePerson && l.isActive);
@@ -336,15 +329,9 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                                     <input type="date" className="flex-1 h-10 px-3 border rounded-lg bg-slate-50 font-mono text-sm" value={planDate} onChange={e => setPlanDate(e.target.value)} />
                                 </div>
                                 <div className="flex gap-2 items-center">
-                                    <select className="flex-1 h-10 px-3 border rounded-lg bg-slate-50 font-mono text-sm" value={planStartTime} onChange={e => setPlanStartTime(e.target.value)}>
-                                        <option value="">開始時間</option>
-                                        {timeOptions.map(t => <option key={t} value={t}>{t}</option>)}
-                                    </select>
+                                    <input type="time" step="1800" className="flex-1 h-10 px-3 border rounded-lg bg-slate-50 font-mono text-sm" value={planStartTime} onChange={e => setPlanStartTime(e.target.value)} />
                                     <span className="text-slate-400">~</span>
-                                    <select className="flex-1 h-10 px-3 border rounded-lg bg-slate-50 font-mono text-sm" value={planEndTime} onChange={e => setPlanEndTime(e.target.value)}>
-                                        <option value="">結束時間</option>
-                                        {timeOptions.map(t => <option key={t} value={t}>{t}</option>)}
-                                    </select>
+                                    <input type="time" step="1800" className="flex-1 h-10 px-3 border rounded-lg bg-slate-50 font-mono text-sm" value={planEndTime} onChange={e => setPlanEndTime(e.target.value)} />
                                 </div>
                             </div>
                             <div>
@@ -471,6 +458,14 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                                 <button onClick={handleCurrentMonth} className="font-bold text-lg text-slate-800 bg-slate-50 px-4 py-1.5 rounded-lg hover:bg-slate-100">{year}年 {month.toString().padStart(2, '0')}月</button>
                                 <button onClick={handleNextMonth} className="p-2 hover:bg-slate-100 rounded-lg text-slate-600"><ChevronRight size={20}/></button>
                             </div>
+                            <div className="flex flex-wrap gap-2 px-1 shrink-0">
+                                {currentLocs.map(l => (
+                                    <div key={l.id} className="flex items-center gap-1">
+                                        <div className={`w-3 h-3 rounded-sm ${locColors[l.id]}`}></div>
+                                        <span className="text-xs text-slate-600 font-bold">{l.name}</span>
+                                    </div>
+                                ))}
+                            </div>
                             <div className="flex-1 bg-white shadow-sm border-y sm:border sm:rounded-xl border-slate-200 flex flex-col overflow-hidden">
                                 <div className="grid grid-cols-7 border-b text-center bg-slate-50 shrink-0">
                                     {['日','一','二','三','四','五','六'].map((d,i) => <div key={i} className={`py-1 md:py-2 text-xs font-bold ${i===0||i===6?'text-red-500':'text-slate-500'}`}>{d}</div>)}
@@ -481,8 +476,9 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                                         const dStr = `${year}-${month.toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`;
                                         const dayRecs = currentRecords.filter(r => r.date === dStr);
                                         const isToday = dStr === new Date().toISOString().split('T')[0];
+                                        const isPast = dStr < new Date().toISOString().split('T')[0];
                                         return (
-                                            <div key={d} className={`border-r border-b flex flex-col overflow-hidden ${isToday ? `bg-${mainColor}-50` : 'bg-white'}`}>
+                                            <div key={d} className={`border-r border-b flex flex-col overflow-hidden ${isToday ? `bg-${mainColor}-50` : isPast ? 'bg-slate-100' : 'bg-white'}`}>
                                                 <div className={`text-[10px] md:text-sm font-mono font-bold text-center py-0.5 ${isToday ? `text-${mainColor}-700 bg-${mainColor}-100/50` : 'text-slate-700 bg-slate-50/50'}`}>{d}</div>
                                                 <div className="flex-1 flex flex-col p-px md:p-0.5 gap-px">
                                                     {dayRecs.map(r => {
@@ -550,57 +546,84 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                 {/* ---------- ANALYSIS VIEW ---------- */}
                 {view === 'analysis' && (
                     <div className="p-4 flex-1 overflow-y-auto flex flex-col gap-6">
-                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden p-4">
-                            <h3 className="font-bold text-slate-700 text-sm mb-4">每月薪資分析 (禹君 vs 禹辰)</h3>
+                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 shrink-0 flex flex-col">
+                            <h3 className="font-bold text-slate-700 text-sm mb-4 flex items-center gap-2">
+                                <BarChart2 size={16} className="text-emerald-500" /> 每月薪資分析
+                            </h3>
                             <div className="h-64">
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={analysisStats.ymData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                                        <XAxis dataKey="yearMonth" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
-                                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} width={40} />
+                                    <BarChart layout="vertical" data={analysisStats.ymData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E2E8F0" />
+                                        <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
+                                        <YAxis type="category" dataKey="yearMonth" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} width={60} />
                                         <Tooltip cursor={{ fill: '#F1F5F9' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} />
                                         <Legend />
-                                        <Bar dataKey="禹君" name="禹君" fill="#ea580c" radius={[4, 4, 0, 0]} />
-                                        <Bar dataKey="禹辰" name="禹辰" fill="#9333ea" radius={[4, 4, 0, 0]} />
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </div>
-
-                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden p-4">
-                            <h3 className="font-bold text-slate-700 text-sm mb-4">地點薪資分析 (禹君 vs 禹辰)</h3>
-                            <div className="h-64">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={analysisStats.locData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                                        <XAxis dataKey="locationName" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
-                                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} width={40} />
-                                        <Tooltip cursor={{ fill: '#F1F5F9' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} />
-                                        <Legend />
-                                        <Bar dataKey="禹君" name="禹君" fill="#ea580c" radius={[4, 4, 0, 0]} />
-                                        <Bar dataKey="禹辰" name="禹辰" fill="#9333ea" radius={[4, 4, 0, 0]} />
+                                        <Bar dataKey="禹君" name="禹君" fill="#ea580c" radius={[0, 4, 4, 0]} />
+                                        <Bar dataKey="禹辰" name="禹辰" fill="#9333ea" radius={[0, 4, 4, 0]} />
                                     </BarChart>
                                 </ResponsiveContainer>
                             </div>
                             
-                            <table className="w-full text-sm text-left mt-4 border-t border-slate-100">
-                                <thead className="bg-slate-50 text-slate-500">
-                                    <tr>
-                                        <th className="p-2 font-bold whitespace-nowrap">地點</th>
-                                        <th className="p-2 font-bold text-right whitespace-nowrap">禹君</th>
-                                        <th className="p-2 font-bold text-right whitespace-nowrap">禹辰</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100">
-                                    {analysisStats.locData.map((d, i) => (
-                                        <tr key={i} className="hover:bg-slate-50">
-                                            <td className="p-2 text-slate-700">{d.locationName}</td>
-                                            <td className="p-2 text-right font-mono text-orange-600 font-bold">${Math.round(d['禹君']).toLocaleString()}</td>
-                                            <td className="p-2 text-right font-mono text-purple-600 font-bold">${Math.round(d['禹辰']).toLocaleString()}</td>
+                            <div className="mt-4 border border-slate-100 rounded-lg overflow-hidden">
+                                <table className="w-full text-sm text-left">
+                                    <thead className="bg-slate-50 text-slate-500 border-b border-slate-100">
+                                        <tr>
+                                            <th className="p-3 font-bold whitespace-nowrap">年月</th>
+                                            <th className="p-3 font-bold text-right whitespace-nowrap">禹君</th>
+                                            <th className="p-3 font-bold text-right whitespace-nowrap">禹辰</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {analysisStats.ymData.map((d, i) => (
+                                            <tr key={i} className="hover:bg-slate-50">
+                                                <td className="p-3 text-slate-700">{d.yearMonth}</td>
+                                                <td className="p-3 text-right font-mono text-orange-600 font-bold">${Math.round(d['禹君']).toLocaleString()}</td>
+                                                <td className="p-3 text-right font-mono text-purple-600 font-bold">${Math.round(d['禹辰']).toLocaleString()}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 shrink-0 flex flex-col">
+                            <h3 className="font-bold text-slate-700 text-sm mb-4 flex items-center gap-2">
+                                <BarChart2 size={16} className="text-emerald-500" /> 地點薪資分析
+                            </h3>
+                            <div className="h-64">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart layout="vertical" data={analysisStats.locData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E2E8F0" />
+                                        <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
+                                        <YAxis type="category" dataKey="locationName" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} width={60} />
+                                        <Tooltip cursor={{ fill: '#F1F5F9' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} />
+                                        <Legend />
+                                        <Bar dataKey="禹君" name="禹君" fill="#ea580c" radius={[0, 4, 4, 0]} />
+                                        <Bar dataKey="禹辰" name="禹辰" fill="#9333ea" radius={[0, 4, 4, 0]} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                            
+                            <div className="mt-4 border border-slate-100 rounded-lg overflow-hidden">
+                                <table className="w-full text-sm text-left">
+                                    <thead className="bg-slate-50 text-slate-500 border-b border-slate-100">
+                                        <tr>
+                                            <th className="p-3 font-bold whitespace-nowrap">地點</th>
+                                            <th className="p-3 font-bold text-right whitespace-nowrap">禹君</th>
+                                            <th className="p-3 font-bold text-right whitespace-nowrap">禹辰</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {analysisStats.locData.map((d, i) => (
+                                            <tr key={i} className="hover:bg-slate-50">
+                                                <td className="p-3 text-slate-700">{d.locationName}</td>
+                                                <td className="p-3 text-right font-mono text-orange-600 font-bold">${Math.round(d['禹君']).toLocaleString()}</td>
+                                                <td className="p-3 text-right font-mono text-purple-600 font-bold">${Math.round(d['禹辰']).toLocaleString()}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 )}
