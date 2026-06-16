@@ -689,10 +689,10 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                             <h3 className="font-bold text-slate-700 text-sm mb-2 flex items-center gap-2">
                                 <BarChart2 size={16} className="text-emerald-500" /> 每月薪資分析
                             </h3>
-                            <div className="w-full overflow-y-auto max-h-80">
-                                <div style={{ height: Math.max(200, analysisStats.ymData.length * 60) }}>
+                            <div className="w-full overflow-y-auto max-h-96">
+                                <div style={{ height: Math.max(200, analysisStats.ymData.length * 45) }}>
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart layout="vertical" data={analysisStats.ymData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }} barCategoryGap={12}>
+                                        <BarChart layout="vertical" data={analysisStats.ymData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }} barCategoryGap={8}>
                                             <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E2E8F0" />
                                             <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
                                             <YAxis type="category" dataKey="yearMonth" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} width={60} interval={0} />
@@ -731,10 +731,10 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                             <h3 className="font-bold text-slate-700 text-sm mb-2 flex items-center gap-2">
                                 <BarChart2 size={16} className="text-emerald-500" /> 地點薪資分析
                             </h3>
-                            <div className="w-full overflow-y-auto max-h-80">
-                                <div style={{ height: Math.max(200, analysisStats.locData.length * 60) }}>
+                            <div className="w-full overflow-y-auto max-h-96">
+                                <div style={{ height: Math.max(200, analysisStats.locData.length * 45) }}>
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart layout="vertical" data={analysisStats.locData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }} barCategoryGap={12}>
+                                        <BarChart layout="vertical" data={analysisStats.locData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }} barCategoryGap={8}>
                                             <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E2E8F0" />
                                             <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
                                             <YAxis type="category" dataKey="locationName" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748B' }} width={70} interval={0} />
