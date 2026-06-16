@@ -689,18 +689,20 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                             <h3 className="font-bold text-slate-700 text-sm mb-2 flex items-center gap-2">
                                 <BarChart2 size={16} className="text-emerald-500" /> 每月薪資分析
                             </h3>
-                            <div className="h-48 md:h-64">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart layout="vertical" data={analysisStats.ymData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E2E8F0" />
-                                        <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
-                                        <YAxis type="category" dataKey="yearMonth" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} width={60} interval={0} />
-                                        <Tooltip cursor={{ fill: '#F1F5F9' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} />
-                                        <Legend />
-                                        <Bar dataKey="禹君" name="禹君" fill="#fdba74" radius={[0, 4, 4, 0]} />
-                                        <Bar dataKey="禹辰" name="禹辰" fill="#d8b4fe" radius={[0, 4, 4, 0]} />
-                                    </BarChart>
-                                </ResponsiveContainer>
+                            <div className="w-full overflow-y-auto max-h-80">
+                                <div style={{ height: Math.max(200, analysisStats.ymData.length * 60) }}>
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart layout="vertical" data={analysisStats.ymData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }} barCategoryGap={12}>
+                                            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E2E8F0" />
+                                            <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
+                                            <YAxis type="category" dataKey="yearMonth" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} width={60} interval={0} />
+                                            <Tooltip cursor={{ fill: '#F1F5F9' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} />
+                                            <Legend />
+                                            <Bar dataKey="禹君" name="禹君" fill="#fdba74" radius={[0, 4, 4, 0]} />
+                                            <Bar dataKey="禹辰" name="禹辰" fill="#d8b4fe" radius={[0, 4, 4, 0]} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
                             </div>
                             
                             <div className="mt-2 border-2 border-slate-100 rounded-lg overflow-hidden">
@@ -729,18 +731,20 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                             <h3 className="font-bold text-slate-700 text-sm mb-2 flex items-center gap-2">
                                 <BarChart2 size={16} className="text-emerald-500" /> 地點薪資分析
                             </h3>
-                            <div className="h-48 md:h-64">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart layout="vertical" data={analysisStats.locData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E2E8F0" />
-                                        <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
-                                        <YAxis type="category" dataKey="locationName" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748B' }} width={70} interval={0} />
-                                        <Tooltip cursor={{ fill: '#F1F5F9' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} />
-                                        <Legend />
-                                        <Bar dataKey="禹君" name="禹君" fill="#fdba74" radius={[0, 4, 4, 0]} />
-                                        <Bar dataKey="禹辰" name="禹辰" fill="#d8b4fe" radius={[0, 4, 4, 0]} />
-                                    </BarChart>
-                                </ResponsiveContainer>
+                            <div className="w-full overflow-y-auto max-h-80">
+                                <div style={{ height: Math.max(200, analysisStats.locData.length * 60) }}>
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart layout="vertical" data={analysisStats.locData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }} barCategoryGap={12}>
+                                            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E2E8F0" />
+                                            <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
+                                            <YAxis type="category" dataKey="locationName" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748B' }} width={70} interval={0} />
+                                            <Tooltip cursor={{ fill: '#F1F5F9' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} />
+                                            <Legend />
+                                            <Bar dataKey="禹君" name="禹君" fill="#fdba74" radius={[0, 4, 4, 0]} />
+                                            <Bar dataKey="禹辰" name="禹辰" fill="#d8b4fe" radius={[0, 4, 4, 0]} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
                             </div>
                             
                             <div className="mt-2 border-2 border-slate-100 rounded-lg overflow-hidden">
