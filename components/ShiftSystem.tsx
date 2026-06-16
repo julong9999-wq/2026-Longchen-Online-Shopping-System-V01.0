@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Home, Calendar as CalendarIcon, FileText, Calculator, Edit, Trash2, X, ChevronLeft, ChevronRight, Plus, BarChart2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { ShiftPerson, ShiftLocation, ShiftWage, ShiftRecord } from '../types';
-import { TimePickerModal } from './TimePickerModal';
+
 import { db } from '../firebase';
 import { collection, onSnapshot, doc, setDoc, deleteDoc, writeBatch, updateDoc } from 'firebase/firestore';
 import { generateUUID } from '../utils';
@@ -45,7 +45,7 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
     const [planEndTime, setPlanEndTime] = useState('');
     const [planRemarks, setPlanRemarks] = useState('');
     const [editPlanId, setEditPlanId] = useState<string | null>(null);
-    const [timePickerTarget, setTimePickerTarget] = useState<'start' | 'end' | null>(null);
+    
     const [quickEditDate, setQuickEditDate] = useState<string | null>(null);
     const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -165,6 +165,7 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
             person: activePerson,
             name: locForm.name!,
             isActive: locForm.isActive !== undefined ? locForm.isActive : true,
+            hasBreak: locForm.hasBreak || false,
             createdAt: locForm.createdAt || Date.now()
         };
         await setDoc(doc(collection(db, 'shiftLocations'), docId), docData);
@@ -210,13 +211,18 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
         return wList.length > 0 ? wList[0].hourlyWage : 0;
     };
 
-    const calculateHours = (start: string, end: string) => {
+    const calculateHours = (start: string, end: string, hasBreak: boolean = false) => {
         const [sh, sm] = start.split(':').map(Number);
         const [eh, em] = end.split(':').map(Number);
         let sMins = sh * 60 + sm;
         let eMins = eh * 60 + em;
         if (eMins < sMins) eMins += 24 * 60; // assumed overnight
-        return (eMins - sMins) / 60;
+        let hours = (eMins - sMins) / 60;
+        if (hasBreak) {
+            // 每 5 小時涵蓋 1 小時休息
+            hours -= Math.floor(hours / 5);
+        }
+        return hours;
     };
 
     // Salary Stats
@@ -230,7 +236,8 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
             const key = `${ym}_${r.locationId}`;
             if(!map.has(key)) map.set(key, { yearMonth: ym, locationId: r.locationId, hours: 0, amount: 0 });
             
-            const hours = calculateHours(r.startTime, r.endTime);
+            const locInfo = locations.find(l => l.id === r.locationId);
+            const hours = calculateHours(r.startTime, r.endTime, locInfo?.hasBreak);
             const rate = getWageRate(r.locationId, r.date);
             const amt = hours * rate;
             
@@ -259,7 +266,8 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
             const p = r.person as '禹君' | '禹辰';
             const locName = locations.find(l => l.id === r.locationId)?.name || '未知';
             
-            const hours = calculateHours(r.startTime, r.endTime);
+            const locInfo2 = locations.find(l => l.id === r.locationId);
+            const hours = calculateHours(r.startTime, r.endTime, locInfo2?.hasBreak);
             const rate = getWageRate(r.locationId, r.date);
             const amt = hours * rate;
 
@@ -358,13 +366,9 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                                     <input type="date" className="flex-1 h-10 px-3 border rounded-lg bg-slate-50 font-mono text-sm" value={planDate} onChange={e => setPlanDate(e.target.value)} />
                                 </div>
                                 <div className="flex gap-2 items-center">
-                                    <button onClick={() => setTimePickerTarget('start')} className={`flex-1 h-10 px-3 border rounded-lg font-mono text-sm flex items-center justify-center ${planStartTime ? 'bg-slate-50 text-slate-800' : 'bg-slate-50 text-slate-400'}`}>
-                                        {planStartTime || '開始時間'}
-                                    </button>
+                                    <input type="time" step="1800" className="flex-1 h-10 px-3 border rounded-lg bg-slate-50 font-mono text-sm" required value={planStartTime} onChange={e => setPlanStartTime(e.target.value)} />
                                     <span className="text-slate-400">~</span>
-                                    <button onClick={() => setTimePickerTarget('end')} className={`flex-1 h-10 px-3 border rounded-lg font-mono text-sm flex items-center justify-center ${planEndTime ? 'bg-slate-50 text-slate-800' : 'bg-slate-50 text-slate-400'}`}>
-                                        {planEndTime || '結束時間'}
-                                    </button>
+                                    <input type="time" step="1800" className="flex-1 h-10 px-3 border rounded-lg bg-slate-50 font-mono text-sm" required value={planEndTime} onChange={e => setPlanEndTime(e.target.value)} />
                                 </div>
                             </div>
                             <div>
@@ -476,19 +480,24 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                     const handleCurrentMonth = () => setCurrentDate(new Date());
 
                     // Map locations to shades based on standard color array
-                    const colorPalette = [
-                        'bg-red-200 text-red-900 border-red-300',
-                        'bg-blue-200 text-blue-900 border-blue-300',
-                        'bg-emerald-200 text-emerald-900 border-emerald-300',
-                        'bg-amber-200 text-amber-900 border-amber-300',
-                        'bg-indigo-200 text-indigo-900 border-indigo-300',
-                        'bg-rose-200 text-rose-900 border-rose-300',
-                        'bg-cyan-200 text-cyan-900 border-cyan-300',
-                        'bg-fuchsia-200 text-fuchsia-900 border-fuchsia-300',
-                    ];
+                    const colorShades = mainColor === 'orange' ? 
+                        [
+                            'bg-orange-50 text-orange-900 border-orange-200',
+                            'bg-orange-200 text-orange-900 border-orange-300', 
+                            'bg-orange-400 text-white border-orange-500', 
+                            'bg-orange-600 text-white border-orange-700',
+                            'bg-orange-800 text-white border-orange-900'
+                        ] : 
+                        [
+                            'bg-purple-50 text-purple-900 border-purple-200',
+                            'bg-purple-200 text-purple-900 border-purple-300', 
+                            'bg-purple-400 text-white border-purple-500', 
+                            'bg-purple-600 text-white border-purple-700',
+                            'bg-purple-800 text-white border-purple-900'
+                        ];
                     const locColors: Record<string, string> = {};
                     currentLocs.forEach((l, i) => {
-                         locColors[l.id] = colorPalette[i % colorPalette.length];
+                         locColors[l.id] = colorShades[i % colorShades.length];
                     });
 
                     return (
@@ -698,13 +707,9 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                                 ))}
                             </div>
                             <div className="flex gap-2 items-center">
-                                <button onClick={() => setTimePickerTarget('start')} className={`flex-1 h-10 px-3 border rounded-lg font-mono text-sm flex items-center justify-center ${planStartTime ? 'bg-slate-50 text-slate-800' : 'bg-slate-50 text-slate-400'}`}>
-                                    {planStartTime || '開始時間'}
-                                </button>
+                                <input type="time" step="1800" className="flex-1 h-10 px-3 border rounded-lg bg-slate-50 font-mono text-sm" required value={planStartTime} onChange={e => setPlanStartTime(e.target.value)} />
                                 <span className="text-slate-400">~</span>
-                                <button onClick={() => setTimePickerTarget('end')} className={`flex-1 h-10 px-3 border rounded-lg font-mono text-sm flex items-center justify-center ${planEndTime ? 'bg-slate-50 text-slate-800' : 'bg-slate-50 text-slate-400'}`}>
-                                    {planEndTime || '結束時間'}
-                                </button>
+                                <input type="time" step="1800" className="flex-1 h-10 px-3 border rounded-lg bg-slate-50 font-mono text-sm" required value={planEndTime} onChange={e => setPlanEndTime(e.target.value)} />
                             </div>
                             <div>
                                 <input type="text" className="w-full h-10 px-3 border rounded-lg bg-slate-50 text-sm" value={planRemarks} onChange={e => setPlanRemarks(e.target.value)} placeholder="備註說明" />
@@ -722,18 +727,7 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                 </div>
             )}
 
-            <TimePickerModal
-                isOpen={timePickerTarget !== null}
-                initialTime={timePickerTarget === 'start' ? planStartTime : timePickerTarget === 'end' ? planEndTime : ''}
-                onClose={() => setTimePickerTarget(null)}
-                onConfirm={(t) => {
-                    if (timePickerTarget === 'start') setPlanStartTime(t);
-                    if (timePickerTarget === 'end') setPlanEndTime(t);
-                    setTimePickerTarget(null);
-                }}
-            />
-
-            {/* Modals for Dictionary */}
+{/* Modals for Dictionary */}
             {showLocModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
                     <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl flex flex-col overflow-hidden">
@@ -746,9 +740,18 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                                 <label className="text-xs font-bold text-slate-500 block mb-1">地點名稱</label>
                                 <input type="text" className="w-full h-10 px-3 border rounded-lg bg-slate-50" value={locForm.name || ''} onChange={e => setLocForm({...locForm, name: e.target.value})} />
                             </div>
-                            <div className="flex items-center gap-2">
-                                <label className="text-xs font-bold text-slate-500">顯示 (Y/N)</label>
-                                <input type="checkbox" checked={locForm.isActive === undefined ? true : locForm.isActive} onChange={e => setLocForm({...locForm, isActive: e.target.checked})} className="w-4 h-4" />
+                            <div className="flex items-center gap-6">
+                                <div className="flex items-center gap-2">
+                                    <label className="text-xs font-bold text-slate-500">顯示 (Y/N)</label>
+                                    <input type="checkbox" checked={locForm.isActive === undefined ? true : locForm.isActive} onChange={e => setLocForm({...locForm, isActive: e.target.checked})} className="w-4 h-4" />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <label className="text-xs font-bold text-slate-500">休息 (Y/N)</label>
+                                    <input type="checkbox" checked={locForm.hasBreak === true} onChange={e => setLocForm({...locForm, hasBreak: e.target.checked})} className="w-4 h-4" />
+                                </div>
+                            </div>
+                            <div className="text-xs text-slate-400 bg-slate-50 p-2 rounded">
+                                休息(Y): 每做滿 4 小時休息 1 小時 (排班滿5小時扣1小時)
                             </div>
                             <button onClick={handleSaveLoc} disabled={!locForm.name} className={`w-full py-2 rounded-lg font-bold text-white transition-opacity ${!locForm.name ? 'opacity-50' : ''} ${mainColorClass}`}>儲存</button>
                         </div>

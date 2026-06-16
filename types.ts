@@ -90,6 +90,7 @@ export interface ShiftLocation {
   person: ShiftPerson;
   name: string;
   isActive: boolean;
+  hasBreak?: boolean;
   createdAt: number;
 }
 
