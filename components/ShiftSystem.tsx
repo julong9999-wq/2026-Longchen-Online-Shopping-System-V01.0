@@ -50,12 +50,14 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
     const [salaryLocFilter, setSalaryLocFilter] = useState<string>('all');
     const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Ensure filter is 'all' when switching to salary view
     useEffect(() => {
-        if (view === 'salary') {
-            setSalaryLocFilter('all');
+        if (salaryLocFilter !== 'all') {
+            const isValid = locations.some(l => l.id === salaryLocFilter && l.person === activePerson && l.isActive);
+            if (!isValid) {
+                setSalaryLocFilter('all');
+            }
         }
-    }, [view]);
+    }, [locations, activePerson, salaryLocFilter]);
 
     const handlePointerDownDay = (dateStr: string) => {
         longPressTimerRef.current = setTimeout(() => {
@@ -89,9 +91,11 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
         if (!planLocationId || !currentLocsForActive.find(l => l.id === planLocationId)) {
             if (currentLocsForActive.length > 0) {
                 setPlanLocationId(currentLocsForActive[0].id);
+            } else {
+                setPlanLocationId('');
             }
         }
-    }, [locations, activePerson, planLocationId]);
+    }, [locations, activePerson]);
     
     // -------- Dictionary View State --------
     const [showLocModal, setShowLocModal] = useState(false);
