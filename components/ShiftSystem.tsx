@@ -98,10 +98,18 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
     // -------- Filters & Computed --------
     const currentLocs = useMemo(() => locations.filter(l => l.person === activePerson), [locations, activePerson]);
     const activeCurrentLocs = useMemo(() => currentLocs.filter(l => l.isActive), [currentLocs]);
-    const currentRecords = useMemo(() => records.filter(r => r.person === activePerson).sort((a, b) => b.date.localeCompare(a.date)), [records, activePerson]);
+    const currentRecords = useMemo(() => records.filter(r => r.person === activePerson).sort((a, b) => {
+        const cmp = b.date.localeCompare(a.date);
+        if (cmp !== 0) return cmp;
+        return a.startTime.localeCompare(b.startTime);
+    }), [records, activePerson]);
     const upcomingRecords = useMemo(() => {
         const today = new Date().toISOString().split('T')[0];
-        return currentRecords.filter(r => r.date >= today).sort((a, b) => a.date.localeCompare(b.date));
+        return currentRecords.filter(r => r.date >= today).sort((a, b) => {
+            const cmp = a.date.localeCompare(b.date);
+            if (cmp !== 0) return cmp;
+            return a.startTime.localeCompare(b.startTime);
+        });
     }, [currentRecords]);
 
     // ==== Plan Functions ====
@@ -415,13 +423,14 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                             </div>
                             <table className="w-full text-sm text-left">
                                 <thead className="bg-slate-100 text-slate-500">
-                                    <tr><th className="p-2 w-full font-bold">打工地點</th><th className="p-2 font-bold whitespace-nowrap text-center">顯示(Y/N)</th><th className="p-2"></th></tr>
+                                    <tr><th className="p-2 w-full font-bold">打工地點</th><th className="p-2 font-bold whitespace-nowrap text-center">顯示(Y/N)</th><th className="p-2 font-bold whitespace-nowrap text-center">休息(Y/N)</th><th className="p-2"></th></tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
                                     {currentLocs.map(l => (
                                         <tr key={l.id} className={`hover:bg-slate-50 cursor-pointer ${activeLocId === l.id ? 'bg-blue-50/50' : ''}`} onClick={() => setActiveLocId(l.id === activeLocId ? '' : l.id)}>
                                             <td className="p-2 font-bold text-slate-700 w-full">{l.name}</td>
                                             <td className="p-2 text-center">{l.isActive ? <span className="text-emerald-600 font-bold">Y</span>:<span className="text-rose-500">N</span>}</td>
+                                            <td className="p-2 text-center">{l.hasBreak ? <span className="text-orange-500 font-bold">Y</span>:<span className="text-slate-400">N</span>}</td>
                                             <td className="p-0 pr-1 text-right whitespace-nowrap">
                                                 <div className="flex items-center justify-end gap-1">
                                                 <button onClick={(e) => {e.stopPropagation(); setLocForm(l); setShowLocModal(true);}} className="text-blue-500 p-2"><Edit size={16}/></button>
@@ -524,7 +533,7 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                                     {blanks.map(b => <div key={`b-${b}`} className="border-r border-b p-1 bg-slate-50/50"></div>)}
                                     {daysArray.map(d => {
                                         const dStr = `${year}-${month.toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`;
-                                        const dayRecs = currentRecords.filter(r => r.date === dStr);
+                                        const dayRecs = currentRecords.filter(r => r.date === dStr).sort((a, b) => a.startTime.localeCompare(b.startTime));
                                         const isToday = dStr === new Date().toISOString().split('T')[0];
                                         const isPast = dStr < new Date().toISOString().split('T')[0];
                                         return (
@@ -534,9 +543,9 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                                                 onPointerUp={handlePointerUpDay}
                                                 onPointerCancel={handlePointerUpDay}
                                                 onPointerLeave={handlePointerUpDay}
-                                                className={`border-r border-b flex flex-col overflow-hidden select-none cursor-pointer hover:opacity-80 transition-opacity ${isToday ? `bg-${mainColor}-50` : isPast ? 'bg-slate-100' : 'bg-white'}`}
+                                                className={`border-r border-b flex flex-col overflow-hidden select-none cursor-pointer hover:opacity-80 transition-opacity ${isToday ? `bg-${mainColor}-50` : isPast ? 'bg-slate-200/60' : 'bg-white'}`}
                                             >
-                                                <div className={`text-[10px] md:text-sm font-mono font-bold text-center py-0.5 ${isToday ? `text-${mainColor}-700 bg-${mainColor}-100/50` : 'text-slate-700 bg-slate-50/50'}`}>{d}</div>
+                                                <div className={`text-[10px] md:text-sm font-mono font-bold text-center py-0.5 ${isToday ? `text-${mainColor}-700 bg-${mainColor}-100/50` : isPast ? 'text-slate-500 bg-slate-200' : 'text-slate-700 bg-slate-50/50'}`}>{d}</div>
                                                 <div className="flex-1 flex flex-col p-px md:p-0.5 gap-px">
                                                     {dayRecs.map(r => {
                                                         const bClass = locColors[r.locationId] || `bg-${mainColor}-100 text-${mainColor}-900`;
@@ -687,14 +696,38 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
             </div>
 
             {/* Quick Edit Modal */}
-            {quickEditDate && (
+            {quickEditDate && (() => {
+                const dayRecords = currentRecords.filter(r => r.date === quickEditDate).sort((a,b)=>a.startTime.localeCompare(b.startTime));
+                return (
                 <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm sm:p-4 pb-safe animate-in fade-in duration-150">
                     <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full max-w-sm flex flex-col overflow-hidden shadow-2xl animate-in slide-in-from-bottom sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-150 border border-slate-200">
                         <div className="flex items-center justify-between p-4 border-b bg-slate-50">
                             <h3 className="text-lg font-bold text-slate-800">{editPlanId ? '編輯排班' : '新增排班'} - {quickEditDate}</h3>
                             <button onClick={()=>setQuickEditDate(null)} className="p-1 rounded-full text-slate-400 hover:bg-slate-200"><X size={20}/></button>
                         </div>
-                        <div className="p-4 flex flex-col gap-4">
+                        <div className="p-4 flex flex-col gap-4 max-h-[80vh] overflow-y-auto">
+                            {dayRecords.length > 0 && (
+                                <div className="flex flex-col gap-2 pb-4 border-b border-slate-100">
+                                    <div className="text-xs font-bold text-slate-500 flex justify-between items-center mb-1">
+                                        <span>當日排班資料 (選擇以編輯)</span>
+                                        <button onClick={() => { setEditPlanId(null); setPlanLocationId(activeCurrentLocs.length > 0 ? activeCurrentLocs[0].id : ''); setPlanStartTime(''); setPlanEndTime(''); setPlanRemarks(''); }} className={`text-${mainColor}-600 hover:text-${mainColor}-800 px-2 py-1 rounded bg-${mainColor}-50 flex items-center gap-1`}><Plus size={12}/>新增一筆</button>
+                                    </div>
+                                    {dayRecords.map(r => (
+                                        <div key={r.id} onClick={() => {
+                                            setEditPlanId(r.id);
+                                            setPlanLocationId(r.locationId);
+                                            setPlanStartTime(r.startTime);
+                                            setPlanEndTime(r.endTime);
+                                            setPlanRemarks(r.remarks || '');
+                                        }} className={`p-2.5 rounded-lg border text-left transition-colors cursor-pointer ${editPlanId === r.id ? `bg-${mainColor}-50 border-${mainColor}-300` : 'bg-white border-slate-200 hover:bg-slate-50'}`}>
+                                            <div className="text-sm font-bold flex justify-between text-slate-700">
+                                                <span>{currentLocs.find(l=>l.id===r.locationId)?.name}</span>
+                                                <span className="font-mono text-slate-500">{r.startTime} ~ {r.endTime}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                             <div className="flex flex-wrap gap-2">
                                 {activeCurrentLocs.map(l => (
                                     <button 
@@ -725,7 +758,7 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                         </div>
                     </div>
                 </div>
-            )}
+            ); })()}
 
 {/* Modals for Dictionary */}
             {showLocModal && (
