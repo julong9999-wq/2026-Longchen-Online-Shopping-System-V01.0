@@ -50,6 +50,13 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
     const [salaryLocFilter, setSalaryLocFilter] = useState<string>('all');
     const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+    // Ensure filter is 'all' when switching to salary view
+    useEffect(() => {
+        if (view === 'salary') {
+            setSalaryLocFilter('all');
+        }
+    }, [view]);
+
     const handlePointerDownDay = (dateStr: string) => {
         longPressTimerRef.current = setTimeout(() => {
             setQuickEditDate(dateStr);
@@ -635,7 +642,7 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                                                     </span>
                                                 </td>
                                                 <td className="p-2 text-right font-mono text-red-400">(預){fi.hours.toFixed(1)}</td>
-                                                <td className="p-2 text-right font-bold text-red-400 font-mono">(預)${Math.round(fi.amount).toLocaleString()}</td>
+                                                <td className="p-2 text-right font-bold text-red-400 font-mono">${Math.round(fi.amount).toLocaleString()}</td>
                                             </tr>
                                         )})}
 
@@ -683,7 +690,7 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                                     <BarChart layout="vertical" data={analysisStats.ymData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
                                         <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E2E8F0" />
                                         <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
-                                        <YAxis type="category" dataKey="yearMonth" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} width={60} />
+                                        <YAxis type="category" dataKey="yearMonth" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} width={60} interval={0} />
                                         <Tooltip cursor={{ fill: '#F1F5F9' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} />
                                         <Legend />
                                         <Bar dataKey="禹君" name="禹君" fill="#fdba74" radius={[0, 4, 4, 0]} />
@@ -723,7 +730,7 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                                     <BarChart layout="vertical" data={analysisStats.locData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
                                         <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E2E8F0" />
                                         <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
-                                        <YAxis type="category" dataKey="locationName" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748B' }} width={70} />
+                                        <YAxis type="category" dataKey="locationName" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748B' }} width={70} interval={0} />
                                         <Tooltip cursor={{ fill: '#F1F5F9' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} />
                                         <Legend />
                                         <Bar dataKey="禹君" name="禹君" fill="#fdba74" radius={[0, 4, 4, 0]} />
