@@ -408,13 +408,18 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
              )}
              
              {view === 'detail' && (
-                 <div className="flex flex-col h-full bg-slate-50 p-4">
-                     <h2 className="text-xl font-bold text-slate-800 mb-4">全部花費明細</h2>
+                 <div className="flex flex-col h-full bg-slate-50 p-2 md:p-4">
+                     <div className="flex justify-between items-center mb-2">
+                         <h2 className="text-xl font-bold text-slate-800">全部花費明細</h2>
+                         <div className="bg-purple-100 text-purple-900 px-3 py-1 rounded-lg font-bold border border-purple-200">
+                             合計: {formatCurrency(expenses.reduce((sum, e) => sum + e.amount, 0))}
+                         </div>
+                     </div>
                      <div className="flex-1 overflow-y-auto">
                          {trips.length === 0 && expenses.length === 0 ? (
                              <div className="text-center py-10 text-slate-400 bg-white rounded-xl shadow-sm border border-slate-200">目前無任何記帳紀錄</div>
                          ) : (
-                             <div className="flex flex-col gap-4 pb-6">
+                             <div className="flex flex-col gap-2 pb-6">
                                  {trips.map(trip => {
                                      const tripExpenses = expenses.filter(e => e.tripId === trip.id);
                                      if(tripExpenses.length === 0) return null;
@@ -424,17 +429,17 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
                                      return (
                                          <div key={trip.id} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                                              <div 
-                                                 className="p-4 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
+                                                 className="p-2 sm:p-3 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors gap-2"
                                                  onClick={() => setExpandedDetails(prev => ({...prev, [trip.id!]: !prev[trip.id!]}))}
                                              >
-                                                 <div>
-                                                     <h3 className="font-bold text-slate-800 text-lg">{trip.location}</h3>
-                                                     <div className="text-xs text-slate-500 mt-1">{trip.startDate} ({trip.days}天)</div>
+                                                 <div className="flex-1 min-w-0">
+                                                     <h3 className="font-bold text-slate-800 text-base md:text-lg truncate">{trip.location} {trip.remarks && <span className="text-slate-500 text-sm md:text-base font-normal ml-1">{trip.remarks}</span>}</h3>
+                                                     <div className="text-[10px] sm:text-xs text-slate-500 mt-0.5">{trip.startDate} ({trip.days}天)</div>
                                                  </div>
-                                                 <div className="flex items-center gap-4">
+                                                 <div className="flex items-center gap-2 sm:gap-4 shrink-0">
                                                      <div className="text-right">
-                                                         <div className="text-xs text-slate-500 mb-0.5">合計</div>
-                                                         <div className="font-bold text-purple-700">{formatCurrency(tripTotal)}</div>
+                                                         <div className="text-[10px] text-slate-500 mb-0.5 leading-none">小計</div>
+                                                         <div className="font-bold text-purple-700 leading-tight">{formatCurrency(tripTotal)}</div>
                                                      </div>
                                                      <div className="text-slate-400">
                                                          {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
@@ -442,13 +447,13 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
                                                  </div>
                                              </div>
                                              {isExpanded && (
-                                                 <div className="border-t border-slate-100 bg-slate-50 px-2 pb-2 pt-1">
-                                                     <table className="w-full text-sm text-left">
+                                                 <div className="border-t border-slate-100 bg-slate-50 p-1">
+                                                     <table className="w-full text-sm text-left table-fixed">
                                                          <thead className="text-slate-500 border-b border-slate-200">
                                                              <tr>
-                                                                 <th className="px-2 py-2 font-bold w-20">日期</th>
-                                                                 <th className="px-2 py-2 font-bold">項目</th>
-                                                                 <th className="px-2 py-2 font-bold text-right">金額</th>
+                                                                 <th className="px-1 py-1 font-bold w-[70px] sm:w-20 text-[11px] sm:text-sm">日期</th>
+                                                                 <th className="px-1 py-1 font-bold text-[11px] sm:text-sm">項目</th>
+                                                                 <th className="px-1 py-1 font-bold text-right w-24 sm:w-28 text-[11px] sm:text-sm">金額</th>
                                                              </tr>
                                                          </thead>
                                                          <tbody className="divide-y divide-slate-100">
@@ -456,18 +461,18 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
                                                                  if (a.date === b.date) return b.createdAt - a.createdAt;
                                                                  return b.date.localeCompare(a.date);
                                                              }).map(exp => (
-                                                                 <tr key={exp.id} className="hover:bg-white transition-colors bg-white/50">
-                                                                     <td className="px-2 py-2 font-mono text-slate-500 text-xs">
+                                                                 <tr key={exp.id} className="hover:bg-purple-100 transition-colors bg-purple-50">
+                                                                     <td className="px-1 py-1 font-mono text-slate-500 text-[10px] sm:text-xs whitespace-nowrap overflow-hidden">
                                                                          {exp.date}
-                                                                         <div className="text-purple-500 font-bold mt-0.5">{exp.category}</div>
+                                                                         <div className="text-purple-500 font-bold mt-px">{exp.category}</div>
                                                                      </td>
-                                                                     <td className="px-2 py-2">
-                                                                         <div className="font-bold text-slate-800">{exp.location}</div>
-                                                                         {exp.description && <div className="text-xs text-slate-500 mt-0.5">{exp.description}</div>}
+                                                                     <td className="px-1 py-1 overflow-hidden">
+                                                                         <div className="font-bold text-slate-800 text-[11px] sm:text-sm truncate">{exp.location}</div>
+                                                                         {exp.description && <div className="text-[10px] text-slate-500 truncate">{exp.description}</div>}
                                                                      </td>
-                                                                     <td className="px-2 py-2 text-right">
-                                                                         <div className="font-bold text-slate-700">{exp.currency} {formatCurrency(exp.amount)}</div>
-                                                                         <div className="text-xs text-slate-400 mt-0.5">{exp.payer}</div>
+                                                                     <td className="px-1 py-1 text-right whitespace-nowrap overflow-hidden">
+                                                                         <div className="font-bold text-slate-700 text-xs sm:text-sm"><span className="text-[9px] sm:text-[10px] text-slate-400 font-normal mr-0.5">{exp.currency}</span>{formatCurrency(exp.amount)}</div>
+                                                                         <div className="text-[10px] text-slate-400 mt-px truncate">{exp.payer}</div>
                                                                      </td>
                                                                  </tr>
                                                              ))}
@@ -488,17 +493,17 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
                                      return (
                                          <div key="orphan" className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                                              <div 
-                                                 className="p-4 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
+                                                 className="p-2 sm:p-3 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors gap-2"
                                                  onClick={() => setExpandedDetails(prev => ({...prev, orphan: !prev.orphan}))}
                                              >
-                                                 <div>
-                                                     <h3 className="font-bold text-slate-800 text-lg">未知標語</h3>
-                                                     <div className="text-xs text-slate-500 mt-1">已刪除的旅遊或異常資料</div>
+                                                 <div className="flex-1 min-w-0">
+                                                     <h3 className="font-bold text-slate-800 text-base md:text-lg">未知標語</h3>
+                                                     <div className="text-[10px] sm:text-xs text-slate-500 mt-0.5">已刪除的旅遊或異常資料</div>
                                                  </div>
-                                                 <div className="flex items-center gap-4">
+                                                 <div className="flex items-center gap-2 sm:gap-4 shrink-0">
                                                      <div className="text-right">
-                                                         <div className="text-xs text-slate-500 mb-0.5">合計</div>
-                                                         <div className="font-bold text-purple-700">{formatCurrency(orphanTotal)}</div>
+                                                         <div className="text-[10px] text-slate-500 mb-0.5 leading-none">小計</div>
+                                                         <div className="font-bold text-purple-700 leading-tight">{formatCurrency(orphanTotal)}</div>
                                                      </div>
                                                      <div className="text-slate-400">
                                                          {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
@@ -506,13 +511,13 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
                                                  </div>
                                              </div>
                                              {isExpanded && (
-                                                 <div className="border-t border-slate-100 bg-slate-50 px-2 pb-2 pt-1">
-                                                     <table className="w-full text-sm text-left">
+                                                 <div className="border-t border-slate-100 bg-slate-50 p-1">
+                                                     <table className="w-full text-sm text-left table-fixed">
                                                          <thead className="text-slate-500 border-b border-slate-200">
                                                              <tr>
-                                                                 <th className="px-2 py-2 font-bold w-20">日期</th>
-                                                                 <th className="px-2 py-2 font-bold">項目</th>
-                                                                 <th className="px-2 py-2 font-bold text-right">金額</th>
+                                                                 <th className="px-1 py-1 font-bold w-[70px] sm:w-20 text-[11px] sm:text-sm">日期</th>
+                                                                 <th className="px-1 py-1 font-bold text-[11px] sm:text-sm">項目</th>
+                                                                 <th className="px-1 py-1 font-bold text-right w-24 sm:w-28 text-[11px] sm:text-sm">金額</th>
                                                              </tr>
                                                          </thead>
                                                          <tbody className="divide-y divide-slate-100">
@@ -520,18 +525,18 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
                                                                  if (a.date === b.date) return b.createdAt - a.createdAt;
                                                                  return b.date.localeCompare(a.date);
                                                              }).map(exp => (
-                                                                 <tr key={exp.id} className="hover:bg-white transition-colors bg-white/50">
-                                                                     <td className="px-2 py-2 font-mono text-slate-500 text-xs">
+                                                                 <tr key={exp.id} className="hover:bg-purple-100 transition-colors bg-purple-50">
+                                                                     <td className="px-1 py-1 font-mono text-slate-500 text-[10px] sm:text-xs whitespace-nowrap overflow-hidden">
                                                                          {exp.date}
-                                                                         <div className="text-purple-500 font-bold mt-0.5">{exp.category}</div>
+                                                                         <div className="text-purple-500 font-bold mt-px">{exp.category}</div>
                                                                      </td>
-                                                                     <td className="px-2 py-2">
-                                                                         <div className="font-bold text-slate-800">{exp.location}</div>
-                                                                         {exp.description && <div className="text-xs text-slate-500 mt-0.5">{exp.description}</div>}
+                                                                     <td className="px-1 py-1 overflow-hidden">
+                                                                         <div className="font-bold text-slate-800 text-[11px] sm:text-sm truncate">{exp.location}</div>
+                                                                         {exp.description && <div className="text-[10px] text-slate-500 truncate">{exp.description}</div>}
                                                                      </td>
-                                                                     <td className="px-2 py-2 text-right">
-                                                                         <div className="font-bold text-slate-700">{exp.currency} {formatCurrency(exp.amount)}</div>
-                                                                         <div className="text-xs text-slate-400 mt-0.5">{exp.payer}</div>
+                                                                     <td className="px-1 py-1 text-right whitespace-nowrap overflow-hidden">
+                                                                         <div className="font-bold text-slate-700 text-xs sm:text-sm"><span className="text-[9px] sm:text-[10px] text-slate-400 font-normal mr-0.5">{exp.currency}</span>{formatCurrency(exp.amount)}</div>
+                                                                         <div className="text-[10px] text-slate-400 mt-px truncate">{exp.payer}</div>
                                                                      </td>
                                                                  </tr>
                                                              ))}
