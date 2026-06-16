@@ -47,6 +47,7 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
     const [editPlanId, setEditPlanId] = useState<string | null>(null);
     
     const [quickEditDate, setQuickEditDate] = useState<string | null>(null);
+    const [salaryLocFilter, setSalaryLocFilter] = useState<string>('all');
     const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
 
     const handlePointerDownDay = (dateStr: string) => {
@@ -235,34 +236,57 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
 
     // Salary Stats
     const salaryStats = useMemo(() => {
-        const map = new Map<string, { yearMonth: string, locationId: string, hours: number, amount: number }>();
-        let totalHours = 0;
-        let totalAmount = 0;
+        const pastMap = new Map<string, { yearMonth: string, locationId: string, hours: number, amount: number }>();
+        let pastTotalHours = 0;
+        let pastTotalAmount = 0;
         
+        const futureMap = new Map<string, { yearMonth: string, locationId: string, hours: number, amount: number }>();
+        let futureTotalHours = 0;
+        let futureTotalAmount = 0;
+
+        const today = new Date().toISOString().split('T')[0];
+
         currentRecords.forEach(r => {
+            if (salaryLocFilter !== 'all' && r.locationId !== salaryLocFilter) return;
+
+            const isStrictFuture = r.date > today;
             const ym = r.date.substring(0, 7);
-            const key = `${ym}_${r.locationId}`;
-            if(!map.has(key)) map.set(key, { yearMonth: ym, locationId: r.locationId, hours: 0, amount: 0 });
             
             const locInfo = locations.find(l => l.id === r.locationId);
             const hours = calculateHours(r.startTime, r.endTime, locInfo?.hasBreak);
             const rate = getWageRate(r.locationId, r.date);
             const amt = hours * rate;
             
-            const stats = map.get(key)!;
-            stats.hours += hours;
-            stats.amount += amt;
+            if (isStrictFuture) {
+                const key = `${ym}_${r.locationId}`;
+                if(!futureMap.has(key)) futureMap.set(key, { yearMonth: ym, locationId: r.locationId, hours: 0, amount: 0 });
+                const stats = futureMap.get(key)!;
+                stats.hours += hours;
+                stats.amount += amt;
 
-            totalHours += hours;
-            totalAmount += amt;
+                futureTotalHours += hours;
+                futureTotalAmount += amt;
+            } else {
+                const key = `${ym}_${r.locationId}`;
+                if(!pastMap.has(key)) pastMap.set(key, { yearMonth: ym, locationId: r.locationId, hours: 0, amount: 0 });
+                const stats = pastMap.get(key)!;
+                stats.hours += hours;
+                stats.amount += amt;
+
+                pastTotalHours += hours;
+                pastTotalAmount += amt;
+            }
         });
 
-        return {
-            items: Array.from(map.values()).sort((a, b) => b.yearMonth.localeCompare(a.yearMonth)),
-            totalHours,
-            totalAmount
+        return { 
+            pastItems: Array.from(pastMap.values()).sort((a,b) => b.yearMonth.localeCompare(a.yearMonth)), 
+            futureItems: Array.from(futureMap.values()).sort((a,b) => b.yearMonth.localeCompare(a.yearMonth)),
+            pastTotalHours, pastTotalAmount,
+            futureTotalHours, futureTotalAmount,
+            totalHours: pastTotalHours + futureTotalHours,
+            totalAmount: pastTotalAmount + futureTotalAmount,
         };
-    }, [currentRecords, wages]);
+    }, [currentRecords, locations, wages, salaryLocFilter]);
 
     // Analysis Stats
     const analysisStats = useMemo(() => {
@@ -303,6 +327,26 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
     const mainColor = getPersonColor(activePerson);
     const mainColorClass = mainColor === 'orange' ? 'bg-orange-600 text-white' : 'bg-purple-600 text-white';
     const activeBtnClass = mainColor === 'orange' ? 'bg-orange-100 border-orange-600 text-orange-800' : 'bg-purple-100 border-purple-600 text-purple-800';
+
+    const colorShades = mainColor === 'orange' ? 
+        [
+            'bg-orange-50 text-orange-900 border-orange-200',
+            'bg-orange-200 text-orange-900 border-orange-300', 
+            'bg-orange-400 text-white border-orange-500', 
+            'bg-orange-600 text-white border-orange-700',
+            'bg-orange-800 text-white border-orange-900'
+        ] : 
+        [
+            'bg-purple-50 text-purple-900 border-purple-200',
+            'bg-purple-200 text-purple-900 border-purple-300', 
+            'bg-purple-400 text-white border-purple-500', 
+            'bg-purple-600 text-white border-purple-700',
+            'bg-purple-800 text-white border-purple-900'
+        ];
+    const locColors: Record<string, string> = {};
+    currentLocs.forEach((l, i) => {
+         locColors[l.id] = colorShades[i % colorShades.length];
+    });
 
     // UI Render Helpers
     const renderPersonToggle = () => (
@@ -352,16 +396,16 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                 
                 {/* ---------- PLAN VIEW ---------- */}
                 {view === 'plan' && (
-                    <div className="p-2 md:p-4 flex-1 overflow-y-auto flex flex-col gap-2">
+                    <div className="p-2 flex-1 overflow-y-auto flex flex-col gap-1.5">
                         {renderPersonToggle()}
-                        <div className="bg-white p-2 md:p-3 rounded-xl shadow-sm border border-slate-200 flex flex-col gap-2">
+                        <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-200 flex flex-col gap-1.5">
                             <div>
-                                <div className="flex flex-wrap gap-2">
+                                <div className="flex flex-wrap gap-1.5">
                                     {activeCurrentLocs.map(l => (
                                         <button 
                                             key={l.id} 
                                             onClick={() => setPlanLocationId(l.id)}
-                                            className={`px-3 py-1.5 rounded-lg border text-sm font-bold transition-colors ${planLocationId === l.id ? activeBtnClass : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
+                                            className={`px-3 py-1 rounded-lg border text-sm font-bold transition-colors ${planLocationId === l.id ? activeBtnClass : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
                                         >
                                             {l.name}
                                         </button>
@@ -370,29 +414,29 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                                 </div>
                             </div>
                             <div>
-                                <div className="flex gap-2 mb-2">
-                                    <input type="date" className="flex-1 h-10 px-3 border rounded-lg bg-slate-50 font-mono text-sm" value={planDate} onChange={e => setPlanDate(e.target.value)} />
+                                <div className="flex gap-1.5 mb-1.5">
+                                    <input type="date" className="flex-1 h-9 px-2 border rounded-lg bg-slate-50 font-mono text-sm" value={planDate} onChange={e => setPlanDate(e.target.value)} />
                                 </div>
-                                <div className="flex gap-2 items-center">
-                                    <input type="time" step="1800" className="flex-1 h-10 px-3 border rounded-lg bg-slate-50 font-mono text-sm" required value={planStartTime} onChange={e => setPlanStartTime(e.target.value)} />
+                                <div className="flex gap-1.5 items-center">
+                                    <input type="time" step="1800" className="flex-1 h-9 px-2 border rounded-lg bg-slate-50 font-mono text-sm" required value={planStartTime} onChange={e => setPlanStartTime(e.target.value)} />
                                     <span className="text-slate-400">~</span>
-                                    <input type="time" step="1800" className="flex-1 h-10 px-3 border rounded-lg bg-slate-50 font-mono text-sm" required value={planEndTime} onChange={e => setPlanEndTime(e.target.value)} />
+                                    <input type="time" step="1800" className="flex-1 h-9 px-2 border rounded-lg bg-slate-50 font-mono text-sm" required value={planEndTime} onChange={e => setPlanEndTime(e.target.value)} />
                                 </div>
                             </div>
                             <div>
-                                <input type="text" className="w-full h-10 px-3 border rounded-lg bg-slate-50 text-sm" value={planRemarks} onChange={e => setPlanRemarks(e.target.value)} placeholder="備註說明" />
+                                <input type="text" className="w-full h-9 px-2 border rounded-lg bg-slate-50 text-sm" value={planRemarks} onChange={e => setPlanRemarks(e.target.value)} placeholder="備註說明" />
                             </div>
-                            <div className="flex gap-2 mt-2">
-                                <button onClick={() => {setPlanDate(''); setPlanStartTime(''); setPlanEndTime(''); setPlanRemarks(''); setEditPlanId(null);}} className="flex-1 h-10 rounded-lg border border-slate-300 font-bold text-slate-600">取消</button>
-                                <button onClick={handleSavePlan} disabled={!planLocationId || !planDate || !planStartTime || !planEndTime} className={`flex-1 h-10 rounded-lg font-bold text-white transition-opacity ${!planLocationId || !planDate || !planStartTime || !planEndTime ? 'opacity-50' : ''} ${mainColorClass}`}>{editPlanId ? '更新' : '存檔'}</button>
+                            <div className="flex gap-1.5 mt-1">
+                                <button onClick={() => {setPlanDate(''); setPlanStartTime(''); setPlanEndTime(''); setPlanRemarks(''); setEditPlanId(null);}} className="flex-1 h-9 rounded-lg border border-slate-300 font-bold text-slate-600">取消</button>
+                                <button onClick={handleSavePlan} disabled={!planLocationId || !planDate || !planStartTime || !planEndTime} className={`flex-1 h-9 rounded-lg font-bold text-white transition-opacity ${!planLocationId || !planDate || !planStartTime || !planEndTime ? 'opacity-50' : ''} ${mainColorClass}`}>{editPlanId ? '更新' : '存檔'}</button>
                             </div>
                         </div>
 
-                        <div className="mt-2">
-                            <h3 className="font-bold text-slate-700 mb-3 flex items-center gap-2"><div className={`w-1.5 h-4 rounded-full bg-${mainColor}-500`}></div>即將到來的排班</h3>
-                            <div className="flex flex-col gap-2">
+                        <div className="mt-1">
+                            <h3 className="font-bold text-slate-700 mb-2 flex items-center gap-2"><div className={`w-1.5 h-4 rounded-full bg-${mainColor}-500`}></div>即將到來的排班</h3>
+                            <div className="flex flex-col gap-1.5">
                                 {upcomingRecords.map(r => (
-                                    <div key={r.id} className="bg-white p-2 rounded-lg border border-slate-100 flex justify-between items-center shadow-sm text-sm overflow-hidden">
+                                    <div key={r.id} className="bg-white p-1.5 rounded-lg border border-slate-100 flex justify-between items-center shadow-sm text-sm overflow-hidden">
                                         <div className="flex items-center gap-2 flex-1 overflow-hidden whitespace-nowrap">
                                             <span className="font-mono text-slate-800 font-bold shrink-0">{r.date}</span>
                                             <span className={`text-[10px] px-1.5 py-0.5 rounded bg-${mainColor}-100 text-${mainColor}-700 font-bold shrink-0`}>{currentLocs.find(l=>l.id===r.locationId)?.name || '未知'}</span>
@@ -488,26 +532,7 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                     const handleNextMonth = () => setCurrentDate(new Date(year, month, 1));
                     const handleCurrentMonth = () => setCurrentDate(new Date());
 
-                    // Map locations to shades based on standard color array
-                    const colorShades = mainColor === 'orange' ? 
-                        [
-                            'bg-orange-50 text-orange-900 border-orange-200',
-                            'bg-orange-200 text-orange-900 border-orange-300', 
-                            'bg-orange-400 text-white border-orange-500', 
-                            'bg-orange-600 text-white border-orange-700',
-                            'bg-orange-800 text-white border-orange-900'
-                        ] : 
-                        [
-                            'bg-purple-50 text-purple-900 border-purple-200',
-                            'bg-purple-200 text-purple-900 border-purple-300', 
-                            'bg-purple-400 text-white border-purple-500', 
-                            'bg-purple-600 text-white border-purple-700',
-                            'bg-purple-800 text-white border-purple-900'
-                        ];
-                    const locColors: Record<string, string> = {};
-                    currentLocs.forEach((l, i) => {
-                         locColors[l.id] = colorShades[i % colorShades.length];
-                    });
+
 
                     return (
                         <div className="p-2 md:p-4 flex-1 flex flex-col gap-2 overflow-hidden">
@@ -568,55 +593,92 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
 
                 {/* ---------- SALARY VIEW ---------- */}
                 {view === 'salary' && (
-                    <div className="p-4 flex-1 overflow-y-auto flex flex-col gap-4">
+                    <div className="p-2 flex-1 overflow-y-auto flex flex-col gap-2 relative">
                         {renderPersonToggle()}
-                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                            <div className="p-3 bg-slate-50 border-b flex justify-between items-center">
-                                <h3 className="font-bold text-slate-700 text-sm">本月薪資統計</h3>
-                                <button onClick={() => setView('analysis')} className={`bg-${mainColor}-600 text-white px-2 py-1 rounded text-xs font-bold flex items-center gap-1`}><BarChart2 size={14}/>分析</button>
+                        <div className="bg-white rounded-xl shadow-sm border-2 border-slate-200 overflow-hidden flex-1 flex flex-col">
+                            <div className="p-2 bg-slate-50 border-b flex flex-wrap gap-1.5 items-center">
+                                <button
+                                    onClick={() => setSalaryLocFilter('all')}
+                                    className={`px-3 py-1 rounded-lg border text-sm font-bold transition-colors ${salaryLocFilter === 'all' ? activeBtnClass : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
+                                >
+                                    全部
+                                </button>
+                                {activeCurrentLocs.map(l => (
+                                    <button 
+                                        key={l.id} 
+                                        onClick={() => setSalaryLocFilter(l.id)}
+                                        className={`px-3 py-1 rounded-lg border text-sm font-bold transition-colors ${salaryLocFilter === l.id ? activeBtnClass : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
+                                    >
+                                        {l.name}
+                                    </button>
+                                ))}
                             </div>
-                            <table className="w-full text-sm text-left">
-                                <thead className="bg-slate-100 text-slate-500">
-                                    <tr>
-                                        <th className="p-2 font-bold whitespace-nowrap">年月</th>
-                                        <th className="p-2 font-bold whitespace-nowrap">工作地點</th>
-                                        <th className="p-2 font-bold text-right whitespace-nowrap">時數</th>
-                                        <th className="p-2 font-bold text-right whitespace-nowrap">金額</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100">
-                                    {salaryStats.items.map((cat, idx) => (
-                                        <tr key={idx} className="hover:bg-slate-50">
-                                            <td className="p-2 font-mono text-xs">{cat.yearMonth}</td>
-                                            <td className="p-2 font-bold text-slate-700 truncate max-w-[80px]">{currentLocs.find(l=>l.id===cat.locationId)?.name || '未知'}</td>
-                                            <td className="p-2 text-right font-mono">{cat.hours.toFixed(1)}</td>
-                                            <td className="p-2 text-right font-bold text-emerald-600 font-mono">${Math.round(cat.amount).toLocaleString()}</td>
-                                        </tr>
-                                    ))}
-                                    {salaryStats.items.length === 0 && <tr><td colSpan={4} className="p-4 text-center text-slate-400">目前無計算資料</td></tr>}
-                                </tbody>
-                                {salaryStats.items.length > 0 && (
-                                    <tfoot className="bg-blue-50 border-t border-blue-100">
+                            <div className="flex-1 overflow-y-auto">
+                                <table className="w-full text-sm text-left">
+                                    <thead className="bg-slate-100 text-slate-500 sticky top-0">
                                         <tr>
-                                            <td colSpan={2} className="p-3 font-bold text-blue-900 text-right">合計</td>
-                                            <td className="p-3 text-right font-mono font-bold text-blue-900">{salaryStats.totalHours.toFixed(1)}</td>
-                                            <td className="p-3 text-right font-mono font-bold text-emerald-700">${Math.round(salaryStats.totalAmount).toLocaleString()}</td>
+                                            <th className="p-2 font-bold whitespace-nowrap w-20">年月</th>
+                                            <th className="p-2 font-bold whitespace-nowrap">工作地點</th>
+                                            <th className="p-2 font-bold text-right whitespace-nowrap">時數</th>
+                                            <th className="p-2 font-bold text-right whitespace-nowrap">金額</th>
                                         </tr>
-                                    </tfoot>
-                                )}
-                            </table>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {salaryStats.futureItems.map((fi, idx) => {
+                                            const bClass = locColors[fi.locationId] || `bg-${mainColor}-100 text-${mainColor}-900`;
+                                            return (
+                                            <tr key={`f-${idx}`} className="hover:bg-red-50/80 bg-red-50/50 text-red-500">
+                                                <td className="p-2 font-mono text-xs text-red-400">{fi.yearMonth}</td>
+                                                <td className="p-2">
+                                                    <span className={`px-2 py-0.5 rounded text-xs font-bold leading-none inline-block ${bClass} opacity-80`}>
+                                                        {currentLocs.find(l=>l.id===fi.locationId)?.name || '未知'}
+                                                    </span>
+                                                </td>
+                                                <td className="p-2 text-right font-mono text-red-400">(預){fi.hours.toFixed(1)}</td>
+                                                <td className="p-2 text-right font-bold text-red-400 font-mono">(預)${Math.round(fi.amount).toLocaleString()}</td>
+                                            </tr>
+                                        )})}
+
+                                        {salaryStats.pastItems.map((cat, idx) => {
+                                            const bClass = locColors[cat.locationId] || `bg-${mainColor}-100 text-${mainColor}-900`;
+                                            return (
+                                            <tr key={`p-${idx}`} className="hover:bg-slate-50">
+                                                <td className="p-2 font-mono text-xs">{cat.yearMonth}</td>
+                                                <td className="p-2">
+                                                    <span className={`px-2 py-0.5 rounded text-xs font-bold leading-none inline-block ${bClass}`}>
+                                                        {currentLocs.find(l=>l.id===cat.locationId)?.name || '未知'}
+                                                    </span>
+                                                </td>
+                                                <td className="p-2 text-right font-mono">{cat.hours.toFixed(1)}</td>
+                                                <td className="p-2 text-right font-bold text-emerald-600 font-mono">${Math.round(cat.amount).toLocaleString()}</td>
+                                            </tr>
+                                        )})}
+                                        
+                                        {salaryStats.pastItems.length === 0 && salaryStats.futureItems.length === 0 && <tr><td colSpan={4} className="p-4 text-center text-slate-400">目前無計算資料</td></tr>}
+                                    </tbody>
+                                    {(salaryStats.pastItems.length > 0 || salaryStats.futureItems.length > 0) && (
+                                        <tfoot className="bg-blue-50 border-t border-blue-100 sticky bottom-0 z-10 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
+                                            <tr>
+                                                <td colSpan={2} className="p-3 font-bold text-blue-900 text-right">合計</td>
+                                                <td className="p-3 text-right font-mono font-bold text-blue-900">{salaryStats.totalHours.toFixed(1)}</td>
+                                                <td className="p-3 text-right font-mono font-bold text-emerald-700">${Math.round(salaryStats.totalAmount).toLocaleString()}</td>
+                                            </tr>
+                                        </tfoot>
+                                    )}
+                                </table>
+                            </div>
                         </div>
                     </div>
                 )}
 
                 {/* ---------- ANALYSIS VIEW ---------- */}
                 {view === 'analysis' && (
-                    <div className="p-4 flex-1 overflow-y-auto flex flex-col gap-6">
-                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 shrink-0 flex flex-col">
-                            <h3 className="font-bold text-slate-700 text-sm mb-4 flex items-center gap-2">
+                    <div className="p-2 flex-1 overflow-y-auto flex flex-col gap-2">
+                        <div className="bg-white rounded-xl shadow-sm border-2 border-slate-200 p-2 shrink-0 flex flex-col">
+                            <h3 className="font-bold text-slate-700 text-sm mb-2 flex items-center gap-2">
                                 <BarChart2 size={16} className="text-emerald-500" /> 每月薪資分析
                             </h3>
-                            <div className="h-64">
+                            <div className="h-48 md:h-64">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <BarChart layout="vertical" data={analysisStats.ymData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
                                         <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E2E8F0" />
@@ -624,27 +686,27 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                                         <YAxis type="category" dataKey="yearMonth" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} width={60} />
                                         <Tooltip cursor={{ fill: '#F1F5F9' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} />
                                         <Legend />
-                                        <Bar dataKey="禹君" name="禹君" fill="#ea580c" radius={[0, 4, 4, 0]} />
-                                        <Bar dataKey="禹辰" name="禹辰" fill="#9333ea" radius={[0, 4, 4, 0]} />
+                                        <Bar dataKey="禹君" name="禹君" fill="#fdba74" radius={[0, 4, 4, 0]} />
+                                        <Bar dataKey="禹辰" name="禹辰" fill="#d8b4fe" radius={[0, 4, 4, 0]} />
                                     </BarChart>
                                 </ResponsiveContainer>
                             </div>
                             
-                            <div className="mt-4 border border-slate-100 rounded-lg overflow-hidden">
+                            <div className="mt-2 border-2 border-slate-100 rounded-lg overflow-hidden">
                                 <table className="w-full text-sm text-left">
                                     <thead className="bg-slate-50 text-slate-500 border-b border-slate-100">
                                         <tr>
-                                            <th className="p-3 font-bold whitespace-nowrap">年月</th>
-                                            <th className="p-3 font-bold text-right whitespace-nowrap">禹君</th>
-                                            <th className="p-3 font-bold text-right whitespace-nowrap">禹辰</th>
+                                            <th className="p-2 font-bold whitespace-nowrap">年月</th>
+                                            <th className="p-2 font-bold text-right whitespace-nowrap text-orange-400">禹君</th>
+                                            <th className="p-2 font-bold text-right whitespace-nowrap text-purple-400">禹辰</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
                                         {analysisStats.ymData.map((d, i) => (
                                             <tr key={i} className="hover:bg-slate-50">
-                                                <td className="p-3 text-slate-700">{d.yearMonth}</td>
-                                                <td className="p-3 text-right font-mono text-orange-600 font-bold">${Math.round(d['禹君']).toLocaleString()}</td>
-                                                <td className="p-3 text-right font-mono text-purple-600 font-bold">${Math.round(d['禹辰']).toLocaleString()}</td>
+                                                <td className="p-2 text-slate-700 font-mono text-xs">{d.yearMonth}</td>
+                                                <td className="p-2 text-right font-mono text-orange-400 font-bold">${Math.round(d['禹君']).toLocaleString()}</td>
+                                                <td className="p-2 text-right font-mono text-purple-400 font-bold">${Math.round(d['禹辰']).toLocaleString()}</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -652,39 +714,39 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                             </div>
                         </div>
 
-                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 shrink-0 flex flex-col">
-                            <h3 className="font-bold text-slate-700 text-sm mb-4 flex items-center gap-2">
+                        <div className="bg-white rounded-xl shadow-sm border-2 border-slate-200 p-2 shrink-0 flex flex-col">
+                            <h3 className="font-bold text-slate-700 text-sm mb-2 flex items-center gap-2">
                                 <BarChart2 size={16} className="text-emerald-500" /> 地點薪資分析
                             </h3>
-                            <div className="h-64">
+                            <div className="h-48 md:h-64">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <BarChart layout="vertical" data={analysisStats.locData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
                                         <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E2E8F0" />
                                         <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
-                                        <YAxis type="category" dataKey="locationName" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} width={60} />
+                                        <YAxis type="category" dataKey="locationName" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748B' }} width={70} />
                                         <Tooltip cursor={{ fill: '#F1F5F9' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} />
                                         <Legend />
-                                        <Bar dataKey="禹君" name="禹君" fill="#ea580c" radius={[0, 4, 4, 0]} />
-                                        <Bar dataKey="禹辰" name="禹辰" fill="#9333ea" radius={[0, 4, 4, 0]} />
+                                        <Bar dataKey="禹君" name="禹君" fill="#fdba74" radius={[0, 4, 4, 0]} />
+                                        <Bar dataKey="禹辰" name="禹辰" fill="#d8b4fe" radius={[0, 4, 4, 0]} />
                                     </BarChart>
                                 </ResponsiveContainer>
                             </div>
                             
-                            <div className="mt-4 border border-slate-100 rounded-lg overflow-hidden">
+                            <div className="mt-2 border-2 border-slate-100 rounded-lg overflow-hidden">
                                 <table className="w-full text-sm text-left">
                                     <thead className="bg-slate-50 text-slate-500 border-b border-slate-100">
                                         <tr>
-                                            <th className="p-3 font-bold whitespace-nowrap">地點</th>
-                                            <th className="p-3 font-bold text-right whitespace-nowrap">禹君</th>
-                                            <th className="p-3 font-bold text-right whitespace-nowrap">禹辰</th>
+                                            <th className="p-2 font-bold whitespace-nowrap">地點</th>
+                                            <th className="p-2 font-bold text-right whitespace-nowrap text-orange-400">禹君</th>
+                                            <th className="p-2 font-bold text-right whitespace-nowrap text-purple-400">禹辰</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
                                         {analysisStats.locData.map((d, i) => (
                                             <tr key={i} className="hover:bg-slate-50">
-                                                <td className="p-3 text-slate-700">{d.locationName}</td>
-                                                <td className="p-3 text-right font-mono text-orange-600 font-bold">${Math.round(d['禹君']).toLocaleString()}</td>
-                                                <td className="p-3 text-right font-mono text-purple-600 font-bold">${Math.round(d['禹辰']).toLocaleString()}</td>
+                                                <td className="p-2 text-slate-700 text-xs truncate max-w-[80px]">{d.locationName}</td>
+                                                <td className="p-2 text-right font-mono text-orange-400 font-bold">${Math.round(d['禹君']).toLocaleString()}</td>
+                                                <td className="p-2 text-right font-mono text-purple-400 font-bold">${Math.round(d['禹辰']).toLocaleString()}</td>
                                             </tr>
                                         ))}
                                     </tbody>
