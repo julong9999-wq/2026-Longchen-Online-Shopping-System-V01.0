@@ -48,6 +48,7 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
     
     const [quickEditDate, setQuickEditDate] = useState<string | null>(null);
     const [salaryLocFilter, setSalaryLocFilter] = useState<string>('all');
+    const [analysisYear, setAnalysisYear] = useState<string>(new Date().getFullYear().toString());
     const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
@@ -683,16 +684,30 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                 )}
 
                 {/* ---------- ANALYSIS VIEW ---------- */}
-                {view === 'analysis' && (
+                {view === 'analysis' && (() => {
+                    const availableYears = Array.from(new Set(analysisStats.ymData.map(d => d.yearMonth.substring(0, 4)))).sort((a,b)=>b.localeCompare(a));
+                    const currentAnalysisYear = availableYears.includes(analysisYear) ? analysisYear : (availableYears[0] || new Date().getFullYear().toString());
+                    const filteredYmData = analysisStats.ymData.filter(d => d.yearMonth.startsWith(currentAnalysisYear));
+
+                    return (
                     <div className="p-2 flex-1 overflow-y-auto flex flex-col gap-2">
                         <div className="bg-white rounded-xl shadow-sm border-2 border-slate-200 p-2 shrink-0 flex flex-col">
-                            <h3 className="font-bold text-slate-700 text-sm mb-2 flex items-center gap-2">
-                                <BarChart2 size={16} className="text-emerald-500" /> 每月薪資分析
-                            </h3>
+                            <div className="flex justify-between items-center mb-2">
+                                <h3 className="font-bold text-slate-700 text-sm flex items-center gap-2">
+                                    <BarChart2 size={16} className="text-emerald-500" /> 每月薪資分析
+                                </h3>
+                                <select
+                                    value={currentAnalysisYear}
+                                    onChange={(e) => setAnalysisYear(e.target.value)}
+                                    className="bg-slate-50 border border-slate-200 rounded px-2 py-1 text-xs font-bold text-slate-700 outline-none"
+                                >
+                                    {availableYears.map(y => <option key={y} value={y}>{y}年</option>)}
+                                </select>
+                            </div>
                             <div className="w-full overflow-y-auto max-h-96">
-                                <div style={{ height: Math.max(200, analysisStats.ymData.length * 45) }}>
+                                <div style={{ height: Math.max(200, filteredYmData.length * 45) }}>
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart layout="vertical" data={analysisStats.ymData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }} barCategoryGap={8}>
+                                        <BarChart layout="vertical" data={filteredYmData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }} barCategoryGap={8}>
                                             <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E2E8F0" />
                                             <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
                                             <YAxis type="category" dataKey="yearMonth" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} width={60} interval={0} />
@@ -715,7 +730,7 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
-                                        {analysisStats.ymData.map((d, i) => (
+                                        {filteredYmData.map((d, i) => (
                                             <tr key={i} className="hover:bg-slate-50">
                                                 <td className="p-2 text-slate-700 font-mono text-xs">{d.yearMonth}</td>
                                                 <td className="p-2 text-right font-mono text-orange-400 font-bold">${Math.round(d['禹君']).toLocaleString()}</td>
@@ -769,7 +784,8 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                             </div>
                         </div>
                     </div>
-                )}
+                    );
+                })()}
             </div>
 
             {/* Quick Edit Modal */}
