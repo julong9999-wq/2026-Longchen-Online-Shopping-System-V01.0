@@ -572,7 +572,15 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
                      return acc;
                  }, {} as Record<string, number>)).sort((a,b)=>b[1]-a[1]).map(([name, value]) => ({name, value}));
 
-                 const colors = ['#f97316', '#3b82f6', '#10b981', '#f43f5e', '#ec4899', '#6366f1'];
+                 const categoryColors: Record<string, string> = {
+                     '餐飲': '#fbbf24',
+                     '住宿': '#60a5fa',
+                     '交通': '#34d399',
+                     '門票': '#fb7185',
+                     '購物': '#a78bfa',
+                     '其他': '#94a3b8'
+                 };
+                 const getCatColor = (catName: string, idx: number) => categoryColors[catName] || ['#eab308', '#06b6d4', '#ec4899', '#8b5cf6'][idx % 4];
 
                  return (
                  <div className="flex flex-col h-full bg-slate-50 p-2">
@@ -618,8 +626,8 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
                                          <ResponsiveContainer width="100%" height="100%">
                                              <PieChart>
                                                  <Pie data={catData} cx="50%" cy="50%" innerRadius={40} outerRadius={70} dataKey="value" stroke="none">
-                                                     {catData.map((_, index) => (
-                                                         <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                                                     {catData.map((d, index) => (
+                                                         <Cell key={`cell-${index}`} fill={getCatColor(d.name, index)} />
                                                      ))}
                                                  </Pie>
                                                  <Tooltip formatter={(value) => formatCurrency(value as number)} />
@@ -631,7 +639,7 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
                                              <thead className="bg-slate-50 text-slate-500 border-b border-slate-100"><tr><th className="p-1.5 px-2 font-bold">分類</th><th className="p-1.5 px-2 text-right font-bold">金額</th></tr></thead>
                                              <tbody className="divide-y divide-slate-100">
                                                  {catData.map((d, idx) => (
-                                                     <tr key={d.name} className="hover:bg-slate-50"><td className="p-1 px-2 text-slate-600"><span className="inline-block w-2.5 h-2.5 rounded-full mr-2" style={{backgroundColor: colors[idx % colors.length]}}></span>{d.name}</td><td className="p-1 px-2 text-right font-bold text-slate-800">{formatCurrency(d.value)}</td></tr>
+                                                     <tr key={d.name} className="hover:bg-slate-50"><td className="p-1 px-2 text-slate-600"><span className="inline-block w-2.5 h-2.5 rounded-full mr-2" style={{backgroundColor: getCatColor(d.name, idx)}}></span>{d.name}</td><td className="p-1 px-2 text-right font-bold text-slate-800">{formatCurrency(d.value)}</td></tr>
                                                  ))}
                                              </tbody>
                                          </table>
