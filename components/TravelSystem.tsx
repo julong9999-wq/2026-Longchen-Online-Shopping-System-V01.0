@@ -275,37 +275,30 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
              {view === 'record' && (
                  <div className="flex flex-col h-full bg-slate-50">
                     {/* Top Area: Slogan Selector */}
-                    <div className="bg-purple-600 text-white p-2 shadow shrink-0 flex items-center gap-2 overflow-x-auto overflow-y-hidden hide-scrollbar whitespace-nowrap">
-                        {trips.length === 0 && <div className="text-sm px-2 font-bold">無標語，請新增</div>}
-                        {trips.map(t => (
-                            <button
-                                key={t.id}
-                                onClick={() => setActiveTripId(t.id)}
-                                className={`px-3 py-1.5 rounded-full text-sm font-bold transition-colors shrink-0 ${activeTripId === t.id ? 'bg-white text-purple-700 shadow-sm' : 'bg-purple-700 text-white hover:bg-purple-500 border border-purple-500'}`}
-                            >
-                                {t.location} {t.remarks}
-                            </button>
-                        ))}
+                    <div className="bg-purple-600 text-white p-3 shadow shrink-0 flex items-center gap-2">
+                        <select 
+                           value={activeTripId} 
+                           onChange={(e) => setActiveTripId(e.target.value)}
+                           className="flex-1 min-w-0 bg-purple-700 border border-purple-500 rounded-lg px-2 py-2 text-sm font-bold shadow-sm outline-none cursor-pointer appearance-none truncate"
+                        >
+                           {trips.length === 0 && <option value="">無標語，請新增</option>}
+                           {trips.map(t => (
+                               <option key={t.id} value={t.id}>{t.location} {t.remarks}</option>
+                           ))}
+                        </select>
                         <button 
                             onClick={() => {
-                                setTripForm({ startDate: new Date().toISOString().split('T')[0], days: 1 });
+                                if (activeTrip) {
+                                    setTripForm(activeTrip);
+                                } else {
+                                    setTripForm({ startDate: new Date().toISOString().split('T')[0], days: 1 });
+                                }
                                 setShowTripModal(true);
                             }} 
                             className="w-8 h-8 shrink-0 flex items-center justify-center bg-purple-500 hover:bg-purple-400 rounded-full transition-colors shadow-sm ml-1"
                         >
-                            <Plus size={18} />
+                            <Edit size={16} />
                         </button>
-                        {activeTrip && (
-                            <button 
-                                onClick={() => {
-                                    setTripForm(activeTrip);
-                                    setShowTripModal(true);
-                                }} 
-                                className="w-8 h-8 shrink-0 flex items-center justify-center bg-purple-500 hover:bg-purple-400 rounded-full transition-colors shadow-sm ml-1"
-                            >
-                                <Edit size={16} />
-                            </button>
-                        )}
                     </div>
 
                     {/* Secondary Area: Totals */}
@@ -439,8 +432,11 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
                                                  onClick={() => setExpandedDetails(prev => ({...prev, [trip.id!]: !prev[trip.id!]}))}
                                              >
                                                  <div className="flex-1 min-w-0">
-                                                     <h3 className="font-bold text-slate-800 text-base md:text-lg truncate">{trip.location} {trip.remarks && <span className="text-slate-500 text-sm md:text-base font-normal ml-1">{trip.remarks}</span>}</h3>
-                                                     <div className="text-[10px] sm:text-xs text-slate-500 mt-0.5">{trip.startDate} ({trip.days}天)</div>
+                                                     <h3 className="font-bold text-slate-800 text-base md:text-lg truncate">
+                                                         {trip.location}
+                                                         <span className="text-[10px] sm:text-xs text-slate-500 font-normal ml-2">{trip.startDate} ({trip.days}天)</span>
+                                                     </h3>
+                                                     {trip.remarks && <div className="text-[11px] sm:text-sm text-slate-500 mt-0.5 truncate">{trip.remarks}</div>}
                                                  </div>
                                                  <div className="flex items-center gap-2 sm:gap-4 shrink-0">
                                                      <div className="text-right">
@@ -503,8 +499,8 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
                                                  onClick={() => setExpandedDetails(prev => ({...prev, orphan: !prev.orphan}))}
                                              >
                                                  <div className="flex-1 min-w-0">
-                                                     <h3 className="font-bold text-slate-800 text-base md:text-lg">未知標語</h3>
-                                                     <div className="text-[10px] sm:text-xs text-slate-500 mt-0.5">已刪除的旅遊或異常資料</div>
+                                                     <h3 className="font-bold text-slate-800 text-base md:text-lg truncate">未知標語</h3>
+                                                     <div className="text-[11px] sm:text-sm text-slate-500 mt-0.5 truncate">已刪除的旅遊或異常資料</div>
                                                  </div>
                                                  <div className="flex items-center gap-2 sm:gap-4 shrink-0">
                                                      <div className="text-right">
