@@ -79,6 +79,7 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
   const [deleteTripConfirm, setDeleteTripConfirm] = useState<string | null>(null);
   const [expandedDetails, setExpandedDetails] = useState<Record<string, boolean>>({});
   const [isSavingExp, setIsSavingExp] = useState(false);
+  const [analysisYear, setAnalysisYear] = useState<string>(new Date().getFullYear().toString());
 
   // Firestore Subscriptions
   useEffect(() => {
@@ -561,9 +562,14 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
                      return acc;
                  }, {} as Record<string, number>)).sort((a,b)=>b[1]-a[1]).map(([name, value]) => ({name, value}));
 
-                 const ymData = Object.entries(expenses.reduce((acc, exp) => {
-                     const ym = exp.date.substring(0, 7);
-                     acc[ym] = (acc[ym] || 0) + exp.amount;
+                 const availableYears = Array.from(new Set(expenses.map(exp => exp.date.substring(0, 4)))).sort((a,b)=>b.localeCompare(a));
+                 const currentAnalysisYear = availableYears.includes(analysisYear) ? analysisYear : (availableYears[0] || new Date().getFullYear().toString());
+
+                 const filteredYmExpenses = expenses.filter(exp => exp.date.startsWith(currentAnalysisYear));
+
+                 const ymData = Object.entries(filteredYmExpenses.reduce((acc, exp) => {
+                     const m = exp.date.substring(5, 7) + '月';
+                     acc[m] = (acc[m] || 0) + exp.amount;
                      return acc;
                  }, {} as Record<string, number>)).sort((a,b)=>a[0].localeCompare(b[0])).map(([name, value]) => ({name, value}));
                  
@@ -592,22 +598,31 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
                              <div className="flex flex-col gap-3 pb-6">
                                  {/* 年月金額 Table & Bar Chart */}
                                  <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-200">
-                                     <h3 className="font-bold text-slate-700 mb-2 flex items-center gap-2">
-                                         <BarChartIcon size={16} className="text-purple-600" /> 年月金額
-                                     </h3>
+                                     <div className="flex justify-between items-center mb-2">
+                                         <h3 className="font-bold text-slate-700 flex items-center gap-2">
+                                             <BarChartIcon size={16} className="text-purple-400" /> 年月金額
+                                         </h3>
+                                         <select
+                                             value={currentAnalysisYear}
+                                             onChange={(e) => setAnalysisYear(e.target.value)}
+                                             className="bg-slate-50 border border-slate-200 rounded px-2 py-1 text-xs font-bold text-slate-700 outline-none"
+                                         >
+                                             {availableYears.map(y => <option key={y} value={y}>{y}年</option>)}
+                                         </select>
+                                     </div>
                                      <div className="h-40 mb-2 border border-slate-100 rounded bg-slate-50 p-1">
                                          <ResponsiveContainer width="100%" height="100%">
-                                             <BarChart data={ymData}>
-                                                 <XAxis dataKey="name" fontSize={10} tickMargin={5} />
-                                                 <YAxis fontSize={10} width={40} />
+                                             <BarChart data={ymData} layout="vertical">
+                                                 <XAxis type="number" fontSize={10} />
+                                                 <YAxis dataKey="name" type="category" fontSize={10} width={40} />
                                                  <Tooltip formatter={(value) => formatCurrency(value as number)} />
-                                                 <Bar dataKey="value" fill="#8b5cf6" radius={[4,4,0,0]} />
+                                                 <Bar dataKey="value" fill="#c084fc" radius={[0,4,4,0]} />
                                              </BarChart>
                                          </ResponsiveContainer>
                                      </div>
                                      <div className="border border-slate-100 rounded overflow-hidden">
                                          <table className="w-full text-sm text-left">
-                                             <thead className="bg-slate-50 text-slate-500 border-b border-slate-100"><tr><th className="p-1.5 px-2 font-bold">年月</th><th className="p-1.5 px-2 text-right font-bold">金額</th></tr></thead>
+                                             <thead className="bg-slate-50 text-slate-500 border-b border-slate-100"><tr><th className="p-1.5 px-2 font-bold">月份</th><th className="p-1.5 px-2 text-right font-bold">金額</th></tr></thead>
                                              <tbody className="divide-y divide-slate-100">
                                                  {ymData.map((d) => (
                                                      <tr key={d.name} className="hover:bg-slate-50"><td className="p-1 px-2 text-slate-600 font-mono">{d.name}</td><td className="p-1 px-2 text-right font-bold text-slate-800">{formatCurrency(d.value)}</td></tr>
@@ -649,7 +664,7 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
                                  {/* 付款人金額 Table & Bar Chart */}
                                  <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-200">
                                      <h3 className="font-bold text-slate-700 mb-2 flex items-center gap-2">
-                                         <BarChartIcon size={16} className="text-emerald-500" /> 付款人金額
+                                         <BarChartIcon size={16} className="text-purple-400" /> 付款人金額
                                      </h3>
                                       <div className="h-40 mb-2 border border-slate-100 rounded bg-slate-50 p-1">
                                          <ResponsiveContainer width="100%" height="100%">
@@ -657,7 +672,7 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
                                                  <XAxis type="number" fontSize={10} />
                                                  <YAxis dataKey="name" type="category" fontSize={10} width={40} />
                                                  <Tooltip formatter={(value) => formatCurrency(value as number)} />
-                                                 <Bar dataKey="value" fill="#10b981" radius={[0,4,4,0]} />
+                                                 <Bar dataKey="value" fill="#c084fc" radius={[0,4,4,0]} />
                                              </BarChart>
                                          </ResponsiveContainer>
                                      </div>
