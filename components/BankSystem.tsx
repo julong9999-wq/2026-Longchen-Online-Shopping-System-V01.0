@@ -211,7 +211,7 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
                     <div key={item.id} className="bg-white border border-slate-200 rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow">
                        <div className="flex justify-between items-center mb-1">
                          <div className="flex items-center gap-2">
-                           <span className="font-mono text-xs text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{item.date.substring(5)}</span>
+                           <span className="font-mono text-xs text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{item.date}</span>
                            <span className="font-bold text-slate-800 text-[15px]">{item.category}</span>
                          </div>
                          <span className={`font-mono font-bold ${valueColor}`}>{formatCurrency(item.amount)}</span>

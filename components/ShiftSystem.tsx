@@ -448,16 +448,20 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                             <h3 className="font-bold text-slate-700 mb-2 flex items-center gap-2"><div className={`w-1.5 h-4 rounded-full bg-${mainColor}-500`}></div>即將到來的排班</h3>
                             <div className="flex flex-col gap-1.5">
                                 {upcomingRecords.map(r => (
-                                    <div key={r.id} className="bg-white p-1.5 rounded-lg border border-slate-100 flex justify-between items-center shadow-sm text-sm overflow-hidden">
-                                        <div className="flex items-center gap-2 flex-1 overflow-hidden whitespace-nowrap">
+                                    <div key={r.id} className="bg-white p-1 rounded-lg border border-slate-100 flex justify-between items-center shadow-sm text-xs overflow-hidden">
+                                        <div className="flex items-center gap-1.5 flex-1 overflow-hidden whitespace-nowrap">
                                             <span className="font-mono text-slate-800 font-bold shrink-0">{r.date}</span>
-                                            <span className={`text-[10px] px-1.5 py-0.5 rounded bg-${mainColor}-100 text-${mainColor}-700 font-bold shrink-0`}>{currentLocs.find(l=>l.id===r.locationId)?.name || '未知'}</span>
-                                            <span className="font-mono font-bold text-slate-600 shrink-0">{r.startTime}-{r.endTime}</span>
-                                            {r.remarks && <span className="text-slate-400 text-xs truncate ml-1">{r.remarks}</span>}
+                                            <span className={`text-[9px] px-1.5 py-0.5 rounded bg-${mainColor}-100 text-${mainColor}-700 font-bold shrink-0`}>{currentLocs.find(l=>l.id===r.locationId)?.name || '未知'}</span>
+                                            {(() => {
+                                                const locInfo = currentLocs.find(l => l.id === r.locationId);
+                                                const hrs = calculateHours(r.startTime, r.endTime, locInfo?.hasBreak);
+                                                return <span className="font-mono font-bold text-slate-600 shrink-0">{r.startTime}-{r.endTime} ({Number(hrs.toFixed(2))}H)</span>;
+                                            })()}
+                                            {r.remarks && <span className="text-slate-400 text-[10px] truncate ml-1">{r.remarks}</span>}
                                         </div>
-                                        <div className="flex gap-1 shrink-0 ml-2">
-                                            <button onClick={() => handleEditRecord(r)} className="text-blue-400 hover:text-blue-600 p-1"><Edit size={16}/></button>
-                                            <button onClick={() => handleDeleteRecord(r.id)} className="text-rose-400 hover:text-rose-600 p-1"><Trash2 size={16}/></button>
+                                        <div className="flex gap-0.5 shrink-0 ml-1.5">
+                                            <button onClick={() => handleEditRecord(r)} className="text-blue-400 hover:text-blue-600 p-0.5"><Edit size={14}/></button>
+                                            <button onClick={() => handleDeleteRecord(r.id)} className="text-rose-400 hover:text-rose-600 p-0.5"><Trash2 size={14}/></button>
                                         </div>
                                     </div>
                                 ))}
