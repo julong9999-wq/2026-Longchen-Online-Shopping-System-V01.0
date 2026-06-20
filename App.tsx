@@ -8,7 +8,7 @@ import TravelSystem from './components/TravelSystem';
 import PurchasingSystem from './components/PurchasingSystem';
 import EcommerceAnalysisSystem from './components/EcommerceAnalysisSystem';
 import ShiftSystem from './components/ShiftSystem';
-import { Trash2, Edit, Plus, Package, ShoppingCart, List, BarChart2, ChevronRight, ChevronDown, User, Box, X, Calculator, Download, Save, Wallet, ArrowUpCircle, ArrowDownCircle, Grid, PieChart, Map as MapIcon, Check, Database, Upload, AlertTriangle, Home, Calendar } from 'lucide-react';
+import { Trash2, Edit, Plus, Package, ShoppingCart, List, BarChart2, ChevronRight, ChevronDown, User, Box, X, Calculator, Download, Save, Wallet, ArrowUpCircle, ArrowDownCircle, Grid, PieChart, Map as MapIcon, Check, Database, Upload, AlertTriangle, Home, Calendar, TrendingUp } from 'lucide-react';
 import { db } from './firebase';
 import { 
   collection, 
@@ -110,7 +110,7 @@ const IncomeField = ({ label, value, isInput = false, onChange, colorClass = "te
 
 const App: React.FC = () => {
   // --- State ---
-  const [appMode, setAppMode] = useState<'home' | 'ecommerce' | 'bank' | 'purchasing' | 'ecommerce_analysis' | 'travel' | 'shift'>('home');
+  const [appMode, setAppMode] = useState<'home' | 'ecommerce' | 'bank' | 'purchasing' | 'ecommerce_analysis' | 'travel' | 'shift' | 'investment'>('home');
   const [view, setView] = useState<ViewState>('products');
   const [dbError, setDbError] = useState<string | null>(null);
   
@@ -1283,7 +1283,7 @@ const App: React.FC = () => {
 
   if (appMode === 'home') {
       return (
-          <div className="min-h-screen fixed inset-0 overflow-hidden bg-slate-50 flex flex-col items-center justify-center p-6">
+          <div className="min-h-screen fixed inset-0 overflow-y-auto bg-slate-50 flex flex-col items-center justify-center p-6 py-12">
               <img src="/logo.png" alt="龍辰系統" className="w-20 h-20 mb-4 rounded-xl object-cover shadow-sm bg-white" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
               <h1 className="text-2xl font-bold text-slate-800 mb-6 tracking-tight text-center">龍辰系統</h1>
               <div className="w-full max-w-sm space-y-3">
@@ -1352,6 +1352,17 @@ const App: React.FC = () => {
                       </div>
                       <ChevronRight size={24} className="opacity-70" />
                   </button>
+
+                  <button 
+                      onClick={() => setAppMode('investment')}
+                      className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-5 rounded-xl shadow border border-indigo-500 transition-all active:scale-95 flex items-center justify-between"
+                  >
+                      <div className="flex items-center gap-4">
+                          <TrendingUp size={24} className="text-white text-opacity-90" />
+                          <span className="text-xl tracking-wider">投資分析</span>
+                      </div>
+                      <ChevronRight size={24} className="opacity-70" />
+                  </button>
               </div>
           </div>
       );
@@ -1378,6 +1389,30 @@ const App: React.FC = () => {
           allIncomeSettings={allIncomeSettings}
           onNavigateHome={() => setAppMode('home')} 
       />;
+  }
+
+  if (appMode === 'investment') {
+      return (
+          <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6">
+              <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-sm border border-slate-100 flex flex-col items-center text-center">
+                  <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 mb-4 shadow-inner">
+                      <TrendingUp size={36} />
+                  </div>
+                  <h2 className="text-2xl font-bold text-slate-800 mb-2 font-sans">投資分析</h2>
+                  <p className="text-slate-500 text-sm mb-6 leading-relaxed font-sans">
+                      投資分析功能正在全力規劃與開發中！<br />
+                      後續將提供更多分析圖表與精準收益計算，敬請期待！
+                  </p>
+                  <button 
+                      onClick={() => setAppMode('home')}
+                      className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 text-sm"
+                  >
+                      <Home size={18} />
+                      <span>返回首頁</span>
+                  </button>
+              </div>
+          </div>
+      );
   }
 
   return (
