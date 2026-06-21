@@ -1501,6 +1501,7 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
             </label>
             <input
               type="text"
+              inputMode="decimal"
               placeholder="0"
               className="w-full h-[42px] border border-slate-200 rounded-xl px-3 font-mono font-bold text-lg text-slate-800 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-[#408f61] focus:border-transparent outline-none transition-colors"
               value={displayAmount}
