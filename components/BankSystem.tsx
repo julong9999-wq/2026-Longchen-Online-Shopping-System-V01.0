@@ -151,7 +151,7 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
   useEffect(() => {
     if (showDrumPicker) {
       const categoriesForType = vocabularies.filter(
-        (v) => v.type === addForm.type && !v.parentId,
+        (v) => v.type === addForm.type && !v.parentId && v.word && v.word.trim() !== "",
       );
       const activeIdx = categoriesForType.findIndex(
         (v) => v.word === addForm.category,
@@ -178,7 +178,7 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
 
     // Resistance constraints boundary
     const categoriesForType = vocabularies.filter(
-      (v) => v.type === addForm.type && !v.parentId,
+      (v) => v.type === addForm.type && !v.parentId && v.word && v.word.trim() !== "",
     );
     const maxOffset = 0;
     const minOffset = -Math.max(0, categoriesForType.length - 1) * 44;
@@ -198,7 +198,7 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
     setIsTransitioning(true);
 
     const categoriesForType = vocabularies.filter(
-      (v) => v.type === addForm.type && !v.parentId,
+      (v) => v.type === addForm.type && !v.parentId && v.word && v.word.trim() !== "",
     );
     if (categoriesForType.length === 0) {
       setOffsetY(0);
@@ -224,7 +224,7 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
   const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
     e.preventDefault();
     const categoriesForType = vocabularies.filter(
-      (v) => v.type === addForm.type && !v.parentId,
+      (v) => v.type === addForm.type && !v.parentId && v.word && v.word.trim() !== "",
     );
     if (categoriesForType.length === 0) return;
 
@@ -1447,50 +1447,19 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
           </div>
 
           <div>
-            <label className="block text-[13px] font-bold text-slate-700 mb-1.5 flex justify-between items-center">
-              <span>項目名稱</span>
-              <span className="text-[11px] text-indigo-500 font-bold flex items-center gap-1 bg-indigo-50 px-1.5 py-0.5 rounded-full animate-pulse">
-                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <circle cx="12" cy="12" r="8" strokeDasharray="3 2" />
-                  <circle cx="12" cy="12" r="2.5" fill="currentColor" />
-                </svg>
-                滾輪滑動模式
-              </span>
+            <label className="block text-[13px] font-bold text-slate-700 mb-1.5">
+              項目名稱
             </label>
-            <div className="relative flex gap-2">
+            <div className="relative">
               <button
                 type="button"
                 onClick={() => setShowDrumPicker(true)}
-                className="flex-1 h-[42px] border border-slate-200 rounded-xl px-3 flex items-center justify-between font-bold text-slate-800 bg-slate-50 hover:bg-slate-100/70 focus:bg-white focus:ring-2 focus:ring-[#408f61] focus:border-transparent outline-none transition-all text-left"
+                className="w-full h-[42px] border border-slate-200 rounded-xl px-3 flex items-center justify-between font-bold text-slate-800 bg-slate-50 hover:bg-slate-100/70 focus:bg-white focus:ring-2 focus:ring-[#408f61] focus:border-transparent outline-none transition-all text-left"
               >
                 <span className={addForm.category ? "text-slate-800 text-[14px]" : "text-slate-400 font-normal text-[14px]"}>
-                  {addForm.category || "點選右側滾輪選擇項目..."}
+                  {addForm.category || "請選擇項目..."}
                 </span>
-                <ChevronDown size={16} className="text-slate-400" />
-              </button>
-              
-              <button
-                type="button"
-                onClick={() => setShowDrumPicker(true)}
-                title="打開滾輪滑動選擇模組"
-                className="w-[42px] h-[42px] bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center border border-indigo-200 shadow-sm active:scale-95 transition-all group"
-              >
-                {/* Beautiful 3D rolling wheel cylinder SVG */}
-                <svg 
-                  className="w-5 h-5 group-hover:rotate-45 transition-transform duration-300 text-indigo-600" 
-                  viewBox="0 0 24 24" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  strokeWidth="2.5"
-                  strokeLinecap="round" 
-                  strokeLinejoin="round"
-                >
-                  <rect x="5" y="3" width="14" height="18" rx="3" />
-                  <line x1="5" y1="8" x2="19" y2="8" strokeDasharray="2 2" />
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                  <line x1="5" y1="16" x2="19" y2="16" strokeDasharray="2 2" />
-                  <circle cx="12" cy="12" r="2.5" fill="currentColor" />
-                </svg>
+                <ChevronDown size={18} className="text-slate-400" />
               </button>
             </div>
           </div>
@@ -1929,7 +1898,7 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
       {/* Modern 3D drum scroller wheel view */}
       {showDrumPicker && (() => {
         const categoriesForType = vocabularies.filter(
-          (v) => v.type === addForm.type && !v.parentId
+          (v) => v.type === addForm.type && !v.parentId && v.word && v.word.trim() !== ""
         );
         return (
           <div 
@@ -1962,41 +1931,45 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
                 <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-slate-50 to-transparent pointer-events-none z-10" />
 
                 {/* Moving drum cylinder */}
-                <div 
-                  className="absolute w-full flex flex-col items-center"
-                  style={{ 
-                    transform: `translateY(${offsetY + 88}px)`, // 88 is the visual center for 44px items
-                    transition: isTransitioning ? 'transform 0.22s cubic-bezier(0.1, 0.8, 0.25, 1)' : 'none'
-                  }}
-                >
-                  {categoriesForType.map((v, idx) => {
-                    const yPos = idx * 44 + offsetY;
-                    const f = yPos / 44; // vertical distance in items ratio
-                    
-                    if (Math.abs(f) > 3) return null; // cull off-screen items
+                {categoriesForType.length === 0 ? (
+                  <div className="text-slate-400 font-bold text-sm">無可用項目</div>
+                ) : (
+                  <div 
+                    className="absolute w-full flex flex-col items-center"
+                    style={{ 
+                      transform: `translateY(${offsetY + 88}px)`, // 88 is the visual center for 44px items
+                      transition: isTransitioning ? 'transform 0.22s cubic-bezier(0.1, 0.8, 0.25, 1)' : 'none'
+                    }}
+                  >
+                    {categoriesForType.map((v, idx) => {
+                      const yPos = idx * 44 + offsetY;
+                      const f = yPos / 44; // vertical distance in items ratio
+                      
+                      if (Math.abs(f) > 3) return null; // cull off-screen items
 
-                    // 3D rotation projection
-                    const scale = 1.12 - Math.min(0.2, Math.abs(f) * 0.1);
-                    const opacity = 1 - Math.min(0.8, Math.abs(f) * 0.35);
-                    const rotX = f * -22;
+                      // 3D rotation projection
+                      const scale = 1.12 - Math.min(0.2, Math.abs(f) * 0.1);
+                      const opacity = 1 - Math.min(0.8, Math.abs(f) * 0.35);
+                      const rotX = f * -22;
 
-                    return (
-                      <div 
-                        key={v.id}
-                        className={`w-full text-center font-bold text-sm truncate px-4 transition-colors duration-150 ${Math.abs(f) < 0.5 ? 'text-indigo-600 font-extrabold text-[15px]' : 'text-slate-400'}`}
-                        style={{ 
-                          height: '44px', 
-                          lineHeight: '44px',
-                          transform: `perspective(400px) rotateX(${rotX}deg) scale(${scale})`,
-                          opacity: opacity,
-                          pointerEvents: 'none'
-                        }}
-                      >
-                        {v.word}
-                      </div>
-                    );
-                  })}
-                </div>
+                      return (
+                        <div 
+                          key={v.id}
+                          className={`w-full text-center font-bold text-sm truncate px-4 transition-colors duration-150 ${Math.abs(f) < 0.5 ? 'text-indigo-600 font-extrabold text-[15px]' : 'text-slate-400'}`}
+                          style={{ 
+                            height: '44px', 
+                            lineHeight: '44px',
+                            transform: `perspective(400px) rotateX(${rotX}deg) scale(${scale})`,
+                            opacity: opacity,
+                            pointerEvents: 'none'
+                          }}
+                        >
+                          {v.word}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               {/* Compact Confirmation Button */}
