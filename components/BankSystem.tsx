@@ -306,6 +306,7 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
   // --- Scroll Snapping Pickers States ---
   const [showDrumPicker, setShowDrumPicker] = useState(false);
   const [showRemarksPicker, setShowRemarksPicker] = useState(false);
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
   
   // Calculate dynamic remarks list
   const staticRemarks = vocabularies
@@ -864,20 +865,13 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
           <h2 className="text-xl font-bold text-slate-800">月份明細</h2>
           <div className="flex items-center gap-2">
             <span className="text-slate-500 text-sm font-bold">選擇月份</span>
-            <select
-              value={displayMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              className="bg-white border border-slate-300 text-slate-800 px-3 py-1 rounded-lg text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-[#408f61]"
+            <button
+              onClick={() => setShowMonthPicker(true)}
+              className="bg-white border border-slate-300 text-slate-800 px-3 py-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-sm font-bold shadow-sm outline-none flex items-center gap-1.5 transition-all"
             >
-              {availableMonths.length === 0 && (
-                <option value={currentMonthStr}>{currentMonthStr}</option>
-              )}
-              {availableMonths.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </select>
+              <span>{displayMonth}</span>
+              <ChevronDown size={14} className="text-slate-500" />
+            </button>
           </div>
         </div>
 
@@ -992,6 +986,20 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
             title={`${displayMonth} 支出分析`}
           />
         </div>
+
+        {/* Roller select month */}
+        <SnapPicker
+          isOpen={showMonthPicker}
+          onClose={() => setShowMonthPicker(false)}
+          title="選擇記帳月份"
+          items={availableMonths.length === 0 ? [currentMonthStr] : availableMonths}
+          initialValue={displayMonth}
+          onConfirm={(val) => {
+            setSelectedMonth(val);
+          }}
+          themeColorClass="emerald"
+          maxWidthClass="max-w-[200px]"
+        />
       </div>
     );
   };

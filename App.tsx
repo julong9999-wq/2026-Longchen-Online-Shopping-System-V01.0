@@ -138,6 +138,8 @@ const App: React.FC = () => {
   }, [orderGroups, selectedOrderGroup]);
 
   const [showNewOrderModal, setShowNewOrderModal] = useState(false);
+  const [showYearPicker, setShowYearPicker] = useState(false);
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [newOrderDate, setNewOrderDate] = useState({ year: 2025, month: new Date().getMonth() + 1 });
 
   const [editingOrderItem, setEditingOrderItem] = useState<OrderItem | null>(null);
@@ -1131,7 +1133,8 @@ const App: React.FC = () => {
     const [localItem, setLocalItem] = useState<Partial<OrderItem>>(editingOrderItem || { quantity: 1, date: new Date().toISOString().split('T')[0], description: '', buyer: '', remarks: '', note: '', productGroupId: '', productItemId: '' });
     const currentGroupItems = productItems.filter(i => i.groupId === localItem.productGroupId).sort((a, b) => a.id.localeCompare(b.id));
     
-
+    const [showGroupPicker, setShowGroupPicker] = useState(false);
+    const [showProductPicker, setShowProductPicker] = useState(false);
 
     const inputClass = "block w-full rounded-lg border border-slate-300 bg-white text-slate-900 px-3 h-10 text-lg font-bold focus:border-blue-500 focus:ring-blue-500";
     const labelClass = "block text-sm font-bold text-slate-600 mb-0.5";
@@ -1143,8 +1146,41 @@ const App: React.FC = () => {
                 <button onClick={() => setIsOrderEntryOpen(false)} className="text-blue-200 hover:text-white"><X size={28} /></button>
             </div>
             <div className="flex-1 p-5 flex flex-col gap-3 overflow-y-auto pb-32">
-                <div><label className={labelClass}>商品類別</label><select className={inputClass} value={localItem.productGroupId || ''} onChange={e => setLocalItem({...localItem, productGroupId: e.target.value, productItemId: ''})}><option value="">選擇類別</option>{productGroups.map(g => <option key={g.id} value={g.id}>{g.id} {g.name}</option>)}</select></div>
-                <div><label className={labelClass}>商品名稱</label><select className={inputClass} value={localItem.productItemId || ''} onChange={e => setLocalItem({...localItem, productItemId: e.target.value})} disabled={!localItem.productGroupId}><option value="">選擇商品</option>{currentGroupItems.map(i => <option key={i.id} value={i.id}>{i.id} {i.name}</option>)}</select></div>
+                <div>
+                    <label className={labelClass}>商品類別</label>
+                    <button
+                        type="button"
+                        onClick={() => setShowGroupPicker(true)}
+                        className={`${inputClass} flex items-center justify-between text-left`}
+                    >
+                        <span className="truncate">
+                            {localItem.productGroupId 
+                                ? `${localItem.productGroupId} ${productGroups.find(g => g.id === localItem.productGroupId)?.name || ''}` 
+                                : '選擇類別'}
+                        </span>
+                        <ChevronDown size={20} className="text-slate-400 shrink-0" />
+                    </button>
+                </div>
+                <div>
+                    <label className={labelClass}>商品名稱</label>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            if (localItem.productGroupId) {
+                                setShowProductPicker(true);
+                            }
+                        }}
+                        disabled={!localItem.productGroupId}
+                        className={`${inputClass} flex items-center justify-between text-left ${!localItem.productGroupId ? 'opacity-50 bg-slate-50' : ''}`}
+                    >
+                        <span className="truncate">
+                            {localItem.productItemId 
+                                ? `${localItem.productItemId} ${productItems.find(i => i.id === localItem.productItemId)?.name || ''}` 
+                                : '選擇商品'}
+                        </span>
+                        <ChevronDown size={20} className="text-slate-400 shrink-0" />
+                    </button>
+                </div>
                 <div><label className={labelClass}>商品描述</label><input type="text" className={inputClass} value={localItem.description} onChange={e => setLocalItem({...localItem, description: e.target.value})} placeholder="規格/款式" autoComplete="one-time-code" autoCorrect="off" spellCheck={false} data-form-type="other" /></div>
                 <div><label className={labelClass}>訂購者</label><input type="text" className={inputClass} value={localItem.buyer} onChange={e => setLocalItem({...localItem, buyer: e.target.value})} placeholder="買家名稱" autoComplete="one-time-code" autoCorrect="off" spellCheck={false} data-form-type="other" /></div>
                 <div className="flex gap-4"><div className="flex-1"><label className={labelClass}>數量</label><input type="number" className={`${inputClass} text-center`} value={localItem.quantity} onChange={e => setLocalItem({...localItem, quantity: parseInt(e.target.value) || 0})} /></div><div className="flex-1"><label className={labelClass}>日期</label><input type="date" className={inputClass} value={localItem.date} onChange={e => setLocalItem({...localItem, date: e.target.value})} /></div></div>
@@ -1156,6 +1192,34 @@ const App: React.FC = () => {
                 <ActionButton icon={X} label="取消" onClick={() => setIsOrderEntryOpen(false)} variant="outline" className="flex-1" />
                 <ActionButton icon={Save} label="儲存" onClick={() => handleSaveOrderItem({ ...localItem, orderGroupId: selectedOrderGroup! } as OrderItem)} disabled={!localItem.productItemId || !localItem.buyer} className="flex-1" />
             </div>
+
+            {/* Product Group Snapping Scroll Picker */}
+            <SnapPicker
+                isOpen={showGroupPicker}
+                onClose={() => setShowGroupPicker(false)}
+                title="選擇商品類別"
+                items={productGroups.map(g => ({ id: g.id, label: `${g.id} ${g.name}` }))}
+                initialValue={localItem.productGroupId || ''}
+                onConfirm={(val) => {
+                    setLocalItem({ ...localItem, productGroupId: val, productItemId: '' });
+                }}
+                themeColorClass="indigo"
+                maxWidthClass="max-w-[300px]"
+            />
+
+            {/* Product Item Snapping Scroll Picker */}
+            <SnapPicker
+                isOpen={showProductPicker}
+                onClose={() => setShowProductPicker(false)}
+                title="選擇商品"
+                items={currentGroupItems.map(i => ({ id: i.id, label: `${i.id} ${i.name}` }))}
+                initialValue={localItem.productItemId || ''}
+                onConfirm={(val) => {
+                    setLocalItem({ ...localItem, productItemId: val });
+                }}
+                themeColorClass="indigo"
+                maxWidthClass="max-w-[320px]"
+            />
         </div>
     )
   }
@@ -1497,7 +1561,53 @@ const App: React.FC = () => {
                             )
                         })}
                     </div>
-                    {showNewOrderModal && <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"><div className="bg-white p-6 rounded-lg w-full max-w-sm"><h3 className="font-bold mb-4 text-xl">建立批次</h3><div className="flex gap-2 mb-4"><select className="border p-3 rounded-lg flex-1 text-lg" value={newOrderDate.year} onChange={e => setNewOrderDate({...newOrderDate, year: +e.target.value})}><option value="2025">2025</option><option value="2026">2026</option></select><select className="border p-3 rounded-lg flex-1 text-lg" value={newOrderDate.month} onChange={e => setNewOrderDate({...newOrderDate, month: +e.target.value})}>{Array.from({length:12},(_,i)=>i+1).map(m=><option key={m} value={m}>{m}月</option>)}</select></div><div className="flex justify-end gap-3"><ActionButton icon={X} label="取消" onClick={()=>setShowNewOrderModal(false)} variant="outline" /><ActionButton icon={Check} label="建立" onClick={handleCreateOrderGroup} /></div></div></div>}
+                    {showNewOrderModal && (
+                        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                            <div className="bg-white p-6 rounded-lg w-full max-w-sm">
+                                <h3 className="font-bold mb-4 text-xl">建立批次</h3>
+                                <div className="flex gap-2 mb-4">
+                                    <button 
+                                        onClick={() => setShowYearPicker(true)}
+                                        className="border p-3 rounded-lg flex-1 text-lg text-center font-bold bg-white outline-none flex items-center justify-between"
+                                    >
+                                        <span>{newOrderDate.year}</span>
+                                        <ChevronDown size={18} className="text-slate-400" />
+                                    </button>
+                                    <button 
+                                        onClick={() => setShowMonthPicker(true)}
+                                        className="border p-3 rounded-lg flex-1 text-lg text-center font-bold bg-white outline-none flex items-center justify-between"
+                                    >
+                                        <span>{newOrderDate.month}月</span>
+                                        <ChevronDown size={18} className="text-slate-400" />
+                                    </button>
+                                </div>
+                                <div className="flex justify-end gap-3">
+                                    <ActionButton icon={X} label="取消" onClick={() => setShowNewOrderModal(false)} variant="outline" />
+                                    <ActionButton icon={Check} label="建立" onClick={handleCreateOrderGroup} />
+                                </div>
+                            </div>
+                            <SnapPicker
+                                isOpen={showYearPicker}
+                                onClose={() => setShowYearPicker(false)}
+                                title="選擇年份"
+                                items={[{id: '2025', label: '2025'}, {id: '2026', label: '2026'}]}
+                                initialValue={newOrderDate.year.toString()}
+                                onConfirm={(val) => setNewOrderDate({...newOrderDate, year: +val})}
+                                themeColorClass="indigo"
+                                maxWidthClass="max-w-[200px]"
+                            />
+                            <SnapPicker
+                                isOpen={showMonthPicker}
+                                onClose={() => setShowMonthPicker(false)}
+                                title="選擇月份"
+                                items={Array.from({length:12},(_,i)=>i+1).map(m=>({id: m.toString(), label: `${m}月`}))}
+                                initialValue={newOrderDate.month.toString()}
+                                onConfirm={(val) => setNewOrderDate({...newOrderDate, month: +val})}
+                                themeColorClass="indigo"
+                                maxWidthClass="max-w-[200px]"
+                            />
+                        </div>
+                    )}
                     {isOrderEntryOpen && <OrderEntryModal />}
                 </div>
             )}
@@ -1539,6 +1649,156 @@ const App: React.FC = () => {
         </div>
     </div>
   );
+};
+
+interface SnapPickerProps {
+    isOpen: boolean;
+    onClose: () => void;
+    title: string;
+    items: { id: string; label: string }[];
+    initialValue: string;
+    onConfirm: (selectedValue: string) => void;
+    themeColorClass?: 'indigo' | 'purple' | 'emerald';
+    maxWidthClass?: string;
+}
+
+const SnapPicker: React.FC<SnapPickerProps> = ({
+    isOpen,
+    onClose,
+    title,
+    items,
+    initialValue,
+    onConfirm,
+    themeColorClass = 'indigo',
+    maxWidthClass = 'max-w-[270px]'
+}) => {
+    const [localActiveIndex, setLocalActiveIndex] = useState(0);
+    const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (isOpen && items.length > 0) {
+            const activeIdx = items.findIndex(item => item.id === initialValue);
+            const targetIdx = activeIdx >= 0 ? activeIdx : 0;
+            setLocalActiveIndex(targetIdx);
+
+            const timer = setTimeout(() => {
+                if (scrollContainerRef.current) {
+                    scrollContainerRef.current.scrollTop = targetIdx * 44;
+                }
+            }, 50);
+            return () => clearTimeout(timer);
+        }
+    }, [isOpen, initialValue, items]);
+
+    const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+        if (items.length === 0) return;
+        const scrollTop = e.currentTarget.scrollTop;
+        const index = Math.max(0, Math.min(items.length - 1, Math.round(scrollTop / 44)));
+        if (index !== localActiveIndex) {
+            setLocalActiveIndex(index);
+        }
+    };
+
+    if (!isOpen) return null;
+
+    let textActiveColor = 'text-indigo-600';
+    let bgActiveColor = 'bg-indigo-500/5';
+    let borderActiveColor = 'border-indigo-200/60';
+    let btnBgColor = 'bg-indigo-600 hover:bg-indigo-500';
+
+    if (themeColorClass === 'purple') {
+        textActiveColor = 'text-purple-600';
+        bgActiveColor = 'bg-purple-500/5';
+        borderActiveColor = 'border-purple-200/60';
+        btnBgColor = 'bg-purple-600 hover:bg-purple-500';
+    } else if (themeColorClass === 'emerald') {
+        textActiveColor = 'text-emerald-600';
+        bgActiveColor = 'bg-emerald-500/5';
+        borderActiveColor = 'border-emerald-200/60';
+        btnBgColor = 'bg-emerald-600 hover:bg-[#347a51]';
+    }
+
+    return (
+        <div 
+            onClick={onClose}
+            className="fixed inset-0 z-[250] bg-slate-900/40 backdrop-blur-[1.5px] flex items-center justify-center p-4 animate-in fade-in duration-150"
+        >
+            <style>{`
+                .no-scrollbar::-webkit-scrollbar {
+                    display: none !important;
+                }
+            `}</style>
+
+            <div 
+                onClick={(e) => e.stopPropagation()}
+                className={`bg-white rounded-2xl shadow-xl w-full ${maxWidthClass} overflow-hidden flex flex-col p-4 animate-in zoom-in-95 duration-150 border border-slate-100`}
+            >
+                <span className="text-center font-bold text-slate-500 text-xs mb-3 block tracking-wide">
+                    {title}
+                </span>
+
+                <div 
+                    className="w-full h-[180px] bg-slate-50 rounded-xl relative overflow-hidden border border-slate-100/80 shadow-inner select-none"
+                >
+                    <div className={`absolute left-3 right-3 h-[44px] top-[68px] border-y ${borderActiveColor} ${bgActiveColor} rounded-lg pointer-events-none z-10`} />
+                    <div className="absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-slate-50 to-transparent pointer-events-none z-10" />
+                    <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-slate-50 to-transparent pointer-events-none z-10" />
+
+                    {items.length === 0 ? (
+                        <div className="w-full h-full flex items-center justify-center text-slate-400 font-bold text-sm">
+                            無可用項目
+                        </div>
+                    ) : (
+                        <div 
+                            ref={scrollContainerRef}
+                            onScroll={handleScroll}
+                            className="w-full h-full overflow-y-auto snap-y snap-mandatory no-scrollbar"
+                            style={{ 
+                                scrollbarWidth: 'none', 
+                                msOverflowStyle: 'none'
+                            }}
+                        >
+                            <div className="h-[68px] shrink-0" />
+
+                            {items.map((item, idx) => {
+                                const isSelected = idx === localActiveIndex;
+                                const opacity = isSelected ? 1 : 0.45;
+
+                                return (
+                                    <div 
+                                        key={item.id}
+                                        className={`w-full text-center h-[44px] leading-[44px] truncate px-4 snap-center transition-all duration-100 ${
+                                            isSelected ? `${textActiveColor} font-extrabold text-[15px]` : 'text-slate-400 font-bold text-[14px]'
+                                        }`}
+                                        style={{
+                                            opacity: opacity
+                                        }}
+                                    >
+                                        {item.label}
+                                    </div>
+                                );
+                            })}
+
+                            <div className="h-[68px] shrink-0" />
+                        </div>
+                    )}
+                </div>
+
+                <button
+                    type="button"
+                    onClick={() => {
+                        if (items.length > 0) {
+                            onConfirm(items[localActiveIndex].id);
+                        }
+                        onClose();
+                    }}
+                    className={`mt-4 w-full py-2.5 text-center ${btnBgColor} font-bold text-white text-sm rounded-xl shadow-sm active:scale-95 transition-all`}
+                >
+                    確定
+                </button>
+            </div>
+        </div>
+    );
 };
 
 export default App;

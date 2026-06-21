@@ -190,6 +190,7 @@ const PurchasingSystem: React.FC<Props> = ({ onNavigateHome }) => {
   }, [records]);
 
   const [detailMonth, setDetailMonth] = useState(getCurrentMonthStr());
+  const [showDetailMonthPicker, setShowDetailMonthPicker] = useState(false);
   const [isDetailMonthInitialized, setIsDetailMonthInitialized] = useState(false);
 
   useEffect(() => {
@@ -464,19 +465,13 @@ const PurchasingSystem: React.FC<Props> = ({ onNavigateHome }) => {
              <h2 className="text-xl font-bold text-slate-800">代購明細</h2>
              <div className="flex items-center gap-2">
                 <span className="text-slate-500 text-sm font-bold">年月</span>
-                <div className="relative">
-                  <select 
-                    value={detailMonth} 
-                    onChange={e => setDetailMonth(e.target.value)} 
-                    className="appearance-none bg-slate-100 border border-slate-300 text-slate-800 pl-3 pr-8 py-1 rounded-lg text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                     {availableMonths.length === 0 && <option value={getCurrentMonthStr()}>{getCurrentMonthStr()}</option>}
-                     {availableMonths.map(m => (
-                       <option key={m} value={m}>{m}</option>
-                     ))}
-                  </select>
-                  <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
-                </div>
+                <button
+                  onClick={() => setShowDetailMonthPicker(true)}
+                  className="bg-slate-100 border border-slate-300 text-slate-800 px-3 py-1 rounded-lg text-sm font-bold shadow-sm outline-none flex items-center gap-1.5 transition-all hover:bg-slate-200"
+                >
+                  <span>{detailMonth}</span>
+                  <ChevronDown size={14} className="text-slate-500" />
+                </button>
              </div>
           </div>
 
@@ -533,6 +528,18 @@ const PurchasingSystem: React.FC<Props> = ({ onNavigateHome }) => {
          {view === 'detail' && <div className="absolute inset-0 overflow-hidden flex flex-col">{renderDetailView()}</div>}
        </div>
        {renderNav()}
+
+       {/* Detail Month Snapping Scroll Selector Drawer */}
+       <SnapPicker
+         isOpen={showDetailMonthPicker}
+         onClose={() => setShowDetailMonthPicker(false)}
+         title="選擇代購月份"
+         items={availableMonths}
+         initialValue={detailMonth}
+         onConfirm={(val) => setDetailMonth(val)}
+         themeColorClass="emerald"
+         maxWidthClass="max-w-[200px]"
+       />
        
        {subItemModal.isOpen && (
          <div className="fixed inset-0 bg-slate-50 flex flex-col z-50 overscroll-none overflow-hidden animate-in slide-in-from-bottom-2">
@@ -569,6 +576,156 @@ const PurchasingSystem: React.FC<Props> = ({ onNavigateHome }) => {
            </div>
          </div>
        )}
+    </div>
+  );
+};
+
+interface SnapPickerProps {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  items: string[];
+  initialValue: string;
+  onConfirm: (selectedValue: string) => void;
+  themeColorClass?: 'indigo' | 'purple' | 'emerald';
+  maxWidthClass?: string;
+}
+
+const SnapPicker: React.FC<SnapPickerProps> = ({
+  isOpen,
+  onClose,
+  title,
+  items,
+  initialValue,
+  onConfirm,
+  themeColorClass = 'emerald',
+  maxWidthClass = 'max-w-[200px]'
+}) => {
+  const [localActiveIndex, setLocalActiveIndex] = useState(0);
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isOpen && items.length > 0) {
+      const activeIdx = items.indexOf(initialValue);
+      const targetIdx = activeIdx >= 0 ? activeIdx : 0;
+      setLocalActiveIndex(targetIdx);
+
+      const timer = setTimeout(() => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = targetIdx * 44;
+        }
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, initialValue, items]);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (items.length === 0) return;
+    const scrollTop = e.currentTarget.scrollTop;
+    const index = Math.max(0, Math.min(items.length - 1, Math.round(scrollTop / 44)));
+    if (index !== localActiveIndex) {
+      setLocalActiveIndex(index);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  let textActiveColor = 'text-emerald-600';
+  let bgActiveColor = 'bg-emerald-500/5';
+  let borderActiveColor = 'border-emerald-200/60';
+  let btnBgColor = 'bg-emerald-600 hover:bg-[#347a51]';
+
+  if (themeColorClass === 'purple') {
+    textActiveColor = 'text-purple-600';
+    bgActiveColor = 'bg-purple-500/5';
+    borderActiveColor = 'border-purple-200/60';
+    btnBgColor = 'bg-purple-600 hover:bg-purple-500';
+  } else if (themeColorClass === 'indigo') {
+    textActiveColor = 'text-indigo-600';
+    bgActiveColor = 'bg-indigo-500/5';
+    borderActiveColor = 'border-indigo-200/60';
+    btnBgColor = 'bg-indigo-600 hover:bg-indigo-500';
+  }
+
+  return (
+    <div 
+      onClick={onClose}
+      className="fixed inset-0 z-[250] bg-slate-900/40 backdrop-blur-[1.5px] flex items-center justify-center p-4 animate-in fade-in duration-150"
+    >
+      <style>{`
+        .no-scrollbar::-webkit-scrollbar {
+          display: none !important;
+        }
+      `}</style>
+
+      <div 
+        onClick={(e) => e.stopPropagation()}
+        className={`bg-white rounded-2xl shadow-xl w-full ${maxWidthClass} overflow-hidden flex flex-col p-4 animate-in zoom-in-95 duration-150 border border-slate-100`}
+      >
+        <span className="text-center font-bold text-slate-500 text-xs mb-3 block tracking-wide">
+          {title}
+        </span>
+
+        <div 
+          className="w-full h-[180px] bg-slate-50 rounded-xl relative overflow-hidden border border-slate-100/80 shadow-inner select-none"
+        >
+          <div className={`absolute left-3 right-3 h-[44px] top-[68px] border-y ${borderActiveColor} ${bgActiveColor} rounded-lg pointer-events-none z-10`} />
+          <div className="absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-slate-50 to-transparent pointer-events-none z-10" />
+          <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-slate-50 to-transparent pointer-events-none z-10" />
+
+          {items.length === 0 ? (
+            <div className="w-full h-full flex items-center justify-center text-slate-400 font-bold text-sm">
+              無可用項目
+            </div>
+          ) : (
+            <div 
+              ref={scrollContainerRef}
+              onScroll={handleScroll}
+              className="w-full h-full overflow-y-auto snap-y snap-mandatory no-scrollbar"
+              style={{ 
+                scrollbarWidth: 'none', 
+                msOverflowStyle: 'none'
+              }}
+            >
+              <div className="h-[68px] shrink-0" />
+
+              {items.map((word, idx) => {
+                const isSelected = idx === localActiveIndex;
+                const opacity = isSelected ? 1 : 0.45;
+
+                return (
+                  <div 
+                    key={idx}
+                    className={`w-full text-center h-[44px] leading-[44px] truncate px-4 snap-center transition-all duration-100 ${
+                      isSelected ? `${textActiveColor} font-extrabold text-[15px]` : 'text-slate-400 font-bold text-[14px]'
+                    }`}
+                    style={{
+                      opacity: opacity
+                    }}
+                  >
+                    {word}
+                  </div>
+                );
+              })}
+
+              <div className="h-[68px] shrink-0" />
+            </div>
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            if (items.length > 0) {
+              onConfirm(items[localActiveIndex]);
+            }
+            onClose();
+          }}
+          className={`mt-4 w-full py-2.5 text-center ${btnBgColor} font-bold text-white text-sm rounded-xl shadow-sm active:scale-95 transition-all`}
+        >
+          確定
+        </button>
+      </div>
     </div>
   );
 };

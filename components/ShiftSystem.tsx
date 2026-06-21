@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Home, Calendar as CalendarIcon, FileText, Calculator, Edit, Trash2, X, ChevronLeft, ChevronRight, Plus, BarChart2 } from 'lucide-react';
+import { Home, Calendar as CalendarIcon, FileText, Calculator, Edit, Trash2, X, ChevronLeft, ChevronRight, Plus, BarChart2, ChevronDown } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { ShiftPerson, ShiftLocation, ShiftWage, ShiftRecord } from '../types';
 
@@ -49,6 +49,7 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
     const [quickEditDate, setQuickEditDate] = useState<string | null>(null);
     const [salaryLocFilter, setSalaryLocFilter] = useState<string>('all');
     const [analysisYear, setAnalysisYear] = useState<string>(new Date().getFullYear().toString());
+    const [showAnalysisYearPicker, setShowAnalysisYearPicker] = useState(false);
     const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
@@ -700,13 +701,13 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                                 <h3 className="font-bold text-slate-700 text-sm flex items-center gap-2">
                                     <BarChart2 size={16} className="text-emerald-500" /> 每月薪資分析
                                 </h3>
-                                <select
-                                    value={currentAnalysisYear}
-                                    onChange={(e) => setAnalysisYear(e.target.value)}
-                                    className="bg-slate-50 border border-slate-200 rounded px-2 py-1 text-xs font-bold text-slate-700 outline-none"
+                                <button
+                                    onClick={() => setShowAnalysisYearPicker(true)}
+                                    className="bg-slate-50 border border-slate-200 rounded px-2 py-1 text-xs font-bold text-slate-700 outline-none flex items-center gap-1 transition-all hover:bg-slate-100"
                                 >
-                                    {availableYears.map(y => <option key={y} value={y}>{y}年</option>)}
-                                </select>
+                                    <span>{currentAnalysisYear}年</span>
+                                    <ChevronDown size={12} className="text-slate-500" />
+                                </button>
                             </div>
                             <div className="w-full overflow-y-auto max-h-96">
                                 <div style={{ height: Math.max(200, filteredYmData.length * 45) }}>
@@ -914,6 +915,176 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                     </div>
                 </div>
             )}
+
+            {/* Analysis Year Snapping Scroll Selector Drawer */}
+            <SnapPicker
+                isOpen={showAnalysisYearPicker}
+                onClose={() => setShowAnalysisYearPicker(false)}
+                title="選擇分析年份"
+                items={(() => {
+                    const availableYears = Array.from(new Set(analysisStats.ymData.map(d => d.yearMonth.substring(0, 4)))).sort((a,b)=>b.localeCompare(a));
+                    return availableYears.length === 0 ? [new Date().getFullYear().toString()] : availableYears;
+                })()}
+                initialValue={analysisYear}
+                onConfirm={(val) => setAnalysisYear(val)}
+                themeColorClass={activePerson === '禹君' ? 'indigo' : 'purple'}
+                maxWidthClass="max-w-[200px]"
+            />
+        </div>
+    );
+};
+
+interface SnapPickerProps {
+    isOpen: boolean;
+    onClose: () => void;
+    title: string;
+    items: string[];
+    initialValue: string;
+    onConfirm: (selectedValue: string) => void;
+    themeColorClass?: 'indigo' | 'purple' | 'emerald';
+    maxWidthClass?: string;
+}
+
+const SnapPicker: React.FC<SnapPickerProps> = ({
+    isOpen,
+    onClose,
+    title,
+    items,
+    initialValue,
+    onConfirm,
+    themeColorClass = 'indigo',
+    maxWidthClass = 'max-w-[270px]'
+}) => {
+    const [localActiveIndex, setLocalActiveIndex] = useState(0);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (isOpen && items.length > 0) {
+            const activeIdx = items.indexOf(initialValue);
+            const targetIdx = activeIdx >= 0 ? activeIdx : 0;
+            setLocalActiveIndex(targetIdx);
+
+            const timer = setTimeout(() => {
+                if (scrollContainerRef.current) {
+                    scrollContainerRef.current.scrollTop = targetIdx * 44;
+                }
+            }, 50);
+            return () => clearTimeout(timer);
+        }
+    }, [isOpen, initialValue, items]);
+
+    const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+        if (items.length === 0) return;
+        const scrollTop = e.currentTarget.scrollTop;
+        const index = Math.max(0, Math.min(items.length - 1, Math.round(scrollTop / 44)));
+        if (index !== localActiveIndex) {
+            setLocalActiveIndex(index);
+        }
+    };
+
+    if (!isOpen) return null;
+
+    let textActiveColor = 'text-indigo-600';
+    let bgActiveColor = 'bg-indigo-500/5';
+    let borderActiveColor = 'border-indigo-200/60';
+    let btnBgColor = 'bg-indigo-600 hover:bg-indigo-500';
+
+    if (themeColorClass === 'purple') {
+        textActiveColor = 'text-purple-600';
+        bgActiveColor = 'bg-purple-500/5';
+        borderActiveColor = 'border-purple-200/60';
+        btnBgColor = 'bg-purple-600 hover:bg-purple-500';
+    } else if (themeColorClass === 'emerald') {
+        textActiveColor = 'text-emerald-600';
+        bgActiveColor = 'bg-emerald-500/5';
+        borderActiveColor = 'border-emerald-200/60';
+        btnBgColor = 'bg-emerald-600 hover:bg-[#347a51]';
+    } else if (themeColorClass === 'indigo') {
+        textActiveColor = 'text-indigo-600';
+        bgActiveColor = 'bg-indigo-500/5';
+        borderActiveColor = 'border-indigo-200/60';
+        btnBgColor = 'bg-indigo-600 hover:bg-indigo-500';
+    }
+
+    return (
+        <div 
+            onClick={onClose}
+            className="fixed inset-0 z-[250] bg-slate-900/40 backdrop-blur-[1.5px] flex items-center justify-center p-4 animate-in fade-in duration-150"
+        >
+            <style>{`
+                .no-scrollbar::-webkit-scrollbar {
+                    display: none !important;
+                }
+            `}</style>
+
+            <div 
+                onClick={(e) => e.stopPropagation()}
+                className={`bg-white rounded-2xl shadow-xl w-full ${maxWidthClass} overflow-hidden flex flex-col p-4 animate-in zoom-in-95 duration-150 border border-slate-100`}
+            >
+                <span className="text-center font-bold text-slate-500 text-xs mb-3 block tracking-wide">
+                    {title}
+                </span>
+
+                <div 
+                    className="w-full h-[180px] bg-slate-50 rounded-xl relative overflow-hidden border border-slate-100/80 shadow-inner select-none"
+                >
+                    <div className={`absolute left-3 right-3 h-[44px] top-[68px] border-y ${borderActiveColor} ${bgActiveColor} rounded-lg pointer-events-none z-10`} />
+                    <div className="absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-slate-50 to-transparent pointer-events-none z-10" />
+                    <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-slate-50 to-transparent pointer-events-none z-10" />
+
+                    {items.length === 0 ? (
+                        <div className="w-full h-full flex items-center justify-center text-slate-400 font-bold text-sm">
+                            無可用項目
+                        </div>
+                    ) : (
+                        <div 
+                            ref={scrollContainerRef}
+                            onScroll={handleScroll}
+                            className="w-full h-full overflow-y-auto snap-y snap-mandatory no-scrollbar"
+                            style={{ 
+                                scrollbarWidth: 'none', 
+                                msOverflowStyle: 'none'
+                            }}
+                        >
+                            <div className="h-[68px] shrink-0" />
+
+                            {items.map((word, idx) => {
+                                const isSelected = idx === localActiveIndex;
+                                const opacity = isSelected ? 1 : 0.45;
+
+                                return (
+                                    <div 
+                                        key={idx}
+                                        className={`w-full text-center h-[44px] leading-[44px] truncate px-4 snap-center transition-all duration-100 ${
+                                            isSelected ? `${textActiveColor} font-extrabold text-[15px]` : 'text-slate-400 font-bold text-[14px]'
+                                        }`}
+                                        style={{
+                                            opacity: opacity
+                                        }}
+                                    >
+                                        {word}
+                                    </div>
+                                );
+                            })}
+
+                            <div className="h-[68px] shrink-0" />
+                        </div>
+                    )}
+                </div>
+
+                <button
+                    type="button"
+                    onClick={() => {
+                        if (items.length > 0) {
+                            onConfirm(items[localActiveIndex]);
+                        }
+                        onClose();
+                    }}
+                    className={`mt-4 w-full py-2.5 text-center ${btnBgColor} font-bold text-white text-sm rounded-xl shadow-sm active:scale-95 transition-all`}
+                >
+                    確定
+                </button>
+            </div>
         </div>
     );
 };

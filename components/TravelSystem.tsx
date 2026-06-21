@@ -243,6 +243,8 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
 
   // --- Slogan Snapping Scroll Picker state ---
   const [showTripPicker, setShowTripPicker] = useState(false);
+  const [showAnalysisYearPicker, setShowAnalysisYearPicker] = useState(false);
+  const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
 
   // Firestore Subscriptions
   useEffect(() => {
@@ -765,13 +767,13 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
                                          <h3 className="font-bold text-slate-700 flex items-center gap-2">
                                              <BarChartIcon size={16} className="text-purple-400" /> 年月金額
                                          </h3>
-                                         <select
-                                             value={currentAnalysisYear}
-                                             onChange={(e) => setAnalysisYear(e.target.value)}
-                                             className="bg-slate-50 border border-slate-200 rounded px-2 py-1 text-xs font-bold text-slate-700 outline-none"
+                                         <button
+                                             onClick={() => setShowAnalysisYearPicker(true)}
+                                             className="bg-slate-50 border border-slate-200 rounded px-2 py-1 text-xs font-bold text-slate-700 outline-none flex items-center gap-1 transition-all hover:bg-slate-100"
                                          >
-                                             {availableYears.map(y => <option key={y} value={y}>{y}年</option>)}
-                                         </select>
+                                             <span>{currentAnalysisYear}年</span>
+                                             <ChevronDown size={12} className="text-slate-500" />
+                                         </button>
                                      </div>
                                      <div className="h-40 mb-2 border border-slate-100 rounded bg-slate-50 p-1">
                                          <ResponsiveContainer width="100%" height="100%">
@@ -959,9 +961,14 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
                          <div className="flex gap-3 items-end">
                              <div className="w-1/3">
                                  <label className="block text-xs font-bold text-slate-500 mb-1">幣別</label>
-                                 <select value={expenseForm.currency || 'TWD'} onChange={e => setExpenseForm({...expenseForm, currency: e.target.value})} className="w-full border border-slate-300 rounded-xl px-2 py-2.5 font-bold focus:ring-2 focus:ring-purple-500 outline-none text-slate-700 bg-white sm:text-sm appearance-none cursor-pointer">
-                                     {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
-                                 </select>
+                                 <button
+                                     type="button"
+                                     onClick={() => setShowCurrencyPicker(true)}
+                                     className="w-full flex h-[46px] items-center justify-between border border-slate-300 rounded-xl px-3 py-2 font-bold outline-none text-slate-700 bg-white sm:text-xs cursor-pointer transition-colors hover:bg-slate-50 shadow-sm"
+                                 >
+                                     <span>{expenseForm.currency || 'TWD'}</span>
+                                     <ChevronDown size={14} className="text-slate-400 shrink-0" />
+                                 </button>
                              </div>
                              <div className="flex-1">
                                  <label className="block text-xs font-bold text-slate-500 mb-1">金額</label>
@@ -1044,7 +1051,35 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
             initialValue={activeTripId}
             onConfirm={(val) => setActiveTripId(val)}
             themeColorClass="purple"
-            maxWidthClass="max-w-[360px]"
+            maxWidthClass="max-w-[340px]"
+          />
+
+          {/* Analysis Year Snapping Scroll Selector Drawer */}
+          <SnapPicker
+            isOpen={showAnalysisYearPicker}
+            onClose={() => setShowAnalysisYearPicker(false)}
+            title="選擇分析年份"
+            items={(() => {
+              const years = Array.from(new Set(expenses.map(exp => exp.date.substring(0, 4)))).sort((a,b)=>b.localeCompare(a));
+              const list = years.length === 0 ? [new Date().getFullYear().toString()] : years;
+              return list.map(y => ({ id: y, label: `${y}年` }));
+            })()}
+            initialValue={analysisYear}
+            onConfirm={(val) => setAnalysisYear(val)}
+            themeColorClass="purple"
+            maxWidthClass="max-w-[200px]"
+          />
+
+          {/* Currency Snapping Scroll Selector Drawer */}
+          <SnapPicker
+            isOpen={showCurrencyPicker}
+            onClose={() => setShowCurrencyPicker(false)}
+            title="選擇幣別"
+            items={CURRENCIES.map(c => ({ id: c, label: c }))}
+            initialValue={expenseForm.currency || 'TWD'}
+            onConfirm={(val) => setExpenseForm({ ...expenseForm, currency: val })}
+            themeColorClass="purple"
+            maxWidthClass="max-w-[200px]"
           />
 
           {renderNav()}
