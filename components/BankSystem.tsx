@@ -138,14 +138,10 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const [txToDelete, setTxToDelete] = useState<BankTransaction | null>(null);
 
-  // --- Drum Roller / Scroll Picker State & Physics ---
+  // --- Native Scroll Snapping Picker ---
   const [showDrumPicker, setShowDrumPicker] = useState(false);
-  const [offsetY, setOffsetY] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
-  const [isTransitioning, setIsTransitioning] = useState(false);
-  const dragStartY = useRef(0);
-  const dragStartOffset = useRef(0);
-  const drumRef = useRef<HTMLDivElement>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Sync scroll position to matches category whenever DrumPicker opens or type changes
   useEffect(() => {
@@ -156,127 +152,35 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
       const activeIdx = categoriesForType.findIndex(
         (v) => v.word === addForm.category,
       );
-      if (activeIdx >= 0) {
-        setOffsetY(-activeIdx * 44);
-      } else {
-        setOffsetY(0); // select first category by default if empty
-      }
+      
+      const targetIdx = activeIdx >= 0 ? activeIdx : 0;
+      setActiveIndex(targetIdx);
+
+      // Scroll to target item top offset
+      setTimeout(() => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = targetIdx * 44;
+        }
+      }, 50);
     }
-  }, [showDrumPicker, addForm.category, addForm.type, vocabularies]);
+  }, [showDrumPicker, addForm.type, addForm.category, vocabularies]);
 
-  const handleDragStart = (clientY: number) => {
-    setIsDragging(true);
-    setIsTransitioning(false);
-    dragStartY.current = clientY;
-    dragStartOffset.current = offsetY;
-  };
-
-  const handleDragMove = (clientY: number) => {
-    if (!isDragging) return;
-    const deltaY = clientY - dragStartY.current;
-    let newOffset = dragStartOffset.current + deltaY;
-
-    // Resistance constraints boundary
-    const categoriesForType = vocabularies.filter(
-      (v) => v.type === addForm.type && !v.parentId && v.word && v.word.trim() !== "",
-    );
-    const maxOffset = 0;
-    const minOffset = -Math.max(0, categoriesForType.length - 1) * 44;
-
-    if (newOffset > maxOffset) {
-      newOffset = maxOffset + (newOffset - maxOffset) * 0.3; // 30% resistance pull
-    } else if (newOffset < minOffset) {
-      newOffset = minOffset + (newOffset - minOffset) * 0.3;
-    }
-
-    setOffsetY(newOffset);
-  };
-
-  const handleDragEnd = () => {
-    if (!isDragging) return;
-    setIsDragging(false);
-    setIsTransitioning(true);
-
-    const categoriesForType = vocabularies.filter(
-      (v) => v.type === addForm.type && !v.parentId && v.word && v.word.trim() !== "",
-    );
-    if (categoriesForType.length === 0) {
-      setOffsetY(0);
-      return;
-    }
-
-    // Snap to nearest 44px interval (itemHeight)
-    const approxIndex = Math.round(-offsetY / 44);
-    const snappedIndex = Math.max(
-      0,
-      Math.min(categoriesForType.length - 1, approxIndex),
-    );
-    setOffsetY(-snappedIndex * 44);
-
-    // Live feedback update the category word in form!
-    setAddForm((prev) => ({
-      ...prev,
-      category: categoriesForType[snappedIndex].word,
-    }));
-  };
-
-  // Wheel Scroll Event
-  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-    e.preventDefault();
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const categoriesForType = vocabularies.filter(
       (v) => v.type === addForm.type && !v.parentId && v.word && v.word.trim() !== "",
     );
     if (categoriesForType.length === 0) return;
 
-    const approxIndex = Math.round(-offsetY / 44);
-    const direction = e.deltaY > 0 ? 1 : -1;
-    const targetIdx = Math.max(
-      0,
-      Math.min(categoriesForType.length - 1, approxIndex + direction),
-    );
-
-    setIsTransitioning(true);
-    setOffsetY(-targetIdx * 44);
-    setAddForm((prev) => ({
-      ...prev,
-      category: categoriesForType[targetIdx].word,
-    }));
-  };
-
-  // Mouse wrapper actions
-  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    handleDragStart(e.clientY);
-  };
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isDragging) return;
-    e.preventDefault();
-    handleDragMove(e.clientY);
-  };
-
-  const handleMouseUp = () => {
-    handleDragEnd();
-  };
-
-  const handleMouseLeave = () => {
-    handleDragEnd();
-  };
-
-  // Touch wrapper actions
-  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (e.touches.length === 1) {
-      handleDragStart(e.touches[0].clientY);
+    const scrollTop = e.currentTarget.scrollTop;
+    const index = Math.max(0, Math.min(categoriesForType.length - 1, Math.round(scrollTop / 44)));
+    
+    if (index !== activeIndex) {
+      setActiveIndex(index);
+      setAddForm((prev) => ({
+        ...prev,
+        category: categoriesForType[index]?.word || "",
+      }));
     }
-  };
-
-  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (!isDragging) return;
-    handleDragMove(e.touches[0].clientY);
-  };
-
-  const handleTouchEnd = () => {
-    handleDragEnd();
   };
 
   const handleSaveTransaction = async () => {
@@ -1895,7 +1799,7 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
         </div>
       )}
 
-      {/* Modern 3D drum scroller wheel view */}
+      {/* Modern crisp drum scroller wheel view with native snap-scrolling */}
       {showDrumPicker && (() => {
         const categoriesForType = vocabularies.filter(
           (v) => v.type === addForm.type && !v.parentId && v.word && v.word.trim() !== ""
@@ -1903,71 +1807,74 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
         return (
           <div 
             onClick={() => setShowDrumPicker(false)}
-            className="absolute inset-0 z-50 bg-slate-900/45 backdrop-blur-[1px] flex items-center justify-center p-4 animate-in fade-in duration-200"
+            className="absolute inset-0 z-50 bg-slate-900/40 backdrop-blur-[1.5px] flex items-center justify-center p-4 animate-in fade-in duration-150"
           >
+            {/* Inject a temporary visual block to hide scrollbars on Webkit browsers */}
+            <style>{`
+              .no-scrollbar::-webkit-scrollbar {
+                display: none !important;
+              }
+            `}</style>
+
             <div 
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-2xl shadow-2xl w-full max-w-[280px] overflow-hidden flex flex-col p-4 animate-in zoom-in-95 duration-200 border border-slate-100"
+              className="bg-white rounded-2xl shadow-xl w-full max-w-[270px] overflow-hidden flex flex-col p-4 animate-in zoom-in-95 duration-150 border border-slate-100"
             >
-              {/* Physical Roller Viewport */}
+              {/* Native Roller Viewport */}
               <div 
-                ref={drumRef}
-                onMouseDown={handleMouseDown}
-                onMouseMove={handleMouseMove}
-                onMouseUp={handleMouseUp}
-                onMouseLeave={handleMouseLeave}
-                onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
-                onWheel={handleWheel}
-                className="w-full h-[220px] bg-slate-50 rounded-xl relative overflow-hidden flex flex-col items-center justify-center cursor-ns-resize border border-slate-100 shadow-inner select-none"
-                style={{ touchAction: 'none' }}
+                className="w-full h-[220px] bg-slate-50 rounded-xl relative overflow-hidden border border-slate-100/80 shadow-inner select-none"
               >
                 {/* Highlight guidelines for the central selected slot */}
-                <div className="absolute left-3 right-3 h-[44px] top-[88px] border-y border-slate-200 bg-indigo-500/5 rounded-lg pointer-events-none" />
+                <div className="absolute left-3 right-3 h-[44px] top-[88px] border-y border-indigo-200/60 bg-indigo-500/5 rounded-lg pointer-events-none z-10" />
                 
                 {/* Edge overlay shading for visual depth */}
                 <div className="absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-slate-50 to-transparent pointer-events-none z-10" />
                 <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-slate-50 to-transparent pointer-events-none z-10" />
 
-                {/* Moving drum cylinder */}
+                {/* Snapping Scroll Container */}
                 {categoriesForType.length === 0 ? (
-                  <div className="text-slate-400 font-bold text-sm">無可用項目</div>
+                  <div className="w-full h-full flex items-center justify-center text-slate-400 font-bold text-sm">
+                    無可用項目
+                  </div>
                 ) : (
                   <div 
-                    className="absolute w-full flex flex-col items-center"
+                    ref={scrollContainerRef}
+                    onScroll={handleScroll}
+                    className="w-full h-full overflow-y-auto scroll-smooth snap-y snap-mandatory no-scrollbar"
                     style={{ 
-                      transform: `translateY(${offsetY + 88}px)`, // 88 is the visual center for 44px items
-                      transition: isTransitioning ? 'transform 0.22s cubic-bezier(0.1, 0.8, 0.25, 1)' : 'none'
+                      scrollbarWidth: 'none', 
+                      msOverflowStyle: 'none'
                     }}
                   >
-                    {categoriesForType.map((v, idx) => {
-                      const yPos = idx * 44 + offsetY;
-                      const f = yPos / 44; // vertical distance in items ratio
-                      
-                      if (Math.abs(f) > 3) return null; // cull off-screen items
+                    {/* Top spacer so item 0 can align properly at center of viewport */}
+                    <div className="h-[88px] shrink-0" />
 
-                      // 3D rotation projection
-                      const scale = 1.12 - Math.min(0.2, Math.abs(f) * 0.1);
-                      const opacity = 1 - Math.min(0.8, Math.abs(f) * 0.35);
-                      const rotX = f * -22;
+                    {/* Items */}
+                    {categoriesForType.map((v, idx) => {
+                      const isSelected = idx === activeIndex;
+
+                      // Subtle linear responsive scaling
+                      const scale = isSelected ? 1.08 : 0.94;
+                      const opacity = isSelected ? 1 : 0.55;
 
                       return (
                         <div 
                           key={v.id}
-                          className={`w-full text-center font-bold text-sm truncate px-4 transition-colors duration-150 ${Math.abs(f) < 0.5 ? 'text-indigo-600 font-extrabold text-[15px]' : 'text-slate-400'}`}
-                          style={{ 
-                            height: '44px', 
-                            lineHeight: '44px',
-                            transform: `perspective(400px) rotateX(${rotX}deg) scale(${scale})`,
-                            opacity: opacity,
-                            pointerEvents: 'none'
+                          className={`w-full text-center h-[44px] leading-[44px] font-bold text-[14px] truncate px-4 snap-center transition-all duration-150 ${
+                            isSelected ? 'text-indigo-600 font-extrabold' : 'text-slate-400'
+                          }`}
+                          style={{
+                            transform: `scale(${scale})`,
+                            opacity: opacity
                           }}
                         >
                           {v.word}
                         </div>
                       );
                     })}
+
+                    {/* Bottom spacer so last item can align properly at center of viewport */}
+                    <div className="h-[88px] shrink-0" />
                   </div>
                 )}
               </div>
