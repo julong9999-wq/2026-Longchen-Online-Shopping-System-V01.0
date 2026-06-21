@@ -44,6 +44,171 @@ import {
 
 type BankView = "summary" | "monthly" | "analysis" | "add" | "vocab";
 
+interface SnapPickerProps {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  items: string[];
+  initialValue: string;
+  onConfirm: (selectedValue: string) => void;
+  themeColorClass?: "indigo" | "purple" | "emerald";
+  maxWidthClass?: string;
+}
+
+const SnapPicker: React.FC<SnapPickerProps> = ({
+  isOpen,
+  onClose,
+  title,
+  items,
+  initialValue,
+  onConfirm,
+  themeColorClass = "indigo",
+  maxWidthClass = "max-w-[270px]"
+}) => {
+  const [localActiveIndex, setLocalActiveIndex] = useState(0);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Sync scroll position when picker opens
+  useEffect(() => {
+    if (isOpen && items.length > 0) {
+      const activeIdx = items.indexOf(initialValue);
+      const targetIdx = activeIdx >= 0 ? activeIdx : 0;
+      setLocalActiveIndex(targetIdx);
+
+      const timer = setTimeout(() => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = targetIdx * 44;
+        }
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, initialValue, items]);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (items.length === 0) return;
+    const scrollTop = e.currentTarget.scrollTop;
+    const index = Math.max(0, Math.min(items.length - 1, Math.round(scrollTop / 44)));
+    if (index !== localActiveIndex) {
+      setLocalActiveIndex(index);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  let textActiveColor = "text-indigo-600";
+  let bgActiveColor = "bg-indigo-500/5";
+  let borderActiveColor = "border-indigo-200/60";
+  let btnBgColor = "bg-[#408f61] hover:bg-[#347a51]"; // Align with custom themed green or indigo
+
+  if (themeColorClass === "purple") {
+    textActiveColor = "text-purple-600";
+    bgActiveColor = "bg-purple-500/5";
+    borderActiveColor = "border-purple-200/60";
+    btnBgColor = "bg-purple-600 hover:bg-purple-500";
+  } else if (themeColorClass === "emerald") {
+    textActiveColor = "text-emerald-600";
+    bgActiveColor = "bg-emerald-500/5";
+    borderActiveColor = "border-emerald-200/60";
+    btnBgColor = "bg-emerald-600 hover:bg-[#347a51]";
+  } else if (themeColorClass === "indigo") {
+    textActiveColor = "text-indigo-600";
+    bgActiveColor = "bg-indigo-500/5";
+    borderActiveColor = "border-indigo-200/60";
+    btnBgColor = "bg-indigo-600 hover:bg-indigo-500";
+  }
+
+  return (
+    <div 
+      onClick={onClose}
+      className="absolute inset-0 z-[250] bg-slate-900/40 backdrop-blur-[1.5px] flex items-center justify-center p-4 animate-in fade-in duration-150"
+    >
+      <style>{`
+        .no-scrollbar::-webkit-scrollbar {
+          display: none !important;
+        }
+      `}</style>
+
+      <div 
+        onClick={(e) => e.stopPropagation()}
+        className={`bg-white rounded-2xl shadow-xl w-full ${maxWidthClass} overflow-hidden flex flex-col p-4 animate-in zoom-in-95 duration-150 border border-slate-100`}
+      >
+        <span className="text-center font-bold text-slate-500 text-xs mb-3 block tracking-wide">
+          {title}
+        </span>
+
+        {/* Native Roller Viewport */}
+        <div 
+          className="w-full h-[180px] bg-slate-50 rounded-xl relative overflow-hidden border border-slate-100/80 shadow-inner select-none"
+        >
+          {/* Highlight guidelines for the central selected slot */}
+          <div className={`absolute left-3 right-3 h-[44px] top-[68px] border-y ${borderActiveColor} ${bgActiveColor} rounded-lg pointer-events-none z-10`} />
+          
+          {/* Edge overlay shading for visual depth */}
+          <div className="absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-slate-50 to-transparent pointer-events-none z-10" />
+          <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-slate-50 to-transparent pointer-events-none z-10" />
+
+          {/* Snapping Scroll Container */}
+          {items.length === 0 ? (
+            <div className="w-full h-full flex items-center justify-center text-slate-400 font-bold text-sm">
+              無可用項目
+            </div>
+          ) : (
+            <div 
+              ref={scrollContainerRef}
+              onScroll={handleScroll}
+              className="w-full h-full overflow-y-auto snap-y snap-mandatory no-scrollbar"
+              style={{ 
+                scrollbarWidth: 'none', 
+                msOverflowStyle: 'none'
+              }}
+            >
+              {/* Top spacer so item 0 can align properly at center of viewport */}
+              <div className="h-[68px] shrink-0" />
+
+              {/* Items */}
+              {items.map((word, idx) => {
+                const isSelected = idx === localActiveIndex;
+                const opacity = isSelected ? 1 : 0.45;
+
+                return (
+                  <div 
+                    key={idx}
+                    className={`w-full text-center h-[44px] leading-[44px] truncate px-4 snap-center transition-all duration-100 ${
+                      isSelected ? `${textActiveColor} font-extrabold text-[15px]` : 'text-slate-400 font-bold text-[14px]'
+                    }`}
+                    style={{
+                      opacity: opacity
+                    }}
+                  >
+                    {word}
+                  </div>
+                );
+              })}
+
+              {/* Bottom spacer so last item can align properly at center of viewport */}
+              <div className="h-[68px] shrink-0" />
+            </div>
+          )}
+        </div>
+
+        {/* Confirmation Button */}
+        <button
+          type="button"
+          onClick={() => {
+            if (items.length > 0) {
+              onConfirm(items[localActiveIndex]);
+            }
+            onClose();
+          }}
+          className={`mt-4 w-full py-2.5 text-center ${btnBgColor} font-bold text-white text-sm rounded-xl shadow-sm active:scale-95 transition-all`}
+        >
+          選好了
+        </button>
+      </div>
+    </div>
+  );
+};
+
 interface Props {
   onNavigateHome: () => void;
 }
@@ -138,56 +303,10 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const [txToDelete, setTxToDelete] = useState<BankTransaction | null>(null);
 
-  // --- Native Scroll Snapping Picker for Category ---
+  // --- Scroll Snapping Pickers States ---
   const [showDrumPicker, setShowDrumPicker] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(0);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-
-  // Sync scroll position to matches category whenever DrumPicker opens or type changes
-  useEffect(() => {
-    if (showDrumPicker) {
-      const categoriesForType = vocabularies.filter(
-        (v) => v.type === addForm.type && !v.parentId && v.word && v.word.trim() !== "",
-      );
-      const activeIdx = categoriesForType.findIndex(
-        (v) => v.word === addForm.category,
-      );
-      
-      const targetIdx = activeIdx >= 0 ? activeIdx : 0;
-      setActiveIndex(targetIdx);
-
-      // Scroll to target item top offset
-      setTimeout(() => {
-        if (scrollContainerRef.current) {
-          scrollContainerRef.current.scrollTop = targetIdx * 44;
-        }
-      }, 50);
-    }
-  }, [showDrumPicker, addForm.type, addForm.category, vocabularies]);
-
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const categoriesForType = vocabularies.filter(
-      (v) => v.type === addForm.type && !v.parentId && v.word && v.word.trim() !== "",
-    );
-    if (categoriesForType.length === 0) return;
-
-    const scrollTop = e.currentTarget.scrollTop;
-    const index = Math.max(0, Math.min(categoriesForType.length - 1, Math.round(scrollTop / 44)));
-    
-    if (index !== activeIndex) {
-      setActiveIndex(index);
-      setAddForm((prev) => ({
-        ...prev,
-        category: categoriesForType[index]?.word || "",
-      }));
-    }
-  };
-
-  // --- Native Scroll Snapping Picker for Remarks ---
   const [showRemarksPicker, setShowRemarksPicker] = useState(false);
-  const [activeRemarksIndex, setActiveRemarksIndex] = useState(0);
-  const remarksScrollContainerRef = useRef<HTMLDivElement>(null);
-
+  
   // Calculate dynamic remarks list
   const staticRemarks = vocabularies
     .filter((v) => v.type === "備註" && !v.parentId && v.word && v.word.trim() !== "")
@@ -207,40 +326,6 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
   const linkedRemarks = Array.from(
     new Set([...staticRemarks, ...dynamicRemarks]),
   );
-
-  // Sync scroll position for Remarks whenever RemarksPicker opens
-  useEffect(() => {
-    if (showRemarksPicker) {
-      const activeIdx = linkedRemarks.findIndex(
-        (r) => r === addForm.remarks,
-      );
-      
-      const targetIdx = activeIdx >= 0 ? activeIdx : 0;
-      setActiveRemarksIndex(targetIdx);
-
-      // Scroll to target item top offset
-      setTimeout(() => {
-        if (remarksScrollContainerRef.current) {
-          remarksScrollContainerRef.current.scrollTop = targetIdx * 44;
-        }
-      }, 50);
-    }
-  }, [showRemarksPicker, addForm.remarks, linkedRemarks.length]);
-
-  const handleRemarksScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    if (linkedRemarks.length === 0) return;
-
-    const scrollTop = e.currentTarget.scrollTop;
-    const index = Math.max(0, Math.min(linkedRemarks.length - 1, Math.round(scrollTop / 44)));
-    
-    if (index !== activeRemarksIndex) {
-      setActiveRemarksIndex(index);
-      setAddForm((prev) => ({
-        ...prev,
-        remarks: linkedRemarks[index] || "",
-      }));
-    }
-  };
 
   const handleSaveTransaction = async () => {
     if (!addForm.category || !addForm.amount || isSaving) return;
@@ -1427,18 +1512,25 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
             <label className="block text-[13px] font-bold text-slate-700 mb-1.5 flex items-center justify-between">
               <span>備註說明</span>
               <span className="text-xs text-slate-400 font-normal">
-                可滾輪選擇或自行輸入
+                左側可直接輸入 / 右側滾輪選擇
               </span>
             </label>
-            <div className="relative">
+            <div className="relative flex items-stretch">
+              <input
+                type="text"
+                placeholder="選填備註說明（直接輸入）..."
+                className="flex-1 min-w-0 h-[42px] border border-r-0 border-slate-200 rounded-l-xl px-3 font-bold text-slate-800 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-[#408f61] focus:border-transparent outline-none transition-colors text-[14px]"
+                value={addForm.remarks || ""}
+                onChange={(e) =>
+                  setAddForm({ ...addForm, remarks: e.target.value })
+                }
+              />
               <button
                 type="button"
                 onClick={() => setShowRemarksPicker(true)}
-                className="w-full h-[42px] border border-slate-200 rounded-xl px-3 flex items-center justify-between font-bold text-slate-800 bg-slate-50 hover:bg-slate-100/70 focus:bg-white focus:ring-2 focus:ring-[#408f61] focus:border-transparent outline-none transition-all text-left"
+                title="滾輪選擇常用備註"
+                className="w-[44px] flex items-center justify-center border border-slate-200 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-r-xl transition-all outline-none"
               >
-                <span className={addForm.remarks ? "text-slate-800 text-[14px]" : "text-slate-400 font-normal text-[14px]"}>
-                  {addForm.remarks || "請選擇或輸入備註..."}
-                </span>
                 <ChevronDown size={18} className="text-slate-400" />
               </button>
             </div>
@@ -1832,196 +1924,35 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
         </div>
       )}
 
-      {/* Modern crisp drum scroller wheel view with native snap-scrolling */}
-      {showDrumPicker && (() => {
-        const categoriesForType = vocabularies.filter(
-          (v) => v.type === addForm.type && !v.parentId && v.word && v.word.trim() !== ""
-        );
-        return (
-          <div 
-            onClick={() => setShowDrumPicker(false)}
-            className="absolute inset-0 z-50 bg-slate-900/40 backdrop-blur-[1.5px] flex items-center justify-center p-4 animate-in fade-in duration-150"
-          >
-            {/* Inject a temporary visual block to hide scrollbars on Webkit browsers */}
-            <style>{`
-              .no-scrollbar::-webkit-scrollbar {
-                display: none !important;
-              }
-            `}</style>
+      {/* Reusable Smooth Scroller Wheel for Category */}
+      <SnapPicker
+        isOpen={showDrumPicker}
+        onClose={() => setShowDrumPicker(false)}
+        title="選擇項目名稱"
+        items={vocabularies
+          .filter((v) => v.type === addForm.type && !v.parentId && v.word && v.word.trim() !== "")
+          .map((v) => v.word)}
+        initialValue={addForm.category || ""}
+        onConfirm={(val) => {
+          setAddForm((prev) => ({ ...prev, category: val }));
+        }}
+        themeColorClass="emerald"
+        maxWidthClass="max-w-[270px]"
+      />
 
-            <div 
-              onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-2xl shadow-xl w-full max-w-[270px] overflow-hidden flex flex-col p-4 animate-in zoom-in-95 duration-150 border border-slate-100"
-            >
-              {/* Native Roller Viewport */}
-              <div 
-                className="w-full h-[220px] bg-slate-50 rounded-xl relative overflow-hidden border border-slate-100/80 shadow-inner select-none"
-              >
-                {/* Highlight guidelines for the central selected slot */}
-                <div className="absolute left-3 right-3 h-[44px] top-[88px] border-y border-indigo-200/60 bg-indigo-500/5 rounded-lg pointer-events-none z-10" />
-                
-                {/* Edge overlay shading for visual depth */}
-                <div className="absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-slate-50 to-transparent pointer-events-none z-10" />
-                <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-slate-50 to-transparent pointer-events-none z-10" />
-
-                {/* Snapping Scroll Container */}
-                {categoriesForType.length === 0 ? (
-                  <div className="w-full h-full flex items-center justify-center text-slate-400 font-bold text-sm">
-                    無可用項目
-                  </div>
-                ) : (
-                  <div 
-                    ref={scrollContainerRef}
-                    onScroll={handleScroll}
-                    className="w-full h-full overflow-y-auto snap-y snap-mandatory no-scrollbar"
-                    style={{ 
-                      scrollbarWidth: 'none', 
-                      msOverflowStyle: 'none'
-                    }}
-                  >
-                    {/* Top spacer so item 0 can align properly at center of viewport */}
-                    <div className="h-[88px] shrink-0" />
-
-                    {/* Items */}
-                    {categoriesForType.map((v, idx) => {
-                      const isSelected = idx === activeIndex;
-                      const opacity = isSelected ? 1 : 0.45;
-
-                      return (
-                        <div 
-                          key={v.id}
-                          className={`w-full text-center h-[44px] leading-[44px] truncate px-4 snap-center transition-all duration-100 ${
-                            isSelected ? 'text-indigo-600 font-extrabold text-[15px]' : 'text-slate-400 font-bold text-[14px]'
-                          }`}
-                          style={{
-                            opacity: opacity
-                          }}
-                        >
-                          {v.word}
-                        </div>
-                      );
-                    })}
-
-                    {/* Bottom spacer so last item can align properly at center of viewport */}
-                    <div className="h-[88px] shrink-0" />
-                  </div>
-                )}
-              </div>
-
-              {/* Compact Confirmation Button */}
-              <button
-                type="button"
-                onClick={() => setShowDrumPicker(false)}
-                className="mt-4 w-full py-2.5 text-center bg-indigo-600 hover:bg-indigo-500 font-bold text-white text-sm rounded-xl shadow-sm active:scale-95 transition-all"
-              >
-                選好了
-              </button>
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* Modern crisp Remarks scroller wheel view with native snap-scrolling */}
-      {showRemarksPicker && (() => {
-        return (
-          <div 
-            onClick={() => setShowRemarksPicker(false)}
-            className="absolute inset-0 z-50 bg-slate-900/40 backdrop-blur-[1.5px] flex items-center justify-center p-4 animate-in fade-in duration-150"
-          >
-            {/* Inject a temporary visual block to hide scrollbars on Webkit browsers */}
-            <style>{`
-              .no-scrollbar::-webkit-scrollbar {
-                display: none !important;
-              }
-            `}</style>
-
-            <div 
-              onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-2xl shadow-xl w-full max-w-[270px] overflow-hidden flex flex-col p-4 animate-in zoom-in-95 duration-150 border border-slate-100"
-            >
-              {/* Native Roller Viewport */}
-              <div 
-                className="w-full h-[180px] bg-slate-50 rounded-xl relative overflow-hidden border border-slate-100/80 shadow-inner select-none"
-              >
-                {/* Highlight guidelines for the central selected slot */}
-                <div className="absolute left-3 right-3 h-[44px] top-[68px] border-y border-indigo-200/60 bg-indigo-500/5 rounded-lg pointer-events-none z-10" />
-                
-                {/* Edge overlay shading for visual depth */}
-                <div className="absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-slate-50 to-transparent pointer-events-none z-10" />
-                <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-slate-50 to-transparent pointer-events-none z-10" />
-
-                {/* Snapping Scroll Container */}
-                {linkedRemarks.length === 0 ? (
-                  <div className="w-full h-full flex items-center justify-center text-slate-400 font-bold text-sm">
-                    無可用項目
-                  </div>
-                ) : (
-                  <div 
-                    ref={remarksScrollContainerRef}
-                    onScroll={handleRemarksScroll}
-                    className="w-full h-full overflow-y-auto snap-y snap-mandatory no-scrollbar"
-                    style={{ 
-                      scrollbarWidth: 'none', 
-                      msOverflowStyle: 'none'
-                    }}
-                  >
-                    {/* Top spacer so item 0 can align properly at center of viewport */}
-                    <div className="h-[68px] shrink-0" />
-
-                    {/* Items */}
-                    {linkedRemarks.map((remarkText, idx) => {
-                      const isSelected = idx === activeRemarksIndex;
-                      const opacity = isSelected ? 1 : 0.45;
-
-                      return (
-                        <div 
-                          key={idx}
-                          className={`w-full text-center h-[44px] leading-[44px] truncate px-4 snap-center transition-all duration-100 ${
-                            isSelected ? 'text-indigo-600 font-extrabold text-[15px]' : 'text-slate-400 font-bold text-[14px]'
-                          }`}
-                          style={{
-                            opacity: opacity
-                          }}
-                        >
-                          {remarkText}
-                        </div>
-                      );
-                    })}
-
-                    {/* Bottom spacer so last item can align properly at center of viewport */}
-                    <div className="h-[68px] shrink-0" />
-                  </div>
-                )}
-              </div>
-
-              {/* Direct Input Field */}
-              <div className="mt-3 pt-2.5 border-t border-slate-100">
-                <label className="block text-xs font-bold text-slate-400 mb-1 text-left">
-                  手動自行輸入備註：
-                </label>
-                <input
-                  type="text"
-                  placeholder="可在此輸入客製備註..."
-                  className="w-full h-[36px] text-xs font-bold border border-slate-200 rounded-lg px-2.5 text-slate-800 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 outline-none transition-colors"
-                  value={addForm.remarks || ""}
-                  onChange={(e) => {
-                    setAddForm({ ...addForm, remarks: e.target.value });
-                  }}
-                />
-              </div>
-
-              {/* Compact Confirmation Button */}
-              <button
-                type="button"
-                onClick={() => setShowRemarksPicker(false)}
-                className="mt-4 w-full py-2.5 text-center bg-indigo-600 hover:bg-indigo-500 font-bold text-white text-sm rounded-xl shadow-sm active:scale-95 transition-all"
-              >
-                選好了
-              </button>
-            </div>
-          </div>
-        );
-      })()}
+      {/* Reusable Smooth Scroller Wheel for Remarks */}
+      <SnapPicker
+        isOpen={showRemarksPicker}
+        onClose={() => setShowRemarksPicker(false)}
+        title="選擇常用備註"
+        items={linkedRemarks}
+        initialValue={addForm.remarks || ""}
+        onConfirm={(val) => {
+          setAddForm((prev) => ({ ...prev, remarks: val }));
+        }}
+        themeColorClass="emerald"
+        maxWidthClass="max-w-[270px]"
+      />
 
       <div className="flex-1 overflow-hidden w-full relative">
         {view === "summary" && (
