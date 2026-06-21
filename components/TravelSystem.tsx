@@ -81,6 +81,39 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
   const [isSavingExp, setIsSavingExp] = useState(false);
   const [analysisYear, setAnalysisYear] = useState<string>(new Date().getFullYear().toString());
 
+  // --- Slogan Snapping Scroll Picker ---
+  const [showTripPicker, setShowTripPicker] = useState(false);
+  const [activeTripIndex, setActiveTripIndex] = useState(0);
+  const tripScrollContainerRef = React.useRef<HTMLDivElement>(null);
+
+  // Sync scroll position for Slogan Picker whenever it opens
+  useEffect(() => {
+    if (showTripPicker && trips.length > 0) {
+      const activeIdx = trips.findIndex(t => t.id === activeTripId);
+      const targetIdx = activeIdx >= 0 ? activeIdx : 0;
+      setActiveTripIndex(targetIdx);
+
+      // Scroll to target item top offset
+      setTimeout(() => {
+        if (tripScrollContainerRef.current) {
+          tripScrollContainerRef.current.scrollTop = targetIdx * 44;
+        }
+      }, 50);
+    }
+  }, [showTripPicker, activeTripId, trips]);
+
+  const handleTripScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (trips.length === 0) return;
+
+    const scrollTop = e.currentTarget.scrollTop;
+    const index = Math.max(0, Math.min(trips.length - 1, Math.round(scrollTop / 44)));
+    
+    if (index !== activeTripIndex) {
+      setActiveTripIndex(index);
+      setActiveTripId(trips[index]?.id || '');
+    }
+  };
+
   // Firestore Subscriptions
   useEffect(() => {
     const unsubTrips = onSnapshot(collection(db, 'trip_slogans'), (snap) => {
@@ -277,16 +310,16 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
                  <div className="flex flex-col h-full bg-slate-50">
                     {/* Top Area: Slogan Selector */}
                     <div className="bg-purple-600 text-white p-3 shadow shrink-0 flex items-center gap-2">
-                        <select 
-                           value={activeTripId} 
-                           onChange={(e) => setActiveTripId(e.target.value)}
-                           className="flex-1 min-w-0 bg-purple-700 border border-purple-500 rounded-lg px-2 py-2 text-sm font-bold shadow-sm outline-none cursor-pointer appearance-none truncate"
+                        <button 
+                           type="button"
+                           onClick={() => setShowTripPicker(true)}
+                           className="flex-1 min-w-0 bg-purple-700 hover:bg-purple-700/80 border border-purple-500 rounded-lg px-3 py-2 text-sm font-bold shadow-sm outline-none cursor-pointer flex items-center justify-between truncate"
                         >
-                           {trips.length === 0 && <option value="">無標語，請新增</option>}
-                           {trips.map(t => (
-                               <option key={t.id} value={t.id}>{t.location} {t.remarks}</option>
-                           ))}
-                        </select>
+                           <span className="truncate">
+                               {activeTrip ? `${activeTrip.location} ${activeTrip.remarks || ''}` : (trips.length === 0 ? "無標語，請新增" : "請選擇標語...")}
+                           </span>
+                           <ChevronDown size={16} className="text-purple-300 ml-1 shrink-0" />
+                        </button>
                         <button 
                             onClick={() => {
                                 if (activeTrip) {
@@ -873,6 +906,92 @@ const TravelSystem: React.FC<TravelSystemProps> = ({ onNavigateHome }) => {
           )}
           
           {/* Bottom Nav Spacer */}
+           {/* Slogan Snapping Scroll Selector Modal */}
+           {showTripPicker && (() => {
+               return (
+                   <div 
+                     onClick={() => setShowTripPicker(false)}
+                     className="absolute inset-0 z-[250] bg-slate-900/40 backdrop-blur-[1.5px] flex items-center justify-center p-4 animate-in fade-in duration-150"
+                   >
+                     <style>{`
+                       .no-scrollbar::-webkit-scrollbar {
+                         display: none !important;
+                       }
+                     `}</style>
+                     <div 
+                       onClick={(e) => e.stopPropagation()}
+                       className="bg-white rounded-2xl shadow-xl w-full max-w-[270px] overflow-hidden flex flex-col p-4 animate-in zoom-in-95 duration-150 border border-slate-100"
+                     >
+                       <h4 className="text-center font-bold text-slate-700 text-sm mb-3">選擇旅遊標語</h4>
+
+                       {/* Native Roller Viewport */}
+                       <div 
+                         className="w-full h-[180px] bg-slate-50 rounded-xl relative overflow-hidden border border-slate-100/80 shadow-inner select-none"
+                       >
+                         {/* Highlight guidelines for the central selected slot */}
+                         <div className="absolute left-3 right-3 h-[44px] top-[68px] border-y border-purple-200/60 bg-purple-500/5 rounded-lg pointer-events-none z-10" />
+                         
+                         {/* Edge overlay shading for visual depth */}
+                         <div className="absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-slate-50 to-transparent pointer-events-none z-10" />
+                         <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-slate-50 to-transparent pointer-events-none z-10" />
+
+                         {/* Snapping Scroll Container */}
+                         {trips.length === 0 ? (
+                           <div className="w-full h-full flex items-center justify-center text-slate-400 font-bold text-sm">
+                             無標語，請新增
+                           </div>
+                         ) : (
+                           <div 
+                             ref={tripScrollContainerRef}
+                             onScroll={handleTripScroll}
+                             className="w-full h-[180px] overflow-y-auto snap-y snap-mandatory no-scrollbar"
+                             style={{ 
+                               scrollbarWidth: 'none', 
+                               msOverflowStyle: 'none'
+                             }}
+                           >
+                             {/* Top spacer so item 0 can align properly at center of viewport */}
+                             <div className="h-[68px] shrink-0" />
+
+                             {/* Items */}
+                             {trips.map((t, idx) => {
+                               const isSelected = idx === activeTripIndex;
+                               const opacity = isSelected ? 1 : 0.45;
+
+                               return (
+                                 <div 
+                                   key={t.id}
+                                   className={`w-full text-center h-[44px] leading-[44px] truncate px-4 snap-center transition-all duration-100 ${
+                                     isSelected ? 'text-purple-600 font-extrabold text-[15px]' : 'text-slate-400 font-bold text-[14px]'
+                                   }`}
+                                   style={{
+                                     opacity: opacity
+                                   }}
+                                 >
+                                   {t.location} {t.remarks || ''}
+                                 </div>
+                               );
+                             })}
+
+                             {/* Bottom spacer so last item can align properly at center of viewport */}
+                             <div className="h-[68px] shrink-0" />
+                           </div>
+                         )}
+                       </div>
+
+                       {/* Confirmation Button */}
+                       <button
+                         type="button"
+                         onClick={() => setShowTripPicker(false)}
+                         className="mt-4 w-full py-2.5 text-center bg-purple-600 hover:bg-purple-500 font-bold text-white text-sm rounded-xl shadow-sm active:scale-95 transition-all"
+                       >
+                         選好了
+                       </button>
+                     </div>
+                   </div>
+               );
+           })()}
+
           {renderNav()}
       </div>
   );
