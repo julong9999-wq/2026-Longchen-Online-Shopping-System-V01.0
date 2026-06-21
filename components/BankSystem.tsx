@@ -243,42 +243,6 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
     }));
   };
 
-  // Direct word tag select tap
-  const handleDirectTap = (idx: number) => {
-    const categoriesForType = vocabularies.filter(
-      (v) => v.type === addForm.type && !v.parentId,
-    );
-    if (idx >= 0 && idx < categoriesForType.length) {
-      setIsTransitioning(true);
-      setOffsetY(-idx * 44);
-      setAddForm((prev) => ({
-        ...prev,
-        category: categoriesForType[idx].word,
-      }));
-    }
-  };
-
-  // Micro adjustments (up/down scroll arrow buttons clicking)
-  const handleMicroAdjust = (direction: number) => {
-    const categoriesForType = vocabularies.filter(
-      (v) => v.type === addForm.type && !v.parentId,
-    );
-    if (categoriesForType.length === 0) return;
-
-    const approxIndex = Math.round(-offsetY / 44);
-    const targetIdx = Math.max(
-      0,
-      Math.min(categoriesForType.length - 1, approxIndex + direction),
-    );
-
-    setIsTransitioning(true);
-    setOffsetY(-targetIdx * 44);
-    setAddForm((prev) => ({
-      ...prev,
-      category: categoriesForType[targetIdx].word,
-    }));
-  };
-
   // Mouse wrapper actions
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -1968,162 +1932,81 @@ const BankSystem: React.FC<Props> = ({ onNavigateHome }) => {
           (v) => v.type === addForm.type && !v.parentId
         );
         return (
-          <div className="absolute inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col animate-in zoom-in-95 duration-200 border border-slate-100">
-              {/* Header */}
-              <div className="px-5 py-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  {/* Rotating wheel logo */}
-                  <svg className="w-5 h-5 text-indigo-500 animate-[spin_6s_linear_infinite]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <circle cx="12" cy="12" r="8" strokeDasharray="3 1" />
-                    <circle cx="12" cy="12" r="3" fill="currentColor" />
-                  </svg>
-                  <span className="font-bold text-slate-800 text-[16px]">項目 滾輪選擇器</span>
-                </div>
-                <button 
-                  type="button"
-                  onClick={() => setShowDrumPicker(false)}
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 transition-all active:scale-95"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              {/* Subtitle Hint */}
-              <div className="px-5 py-2 text-center text-slate-400 text-xs font-semibold bg-indigo-50/20 text-indigo-700/80">
-                可垂直拖曳、滑動、使用滾輪，或點選兩側按鈕微調項目
-              </div>
-
+          <div 
+            onClick={() => setShowDrumPicker(false)}
+            className="absolute inset-0 z-50 bg-slate-900/45 backdrop-blur-[1px] flex items-center justify-center p-4 animate-in fade-in duration-200"
+          >
+            <div 
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-[280px] overflow-hidden flex flex-col p-4 animate-in zoom-in-95 duration-200 border border-slate-100"
+            >
               {/* Physical Roller Viewport */}
-              <div className="px-6 py-6 flex flex-col items-center justify-center bg-slate-50 relative select-none">
+              <div 
+                ref={drumRef}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseLeave}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                onWheel={handleWheel}
+                className="w-full h-[220px] bg-slate-50 rounded-xl relative overflow-hidden flex flex-col items-center justify-center cursor-ns-resize border border-slate-100 shadow-inner select-none"
+                style={{ touchAction: 'none' }}
+              >
+                {/* Highlight guidelines for the central selected slot */}
+                <div className="absolute left-3 right-3 h-[44px] top-[88px] border-y border-slate-200 bg-indigo-500/5 rounded-lg pointer-events-none" />
+                
+                {/* Edge overlay shading for visual depth */}
+                <div className="absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-slate-50 to-transparent pointer-events-none z-10" />
+                <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-slate-50 to-transparent pointer-events-none z-10" />
+
+                {/* Moving drum cylinder */}
                 <div 
-                  ref={drumRef}
-                  onMouseDown={handleMouseDown}
-                  onMouseMove={handleMouseMove}
-                  onMouseUp={handleMouseUp}
-                  onMouseLeave={handleMouseLeave}
-                  onTouchStart={handleTouchStart}
-                  onTouchMove={handleTouchMove}
-                  onTouchEnd={handleTouchEnd}
-                  onWheel={handleWheel}
-                  className="w-full h-[220px] bg-slate-900 rounded-2xl relative overflow-hidden flex flex-col items-center justify-center cursor-ns-resize shadow-inner border border-slate-800"
-                  style={{ touchAction: 'none' }}
-                >
-                  {/* Highlight guidelines for the central selected slot */}
-                  <div className="absolute left-6 right-6 h-[44px] top-[88px] border-y-2 border-indigo-400/50 bg-indigo-500/10 rounded-lg pointer-events-none" />
-                  
-                  {/* Edge overlay gradients for depth */}
-                  <div className="absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-slate-900 to-transparent pointer-events-none z-10" />
-                  <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-slate-900 to-transparent pointer-events-none z-10" />
-
-                  {/* Cylindrical moving drum cylinder */}
-                  <div 
-                    className="absolute w-full flex flex-col items-center"
-                    style={{ 
-                      transform: `translateY(${offsetY + 88}px)`, // 88 is the visual center for 44px items
-                      transition: isTransitioning ? 'transform 0.22s cubic-bezier(0.1, 0.8, 0.25, 1)' : 'none'
-                    }}
-                  >
-                    {categoriesForType.map((v, idx) => {
-                      const yPos = idx * 44 + offsetY;
-                      const f = yPos / 44; // vertical distance in items ratio
-                      
-                      if (Math.abs(f) > 3) return null; // cull off-screen items
-
-                      // 3D projections
-                      const scale = 1.15 - Math.min(0.3, Math.abs(f) * 0.12);
-                      const opacity = 1 - Math.min(0.8, Math.abs(f) * 0.35);
-                      const rotX = f * -26;
-                      const transZ = -Math.abs(f) * 15;
-
-                      return (
-                        <div 
-                          key={v.id}
-                          className={`w-full text-center font-extrabold text-[16px] truncate ${Math.abs(f) < 0.5 ? 'text-indigo-400' : 'text-slate-500'}`}
-                          style={{ 
-                            height: '44px', 
-                            lineHeight: '44px',
-                            transform: `perspective(500px) rotateX(${rotX}deg) translateZ(${transZ}px) scale(${scale})`,
-                            opacity: opacity,
-                            pointerEvents: 'none'
-                          }}
-                        >
-                          {v.word}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Fine tuning controls */}
-                <div className="flex gap-4 mt-5 w-full">
-                  <button
-                    type="button"
-                    onClick={() => handleMicroAdjust(-1)}
-                    className="flex-1 py-1 px-3 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs rounded-lg active:scale-95 transition-all shadow-sm flex items-center justify-center gap-1"
-                  >
-                    ▲ 向上滾動
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleMicroAdjust(1)}
-                    className="flex-1 py-1 px-3 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs rounded-lg active:scale-95 transition-all shadow-sm flex items-center justify-center gap-1"
-                  >
-                    ▼ 向下滾動
-                  </button>
-                </div>
-              </div>
-
-              {/* Direct chips for convenience */}
-              {categoriesForType.length > 0 && (
-                <div className="p-4 border-t border-slate-100 bg-white">
-                  <div className="text-slate-400 text-xs font-semibold mb-2 flex items-center justify-between">
-                    <span>快速點選定位</span>
-                    <span className="text-[10px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded-full font-mono">
-                      {categoriesForType.length} 項
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5 max-h-[85px] overflow-y-auto pr-1">
-                    {categoriesForType.map((v, idx) => {
-                      const isSelected = v.word === addForm.category;
-                      return (
-                        <button
-                          key={v.id}
-                          type="button"
-                          onClick={() => handleDirectTap(idx)}
-                          className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all active:scale-95 ${isSelected ? 'bg-indigo-600 text-white shadow-sm ring-1 ring-indigo-500' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}
-                        >
-                          {v.word}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Confirm / Action Bar */}
-              <div className="px-5 py-4 bg-slate-50 border-t border-slate-100 flex gap-2 flex-row-reverse">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (categoriesForType.length > 0) {
-                      const targetIdx = Math.max(0, Math.min(categoriesForType.length - 1, Math.round(-offsetY / 44)));
-                      setAddForm({ ...addForm, category: categoriesForType[targetIdx].word });
-                    }
-                    setShowDrumPicker(false);
+                  className="absolute w-full flex flex-col items-center"
+                  style={{ 
+                    transform: `translateY(${offsetY + 88}px)`, // 88 is the visual center for 44px items
+                    transition: isTransitioning ? 'transform 0.22s cubic-bezier(0.1, 0.8, 0.25, 1)' : 'none'
                   }}
-                  className="flex-1 py-2.5 text-center bg-indigo-600 hover:bg-indigo-500 font-bold text-white text-[15px] rounded-xl shadow active:scale-98 transition-all"
                 >
-                  確認選取
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowDrumPicker(false)}
-                  className="flex-1 py-2.5 text-center bg-white hover:bg-slate-50 font-bold text-slate-600 text-[15px] border border-slate-200 rounded-xl transition-all"
-                >
-                  取消
-                </button>
+                  {categoriesForType.map((v, idx) => {
+                    const yPos = idx * 44 + offsetY;
+                    const f = yPos / 44; // vertical distance in items ratio
+                    
+                    if (Math.abs(f) > 3) return null; // cull off-screen items
+
+                    // 3D rotation projection
+                    const scale = 1.12 - Math.min(0.2, Math.abs(f) * 0.1);
+                    const opacity = 1 - Math.min(0.8, Math.abs(f) * 0.35);
+                    const rotX = f * -22;
+
+                    return (
+                      <div 
+                        key={v.id}
+                        className={`w-full text-center font-bold text-sm truncate px-4 transition-colors duration-150 ${Math.abs(f) < 0.5 ? 'text-indigo-600 font-extrabold text-[15px]' : 'text-slate-400'}`}
+                        style={{ 
+                          height: '44px', 
+                          lineHeight: '44px',
+                          transform: `perspective(400px) rotateX(${rotX}deg) scale(${scale})`,
+                          opacity: opacity,
+                          pointerEvents: 'none'
+                        }}
+                      >
+                        {v.word}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
+
+              {/* Compact Confirmation Button */}
+              <button
+                type="button"
+                onClick={() => setShowDrumPicker(false)}
+                className="mt-4 w-full py-2.5 text-center bg-indigo-600 hover:bg-indigo-500 font-bold text-white text-sm rounded-xl shadow-sm active:scale-95 transition-all"
+              >
+                選好了
+              </button>
             </div>
           </div>
         );
