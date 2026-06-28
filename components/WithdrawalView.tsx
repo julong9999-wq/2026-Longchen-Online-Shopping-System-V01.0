@@ -43,6 +43,7 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
   const [overviewSubTab, setOverviewSubTab] = useState('amount'); // amount, dividend, year
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [lifeUsageType, setLifeUsageType] = useState<string>(''); // For life and virtual tabs
+  const [dividendChartMode, setDividendChartMode] = useState<'purchase' | 'dividend'>('purchase');
 
   const filteredRecords = useMemo(() => {
     if (activeAccount === 'all') return records;
@@ -174,17 +175,6 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
     fetchData();
   }, [refreshKey]);
 
-  // Set default usage type for life/virtual when tab changes
-  useEffect(() => {
-    if (activeTab === 'life') {
-      const types = Array.from(new Set(filteredRecords.filter(r => r.feeType === '生活費用').map(r => r.usageType))).filter(Boolean);
-      if (types.length > 0 && !types.includes(lifeUsageType)) setLifeUsageType(types[0]);
-    } else if (activeTab === 'virtual') {
-      const types = Array.from(new Set(records.filter(r => r.feeType === '虛擬帳戶').map(r => r.usageType))).filter(t => t && t !== '銀行費用');
-      if (types.length > 0 && !types.includes(lifeUsageType)) setLifeUsageType(types[0]);
-    }
-  }, [activeTab, filteredRecords, records]);
-
   // UseMemos for data crunching
   const overviewAmountData = useMemo(() => {
     if (activeTab !== 'overview' || overviewSubTab !== 'amount') return null;
@@ -296,10 +286,24 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
       }
     });
 
-    return Array.from(yearlyData.values())
-        .filter(d => d.purchase > 0 || d.dividend > 0 || d.withdrawal > 0)
-        .sort((a, b) => b.year - a.year);
+    const sortedData = Array.from(yearlyData.values()).sort((a, b) => a.year - b.year);
+    let cumulativePurchase = 0;
+    return sortedData.map(d => {
+      cumulativePurchase += d.purchase;
+      return { ...d, purchase: Math.round(cumulativePurchase), dividend: Math.round(d.dividend), withdrawal: Math.round(d.withdrawal) };
+    })
+    .filter(d => d.purchase > 0 || d.dividend > 0 || d.withdrawal > 0)
+    .sort((a, b) => b.year - a.year);
   }, [activeTab, overviewSubTab, purchaseRecords, dividendEvents, filteredRecords, activeAccount]);
+
+  const dividendChartData = useMemo(() => {
+    if (!dividendTableData) return [];
+    return [...dividendTableData].reverse().map(d => ({
+      year: d.year,
+      purchaseRatio: d.purchase > 0 ? parseFloat(((d.withdrawal / d.purchase) * 100).toFixed(1)) : 0,
+      dividendRatio: d.dividend > 0 ? parseFloat(((d.withdrawal / d.dividend) * 100).toFixed(1)) : 0,
+    }));
+  }, [dividendTableData]);
 
   const companySchoolData = useMemo(() => {
     if (activeTab !== 'company' && activeTab !== 'highschool') return null;
@@ -352,8 +356,11 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
     const sourceRecords = activeTab === 'virtual' ? records : filteredRecords;
     const filtered = sourceRecords.filter(r => r.feeType === targetFeeType);
     let allUsageTypes = Array.from(new Set(filtered.map(r => r.usageType).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'zh-TW'));
-    if (activeTab === 'virtual') {
+    if (activeTab === 'life') {
+      allUsageTypes = ['全部支出', ...allUsageTypes];
+    } else if (activeTab === 'virtual') {
       allUsageTypes = allUsageTypes.filter(t => t !== '銀行費用');
+      allUsageTypes = ['全部支出', ...allUsageTypes];
     }
 
     let currentUsageType = lifeUsageType;
@@ -361,7 +368,7 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
       currentUsageType = allUsageTypes[0];
     }
 
-    const yearFiltered = filtered.filter(r => r.year === selectedYear && r.usageType === currentUsageType);
+    const yearFiltered = filtered.filter(r => r.year === selectedYear && (currentUsageType === '全部支出' ? true : r.usageType === currentUsageType));
     
     const chartMap = new Map<number, any>();
     const expenseTypeTotals = new Map<string, number[]>();
@@ -428,8 +435,8 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
         </div>
         
         {overviewSubTab === 'amount' && (
-          <div className="flex-1 flex flex-col min-h-0 px-2 space-y-2 pb-20">
-            <div className="shrink-0 bg-white rounded-lg shadow-sm border border-slate-200 p-2 h-48">
+          <div className="flex-1 flex flex-col min-h-0 px-1 space-y-1 pb-16">
+            <div className="shrink-0 bg-white rounded-lg shadow-sm border border-slate-200 p-1.5 h-40">
               {chartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
@@ -451,7 +458,7 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
             </div>
             
             <div className="flex-1 bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col min-h-0 text-[10px]">
-              <div className="shrink-0 grid grid-cols-[2fr_1.5fr_0.5fr_1.5fr_0.5fr_1.5fr] bg-slate-100 p-1.5 border-b border-slate-200 text-slate-600 font-bold text-center items-center rounded-t-lg">
+              <div className="shrink-0 grid grid-cols-[2fr_1.5fr_0.5fr_1.5fr_0.5fr_1.5fr] bg-slate-100 p-1 border-b border-slate-200 text-slate-600 font-bold text-center items-center rounded-t-lg">
                 <div className="text-left pl-1">項目</div>
                 <div className="text-indigo-600 text-right">{selectedYear}</div>
                 <button onClick={handleNextYear} disabled={!availableYears.find(y => y > selectedYear)} className="hover:bg-slate-300 rounded p-0.5 disabled:opacity-30 mx-auto"><ChevronRight size={14}/></button>
@@ -463,7 +470,7 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
                 {tree.map(master => (
                   <div key={master.name}>
                     {/* Master Row */}
-                    <div className="grid grid-cols-[2fr_1.5fr_0.5fr_1.5fr_0.5fr_1.5fr] p-1.5 items-center bg-indigo-50/30">
+                    <div className="grid grid-cols-[2fr_1.5fr_0.5fr_1.5fr_0.5fr_1.5fr] p-1 items-center bg-indigo-50/30">
                       <div className="font-bold truncate text-left text-indigo-800 pl-1">{master.name}</div>
                       <div className="text-right text-indigo-600 font-bold">{formatCurrency(master.current)}</div>
                       <div></div>
@@ -473,7 +480,7 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
                     </div>
                     {/* Detail Rows */}
                     {master.children.map(child => (
-                      <div key={child.name} className="grid grid-cols-[2fr_1.5fr_0.5fr_1.5fr_0.5fr_1.5fr] p-1.5 items-center hover:bg-slate-50 transition-colors">
+                      <div key={child.name} className="grid grid-cols-[2fr_1.5fr_0.5fr_1.5fr_0.5fr_1.5fr] p-1 items-center hover:bg-slate-50 transition-colors">
                         <div className="truncate text-left pl-4 text-slate-500 before:content-['└_'] before:mr-0.5 before:text-slate-300">{child.name}</div>
                         <div className="text-right text-indigo-500">{formatCurrency(child.current)}</div>
                         <div></div>
@@ -485,7 +492,7 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
                   </div>
                 ))}
                 {tree.length > 0 && (
-                  <div className="grid grid-cols-[2fr_1.5fr_0.5fr_1.5fr_0.5fr_1.5fr] p-1.5 items-center bg-indigo-100/50 sticky bottom-0 border-t border-indigo-200">
+                  <div className="grid grid-cols-[2fr_1.5fr_0.5fr_1.5fr_0.5fr_1.5fr] p-1 items-center bg-indigo-100/50 sticky bottom-0 border-t border-indigo-200">
                     <div className="font-bold truncate text-left text-indigo-900 pl-1">合計</div>
                     <div className="text-right text-indigo-700 font-bold">{formatCurrency(tree.reduce((sum, m) => sum + m.current, 0))}</div>
                     <div></div>
@@ -500,9 +507,26 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
         )}
 
         {overviewSubTab === 'dividend' && (
-          <div className="flex-1 flex flex-col min-h-0 px-2 space-y-2 pb-20">
+          <div className="flex-1 flex flex-col min-h-0 px-1 space-y-1 pb-16">
+            <div className="shrink-0 bg-white rounded-lg shadow-sm border border-slate-200 p-1.5 h-40 flex flex-col">
+              <div className="flex justify-center gap-2 mb-1 shrink-0">
+                <button onClick={() => setDividendChartMode('purchase')} className={`px-3 py-1 rounded-md text-[10px] font-bold border ${dividendChartMode === 'purchase' ? 'border-indigo-500 text-indigo-700 bg-indigo-50' : 'border-slate-200 text-slate-600 hover:border-indigo-300'}`}>購買分析圖</button>
+                <button onClick={() => setDividendChartMode('dividend')} className={`px-3 py-1 rounded-md text-[10px] font-bold border ${dividendChartMode === 'dividend' ? 'border-indigo-500 text-indigo-700 bg-indigo-50' : 'border-slate-200 text-slate-600 hover:border-indigo-300'}`}>股息分析圖</button>
+              </div>
+              <div className="flex-1 min-h-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={dividendChartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                    <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} dy={5} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} dx={-5} tickFormatter={(val) => `${val}%`} />
+                    <Tooltip cursor={{fill: '#f1f5f9'}} contentStyle={{fontSize: '12px', borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} formatter={(val: number) => [`${val}%`, dividendChartMode === 'purchase' ? '領用/購買' : '領用/股息']} />
+                    <Bar dataKey={dividendChartMode === 'purchase' ? 'purchaseRatio' : 'dividendRatio'} fill="#4f46e5" radius={[4, 4, 0, 0]} barSize={32} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
             <div className="flex-1 bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col min-h-0 text-xs">
-              <div className="shrink-0 grid grid-cols-[1fr_2fr_2fr_2fr] bg-slate-100 p-2 border-b border-slate-200 text-slate-600 font-bold text-center items-center rounded-t-lg">
+              <div className="shrink-0 grid grid-cols-[1fr_2fr_2fr_2fr] bg-slate-100 p-1.5 border-b border-slate-200 text-slate-600 font-bold text-center items-center rounded-t-lg">
                 <div>年份</div>
                 <div className="text-right">購買金額</div>
                 <div className="text-right">股息金額</div>
@@ -510,7 +534,7 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
               </div>
               <div className="flex-1 overflow-y-auto no-scrollbar divide-y divide-slate-100">
                 {dividendTableData?.map(item => (
-                  <div key={item.year} className="grid grid-cols-[1fr_2fr_2fr_2fr] p-3 items-center hover:bg-slate-50 transition-colors text-slate-600">
+                  <div key={item.year} className="grid grid-cols-[1fr_2fr_2fr_2fr] p-1.5 items-center hover:bg-slate-50 transition-colors text-slate-600">
                     <div className="font-bold text-indigo-700 text-center">{item.year}</div>
                     <div className="text-right">{formatCurrency(item.purchase)}</div>
                     <div className="text-right text-green-600 font-bold">{formatCurrency(item.dividend)}</div>
@@ -523,9 +547,9 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
                   </div>
                 )}
                 {dividendTableData && dividendTableData.length > 0 && (
-                  <div className="grid grid-cols-[1fr_2fr_2fr_2fr] p-3 items-center bg-indigo-100/50 sticky bottom-0 border-t border-indigo-200 text-slate-600">
+                  <div className="grid grid-cols-[1fr_2fr_2fr_2fr] p-1.5 items-center bg-indigo-100/50 sticky bottom-0 border-t border-indigo-200 text-slate-600">
                     <div className="font-bold text-indigo-900 text-center">合計</div>
-                    <div className="text-right text-indigo-700 font-bold">{formatCurrency(dividendTableData.reduce((sum, item) => sum + item.purchase, 0))}</div>
+                    <div className="text-right text-indigo-700 font-bold">{formatCurrency(Math.max(...dividendTableData.map(d => d.purchase), 0))}</div>
                     <div className="text-right text-green-700 font-bold">{formatCurrency(dividendTableData.reduce((sum, item) => sum + item.dividend, 0))}</div>
                     <div className="text-right text-indigo-700 font-bold pr-2">{formatCurrency(dividendTableData.reduce((sum, item) => sum + item.withdrawal, 0))}</div>
                   </div>
@@ -535,7 +559,7 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
           </div>
         )}
         {overviewSubTab === 'year' && (
-          <div className="flex-1 flex flex-col items-center justify-center text-slate-400 text-sm pb-20">
+          <div className="flex-1 flex flex-col items-center justify-center text-slate-400 text-sm pb-16">
             <span className="font-bold">YYYY 規劃中</span>
           </div>
         )}
@@ -548,8 +572,8 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
     const { chartData, allUsageTypes, tree } = companySchoolData;
 
     return (
-      <div className="flex-1 flex flex-col min-h-0 px-2 space-y-2 pb-20 pt-2">
-        <div className="shrink-0 bg-white rounded-lg shadow-sm border border-slate-200 p-2 h-48">
+      <div className="flex-1 flex flex-col min-h-0 px-1 space-y-1 pb-16 pt-1">
+        <div className="shrink-0 bg-white rounded-lg shadow-sm border border-slate-200 p-1.5 h-40">
           {chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
@@ -571,7 +595,7 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
         </div>
         
         <div className="flex-1 bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col min-h-0 text-[10px]">
-          <div className="shrink-0 grid grid-cols-[2fr_1.5fr_0.5fr_1.5fr_0.5fr_1.5fr] bg-slate-100 p-1.5 border-b border-slate-200 text-slate-600 font-bold text-center items-center rounded-t-lg">
+          <div className="shrink-0 grid grid-cols-[2fr_1.5fr_0.5fr_1.5fr_0.5fr_1.5fr] bg-slate-100 p-1 border-b border-slate-200 text-slate-600 font-bold text-center items-center rounded-t-lg">
             <div className="text-left pl-1">項目</div>
             <div className="text-indigo-600 text-right">{selectedYear}</div>
             <button onClick={handleNextYear} disabled={!availableYears.find(y => y > selectedYear)} className="hover:bg-slate-300 rounded p-0.5 disabled:opacity-30 mx-auto"><ChevronRight size={14}/></button>
@@ -583,7 +607,7 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
             {tree.map(master => (
               <div key={master.name}>
                 {/* Master Row */}
-                <div className="grid grid-cols-[2fr_1.5fr_0.5fr_1.5fr_0.5fr_1.5fr] p-1.5 items-center bg-indigo-50/30">
+                <div className="grid grid-cols-[2fr_1.5fr_0.5fr_1.5fr_0.5fr_1.5fr] p-1 items-center bg-indigo-50/30">
                   <div className="font-bold truncate text-left text-indigo-800 pl-1">{master.name}</div>
                   <div className="text-right text-indigo-600 font-bold">{formatCurrency(master.current)}</div>
                   <div></div>
@@ -593,7 +617,7 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
                 </div>
                 {/* Detail Rows */}
                 {master.children.map(child => (
-                  <div key={child.name} className="grid grid-cols-[2fr_1.5fr_0.5fr_1.5fr_0.5fr_1.5fr] p-1.5 items-center hover:bg-slate-50 transition-colors">
+                  <div key={child.name} className="grid grid-cols-[2fr_1.5fr_0.5fr_1.5fr_0.5fr_1.5fr] p-1 items-center hover:bg-slate-50 transition-colors">
                     <div className="truncate text-left pl-4 text-slate-500 before:content-['└_'] before:mr-0.5 before:text-slate-300">{child.name}</div>
                     <div className="text-right text-indigo-500">{formatCurrency(child.current)}</div>
                     <div></div>
@@ -605,7 +629,7 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
               </div>
             ))}
             {tree.length > 0 && (
-              <div className="grid grid-cols-[2fr_1.5fr_0.5fr_1.5fr_0.5fr_1.5fr] p-1.5 items-center bg-indigo-100/50 sticky bottom-0 border-t border-indigo-200">
+              <div className="grid grid-cols-[2fr_1.5fr_0.5fr_1.5fr_0.5fr_1.5fr] p-1 items-center bg-indigo-100/50 sticky bottom-0 border-t border-indigo-200">
                 <div className="font-bold truncate text-left text-indigo-900 pl-1">合計</div>
                 <div className="text-right text-indigo-700 font-bold">{formatCurrency(tree.reduce((sum, m) => sum + m.current, 0))}</div>
                 <div></div>
@@ -625,7 +649,7 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
     const { allUsageTypes, activeUsageType, chartData, allExpenseTypes, expenseTypeTotals } = lifeVirtualData;
 
     return (
-      <div className="flex-1 flex flex-col min-h-0 px-2 space-y-2 pb-20 pt-2">
+      <div className="flex-1 flex flex-col min-h-0 px-1 space-y-1 pb-16 pt-1">
         <div className="shrink-0 flex gap-2 overflow-x-auto no-scrollbar pb-1">
           {allUsageTypes.map(item => (
             <button 
@@ -638,7 +662,7 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
           ))}
         </div>
   
-        <div className="shrink-0 bg-white rounded-lg shadow-sm border border-slate-200 p-2 h-48 relative flex flex-col">
+        <div className="shrink-0 bg-white rounded-lg shadow-sm border border-slate-200 p-1.5 h-40 relative flex flex-col">
           <div className="flex justify-between items-center px-1 mb-1 z-10">
             <button onClick={handlePrevYear} disabled={!availableYears.find(y => y < selectedYear)} className="p-1 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors disabled:opacity-30"><ChevronLeft size={16}/></button>
             <span className="text-xs font-bold text-slate-700">{selectedYear} 年</span>
@@ -671,11 +695,11 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
             <table className="w-full text-[10px] text-center whitespace-nowrap">
               <thead className="sticky top-0 z-30">
                 <tr className="bg-indigo-50/90 backdrop-blur-sm border-b border-slate-200 text-indigo-800">
-                  <th className="p-2 font-bold sticky left-0 bg-indigo-50/90 backdrop-blur-sm border-r border-slate-200 z-40 shadow-[1px_0_0_0_#e2e8f0]">月份</th>
+                  <th className="p-1.5 font-bold sticky left-0 bg-indigo-50/90 backdrop-blur-sm border-r border-slate-200 z-40 shadow-[1px_0_0_0_#e2e8f0]">月份</th>
                   {allExpenseTypes.map(type => (
-                    <th key={type} className="p-2 font-bold">{type}</th>
+                    <th key={type} className="p-1.5 font-bold">{type}</th>
                   ))}
-                  <th className="p-2 font-bold text-indigo-600">合計</th>
+                  <th className="p-1.5 font-bold text-indigo-600">合計</th>
                 </tr>
               </thead>
               <tbody className="text-slate-600 divide-y divide-slate-100">
@@ -683,23 +707,23 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
                   let rowTotal = 0;
                   return (
                     <tr key={i} className="hover:bg-slate-50 transition-colors">
-                      <td className="p-2 font-bold bg-slate-50/50 border-r border-slate-200 sticky left-0 z-10 text-slate-700 shadow-[1px_0_0_0_#e2e8f0]">{i + 1}月</td>
+                      <td className="p-1.5 font-bold bg-slate-50/50 border-r border-slate-200 sticky left-0 z-10 text-slate-700 shadow-[1px_0_0_0_#e2e8f0]">{i + 1}月</td>
                       {allExpenseTypes.map(type => {
                         const amount = expenseTypeTotals.find(e => e.name === type)?.months[i] || 0;
                         rowTotal += amount;
-                        return <td key={type} className="p-2">{formatCurrency(amount)}</td>;
+                        return <td key={type} className="p-1.5">{formatCurrency(amount)}</td>;
                       })}
-                      <td className="p-2 font-bold text-indigo-600">{formatCurrency(rowTotal)}</td>
+                      <td className="p-1.5 font-bold text-indigo-600">{formatCurrency(rowTotal)}</td>
                     </tr>
                   );
                 })}
                 <tr className="bg-slate-50/50">
-                  <td className="p-2 font-bold border-r border-slate-200 sticky left-0 z-10 shadow-[1px_0_0_0_#e2e8f0]">合計</td>
+                  <td className="p-1.5 font-bold border-r border-slate-200 sticky left-0 z-10 shadow-[1px_0_0_0_#e2e8f0]">合計</td>
                   {allExpenseTypes.map(type => {
                     const total = expenseTypeTotals.find(e => e.name === type)?.total || 0;
-                    return <td key={type} className="p-2 font-bold">{formatCurrency(total)}</td>;
+                    return <td key={type} className="p-1.5 font-bold">{formatCurrency(total)}</td>;
                   })}
-                  <td className="p-2 font-bold text-indigo-600">
+                  <td className="p-1.5 font-bold text-indigo-600">
                     {formatCurrency(expenseTypeTotals.reduce((sum, e) => sum + e.total, 0))}
                   </td>
                 </tr>
