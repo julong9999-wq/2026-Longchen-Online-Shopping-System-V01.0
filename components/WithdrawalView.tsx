@@ -423,6 +423,20 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
     </div>
   );
 
+  const renderCustomLegend = (props: any) => {
+    const { payload } = props;
+    return (
+      <ul className="flex flex-wrap justify-end gap-x-2 gap-y-1 mb-2">
+        {payload?.map((entry: any, index: number) => (
+          <li key={`item-${index}`} className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-sm shrink-0" style={{ backgroundColor: entry.color }} />
+            <span className="text-slate-600 text-[9px]">{entry.value}</span>
+          </li>
+        ))}
+      </ul>
+    );
+  };
+
   const renderOverview = () => {
     const { chartData = [], allFeeTypes = [], tree = [] } = overviewAmountData || {};
 
@@ -436,7 +450,7 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
         
         {overviewSubTab === 'amount' && (
           <div className="flex-1 flex flex-col min-h-0 px-1 space-y-1 pb-16">
-            <div className="shrink-0 bg-white rounded-lg shadow-sm border border-slate-200 p-1.5 h-40">
+            <div className="shrink-0 bg-white rounded-lg shadow-sm border border-slate-200 p-1.5 h-52">
               {chartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
@@ -444,7 +458,7 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
                     <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} />
                     <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} tickFormatter={(val) => `${val/10000}W`} />
                     <Tooltip cursor={{fill: '#f1f5f9'}} contentStyle={{fontSize: '12px', borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} formatter={(val: number) => val.toLocaleString()} />
-                    <Legend wrapperStyle={{fontSize: '10px'}} />
+                    <Legend verticalAlign="top" align="right" content={renderCustomLegend} />
                     {allFeeTypes.map((type, idx) => (
                       <Bar key={type} dataKey={type} stackId="a" fill={COLORS[idx % COLORS.length]} />
                     ))}
@@ -508,8 +522,8 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
 
         {overviewSubTab === 'dividend' && (
           <div className="flex-1 flex flex-col min-h-0 px-1 space-y-1 pb-16">
-            <div className="shrink-0 bg-white rounded-lg shadow-sm border border-slate-200 p-1.5 h-40 flex flex-col">
-              <div className="flex justify-center gap-2 mb-1 shrink-0">
+            <div className="shrink-0 bg-white rounded-lg shadow-sm border border-slate-200 p-1.5 h-52 flex flex-col">
+              <div className="flex justify-start gap-2 mb-1 shrink-0 pl-1">
                 <button onClick={() => setDividendChartMode('purchase')} className={`px-3 py-1 rounded-md text-[10px] font-bold border ${dividendChartMode === 'purchase' ? 'border-indigo-500 text-indigo-700 bg-indigo-50' : 'border-slate-200 text-slate-600 hover:border-indigo-300'}`}>購買分析圖</button>
                 <button onClick={() => setDividendChartMode('dividend')} className={`px-3 py-1 rounded-md text-[10px] font-bold border ${dividendChartMode === 'dividend' ? 'border-indigo-500 text-indigo-700 bg-indigo-50' : 'border-slate-200 text-slate-600 hover:border-indigo-300'}`}>股息分析圖</button>
               </div>
@@ -573,7 +587,7 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
 
     return (
       <div className="flex-1 flex flex-col min-h-0 px-1 space-y-1 pb-16 pt-1">
-        <div className="shrink-0 bg-white rounded-lg shadow-sm border border-slate-200 p-1.5 h-40">
+        <div className="shrink-0 bg-white rounded-lg shadow-sm border border-slate-200 p-1.5 h-52">
           {chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
@@ -581,7 +595,7 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
                 <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} tickFormatter={(val) => `${val/10000}W`} />
                 <Tooltip cursor={{fill: '#f1f5f9'}} contentStyle={{fontSize: '12px', borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} formatter={(val: number) => val.toLocaleString()} />
-                <Legend wrapperStyle={{fontSize: '10px'}} />
+                <Legend verticalAlign="top" align="right" content={renderCustomLegend} />
                 {allUsageTypes.map((type, idx) => (
                   <Bar key={type} dataKey={type} stackId="a" fill={COLORS[idx % COLORS.length]} />
                 ))}
@@ -650,20 +664,22 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
 
     return (
       <div className="flex-1 flex flex-col min-h-0 px-1 space-y-1 pb-16 pt-1">
-        <div className="shrink-0 flex gap-2 overflow-x-auto no-scrollbar pb-1">
-          {allUsageTypes.map(item => (
-            <button 
-              key={item} 
-              onClick={() => setLifeUsageType(item)}
-              className={`px-3 py-1 bg-white border rounded-md text-xs font-bold whitespace-nowrap shadow-sm transition-colors ${item === activeUsageType ? 'border-indigo-500 text-indigo-700 bg-indigo-50' : 'border-slate-200 text-slate-600 hover:border-indigo-300'}`}
-            >
-              {item}
-            </button>
-          ))}
-        </div>
+        {(activeTab === 'life' || allUsageTypes.length > 1) && (
+          <div className="shrink-0 flex gap-2 overflow-x-auto no-scrollbar pb-1">
+            {allUsageTypes.map(item => (
+              <button 
+                key={item} 
+                onClick={() => setLifeUsageType(item)}
+                className={`px-3 py-1 bg-white border rounded-md text-xs font-bold whitespace-nowrap shadow-sm transition-colors ${item === activeUsageType ? 'border-indigo-500 text-indigo-700 bg-indigo-50' : 'border-slate-200 text-slate-600 hover:border-indigo-300'}`}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+        )}
   
-        <div className="shrink-0 bg-white rounded-lg shadow-sm border border-slate-200 p-1.5 h-40 relative flex flex-col">
-          <div className="flex justify-between items-center px-1 mb-1 z-10">
+        <div className="shrink-0 bg-white rounded-lg shadow-sm border border-slate-200 p-1.5 h-52 relative flex flex-col">
+          <div className="flex justify-start items-center gap-2 px-1 mb-1 z-10">
             <button onClick={handlePrevYear} disabled={!availableYears.find(y => y < selectedYear)} className="p-1 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors disabled:opacity-30"><ChevronLeft size={16}/></button>
             <span className="text-xs font-bold text-slate-700">{selectedYear} 年</span>
             <button onClick={handleNextYear} disabled={!availableYears.find(y => y > selectedYear)} className="p-1 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors disabled:opacity-30"><ChevronRight size={16}/></button>
@@ -676,7 +692,7 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
                   <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} tickFormatter={(val) => `${val}月`} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} tickFormatter={(val) => `${val/1000}k`} />
                   <Tooltip cursor={{fill: '#f1f5f9'}} contentStyle={{fontSize: '12px', borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} formatter={(val: number) => val.toLocaleString()} />
-                  <Legend wrapperStyle={{fontSize: '10px'}} />
+                  <Legend verticalAlign="top" align="right" content={renderCustomLegend} />
                   {allExpenseTypes.map((type, idx) => (
                     <Bar key={type} dataKey={type} stackId="a" fill={COLORS[idx % COLORS.length]} />
                   ))}
