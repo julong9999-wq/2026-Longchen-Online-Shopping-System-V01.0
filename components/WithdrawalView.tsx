@@ -17,8 +17,27 @@ interface WithdrawalRecord {
   note: string;
 }
 
+interface PurchaseRecord {
+  account: string;
+  stockId: string;
+  date: string; 
+  buySell: string; 
+  price: number;
+  shares: number;
+  fee: number;
+  tax: number;
+}
+
+interface DividendEvent {
+  stockId: string;
+  exDate: string; 
+  dividendPerShare: number;
+}
+
 export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }: { activeAccount?: string, refreshKey?: number }) {
   const [records, setRecords] = useState<WithdrawalRecord[]>([]);
+  const [purchaseRecords, setPurchaseRecords] = useState<PurchaseRecord[]>([]);
+  const [dividendEvents, setDividendEvents] = useState<DividendEvent[]>([]);
 
   const [activeTab, setActiveTab] = useState('overview'); // overview, company, life, highschool, virtual
   const [overviewSubTab, setOverviewSubTab] = useState('amount'); // amount, dividend, year
@@ -32,7 +51,8 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
 
   const availableYears = useMemo(() => {
     const yearSums = new Map<number, number>();
-    filteredRecords.forEach(r => {
+    const source = activeTab === 'virtual' ? records : filteredRecords;
+    source.forEach(r => {
       if (r.year > 0) {
         yearSums.set(r.year, (yearSums.get(r.year) || 0) + r.amount);
       }
@@ -41,7 +61,7 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
       .filter(([_, sum]) => sum > 0)
       .map(([year]) => year)
       .sort((a, b) => a - b);
-  }, [filteredRecords]);
+  }, [filteredRecords, records, activeTab]);
 
   const handleNextYear = () => {
     const next = availableYears.find(y => y > selectedYear);
@@ -55,10 +75,19 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
 
   const fetchData = async () => {
     try {
-      const response = await fetch(CSV_URL);
-      const csvText = await response.text();
+      const [res203, res219, res215] = await Promise.all([
+        fetch(CSV_URL),
+        fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vSnkojvITxtjSfxyv0D85BEfMv80ANLdGyXGZih5prz6-W_0KfP1Fr5fRFwx8jUGkvEIQjoVa4afbnJ/pub?gid=522688960&single=true&output=csv'),
+        fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vR5JvOGT3eB4xq9phw2dXHApJKOgQkUZcs69CsJfL0Iw3s6egADwA8HdbimrWUceQZl_73pnsSLVnQw/pub?output=csv')
+      ]);
+
+      const [csv203, csv219, csv215] = await Promise.all([
+        res203.text(),
+        res219.text(),
+        res215.text()
+      ]);
       
-      Papa.parse(csvText, {
+      Papa.parse(csv203, {
         header: true,
         skipEmptyLines: true,
         complete: (results) => {
@@ -74,12 +103,14 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
             }
             const amountStr = row['金額'] || '0';
             const amount = parseFloat(String(amountStr).replace(/,/g, ''));
+            let parsedAccount = row['證券戶'] || '';
+            if (parsedAccount === '信用卡') parsedAccount = '俊龍';
             return {
               date: dateStr,
               year,
               month,
               amount: isNaN(amount) ? 0 : amount,
-              account: row['證券戶'] || '',
+              account: parsedAccount,
               feeType: row['費用說明'] || '',
               usageType: row['領用說明'] || '',
               expenseType: row['支出說明'] || '',
@@ -89,6 +120,51 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
           setRecords(parsedRecords.filter(r => r.year > 0));
         },
       });
+
+      Papa.parse(csv219, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          const parsed: PurchaseRecord[] = results.data.map((row: any) => {
+            const price = parseFloat(String(row['價格'] || '0').replace(/,/g, ''));
+            const shares = parseFloat(String(row['股數'] || '0').replace(/,/g, ''));
+            const fee = parseFloat(String(row['手續費'] || '0').replace(/,/g, ''));
+            const tax = parseFloat(String(row['交易稅'] || '0').replace(/,/g, ''));
+            
+            let parsedAccount = row['證券戶'] || '';
+            if (parsedAccount === '信用卡') parsedAccount = '俊龍';
+
+            return {
+              account: parsedAccount,
+              stockId: String(row['股號'] || '').trim(),
+              date: String(row['日期'] || '').trim(),
+              buySell: row['買賣別'] || '',
+              price: isNaN(price) ? 0 : price,
+              shares: isNaN(shares) ? 0 : shares,
+              fee: isNaN(fee) ? 0 : fee,
+              tax: isNaN(tax) ? 0 : tax,
+            };
+          });
+          setPurchaseRecords(parsed.filter(r => r.date));
+        },
+      });
+
+      Papa.parse(csv215, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          const parsed: DividendEvent[] = results.data.map((row: any) => {
+            const dps = parseFloat(String(row['除息金額 '] || row['除息金額'] || '0').replace(/,/g, ''));
+            return {
+              stockId: String(row['ETF 代碼'] || row['ETF代碼'] || '').trim(),
+              exDate: String(row['除息日期 '] || row['除息日期'] || '').trim(),
+              dividendPerShare: isNaN(dps) ? 0 : dps,
+            };
+          });
+          setDividendEvents(parsed.filter(r => r.exDate && r.exDate !== '-'));
+        }
+      });
+
     } catch (err: any) {
       console.error(err);
     }
@@ -104,10 +180,10 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
       const types = Array.from(new Set(filteredRecords.filter(r => r.feeType === '生活費用').map(r => r.usageType))).filter(Boolean);
       if (types.length > 0 && !types.includes(lifeUsageType)) setLifeUsageType(types[0]);
     } else if (activeTab === 'virtual') {
-      const types = Array.from(new Set(filteredRecords.filter(r => r.feeType === '虛擬帳戶').map(r => r.usageType))).filter(t => t && t !== '銀行費用');
+      const types = Array.from(new Set(records.filter(r => r.feeType === '虛擬帳戶').map(r => r.usageType))).filter(t => t && t !== '銀行費用');
       if (types.length > 0 && !types.includes(lifeUsageType)) setLifeUsageType(types[0]);
     }
-  }, [activeTab, filteredRecords]);
+  }, [activeTab, filteredRecords, records]);
 
   // UseMemos for data crunching
   const overviewAmountData = useMemo(() => {
@@ -116,6 +192,7 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
     const feeTypeMap = new Map<string, { current: number, prev: number, total: number, children: Map<string, { current: number, prev: number, total: number }> }>();
   
     filteredRecords.forEach(r => {
+      if (r.feeType === '虛擬帳戶') return;
       if (!chartMap.has(r.year)) chartMap.set(r.year, { year: r.year });
       const cData = chartMap.get(r.year);
       cData[r.feeType] = (cData[r.feeType] || 0) + r.amount;
@@ -147,10 +224,82 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
 
     return {
       chartData: Array.from(chartMap.values()).sort((a, b) => a.year - b.year),
-      allFeeTypes: Array.from(new Set(filteredRecords.map(r => r.feeType).filter(Boolean))),
+      allFeeTypes: Array.from(new Set(filteredRecords.filter(r => r.feeType !== '虛擬帳戶').map(r => r.feeType).filter(Boolean))),
       tree
     };
   }, [filteredRecords, activeTab, overviewSubTab, selectedYear]);
+
+  const dividendTableData = useMemo(() => {
+    if (activeTab !== 'overview' || overviewSubTab !== 'dividend') return null;
+
+    const purchases = activeAccount === 'all' ? purchaseRecords : purchaseRecords.filter(r => r.account === activeAccount);
+    
+    const yearlyData = new Map<number, { year: number, purchase: number, dividend: number, withdrawal: number }>();
+    
+    filteredRecords.forEach(r => {
+      if (r.year > 0 && r.feeType !== '虛擬帳戶') {
+        if (!yearlyData.has(r.year)) yearlyData.set(r.year, { year: r.year, purchase: 0, dividend: 0, withdrawal: 0 });
+        yearlyData.get(r.year)!.withdrawal += r.amount;
+      }
+    });
+
+    purchases.forEach(r => {
+      if (r.buySell === '買入') {
+        const parts = r.date.split('/');
+        if (parts.length >= 2) {
+          const year = parseInt(parts[0], 10);
+          if (!yearlyData.has(year)) yearlyData.set(year, { year, purchase: 0, dividend: 0, withdrawal: 0 });
+          yearlyData.get(year)!.purchase += (r.price * r.shares + r.fee + r.tax);
+        }
+      }
+    });
+    
+    const parseDate = (dStr: string) => new Date(dStr).getTime();
+    
+    const holdingsByAccAndStock = new Map<string, PurchaseRecord[]>();
+    purchases.forEach(r => {
+        const key = `${r.account}_${r.stockId}`;
+        if (!holdingsByAccAndStock.has(key)) holdingsByAccAndStock.set(key, []);
+        holdingsByAccAndStock.get(key)!.push(r);
+    });
+    
+    holdingsByAccAndStock.forEach(arr => arr.sort((a,b) => parseDate(a.date) - parseDate(b.date)));
+
+    dividendEvents.forEach(ev => {
+      const exDateTime = parseDate(ev.exDate);
+      const year = new Date(ev.exDate).getFullYear();
+      
+      let totalDividendsForEvent = 0;
+      
+      holdingsByAccAndStock.forEach((txs, key) => {
+         const stockId = key.split('_')[1];
+         if (stockId === ev.stockId) {
+             let heldShares = 0;
+             for (const tx of txs) {
+                 const txTime = parseDate(tx.date);
+                 if (txTime <= exDateTime) {
+                     if (tx.buySell === '買入') heldShares += tx.shares;
+                     if (tx.buySell === '賣出') heldShares -= tx.shares;
+                 } else {
+                     break; 
+                 }
+             }
+             if (heldShares > 0) {
+                 totalDividendsForEvent += (heldShares * ev.dividendPerShare);
+             }
+         }
+      });
+      
+      if (totalDividendsForEvent > 0 && !isNaN(year) && year > 2000) {
+          if (!yearlyData.has(year)) yearlyData.set(year, { year, purchase: 0, dividend: 0, withdrawal: 0 });
+          yearlyData.get(year)!.dividend += totalDividendsForEvent;
+      }
+    });
+
+    return Array.from(yearlyData.values())
+        .filter(d => d.purchase > 0 || d.dividend > 0 || d.withdrawal > 0)
+        .sort((a, b) => b.year - a.year);
+  }, [activeTab, overviewSubTab, purchaseRecords, dividendEvents, filteredRecords, activeAccount]);
 
   const companySchoolData = useMemo(() => {
     if (activeTab !== 'company' && activeTab !== 'highschool') return null;
@@ -200,7 +349,8 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
   const lifeVirtualData = useMemo(() => {
     if (activeTab !== 'life' && activeTab !== 'virtual') return null;
     const targetFeeType = activeTab === 'life' ? '生活費用' : '虛擬帳戶';
-    const filtered = filteredRecords.filter(r => r.feeType === targetFeeType);
+    const sourceRecords = activeTab === 'virtual' ? records : filteredRecords;
+    const filtered = sourceRecords.filter(r => r.feeType === targetFeeType);
     let allUsageTypes = Array.from(new Set(filtered.map(r => r.usageType).filter(Boolean)));
     if (activeTab === 'virtual') {
       allUsageTypes = allUsageTypes.filter(t => t !== '銀行費用');
@@ -260,8 +410,7 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
   );
 
   const renderOverview = () => {
-    if (!overviewAmountData) return null;
-    const { chartData, allFeeTypes, tree } = overviewAmountData;
+    const { chartData = [], allFeeTypes = [], tree = [] } = overviewAmountData || {};
 
     return (
       <div className="flex flex-col h-full space-y-2">
@@ -328,13 +477,51 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
                     ))}
                   </div>
                 ))}
+                {tree.length > 0 && (
+                  <div className="grid grid-cols-[2fr_1.5fr_0.5fr_1.5fr_0.5fr_1.5fr] p-1.5 items-center bg-indigo-100/50 sticky bottom-0 border-t border-indigo-200">
+                    <div className="font-bold truncate text-left text-indigo-900 pl-1">合計</div>
+                    <div className="text-right text-indigo-700 font-bold">{formatCurrency(tree.reduce((sum, m) => sum + m.current, 0))}</div>
+                    <div></div>
+                    <div className="text-right font-bold text-slate-700">{formatCurrency(tree.reduce((sum, m) => sum + m.prev, 0))}</div>
+                    <div></div>
+                    <div className="text-right font-bold text-slate-800 pr-1">{formatCurrency(tree.reduce((sum, m) => sum + m.total, 0))}</div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         )}
-        {overviewSubTab !== 'amount' && (
+
+        {overviewSubTab === 'dividend' && (
+          <div className="flex-1 flex flex-col min-h-0 px-2 space-y-2 pb-20">
+            <div className="flex-1 bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col min-h-0 text-xs">
+              <div className="shrink-0 grid grid-cols-[1fr_2fr_2fr_2fr] bg-slate-100 p-2 border-b border-slate-200 text-slate-600 font-bold text-center items-center rounded-t-lg">
+                <div>年份</div>
+                <div className="text-right">購買金額</div>
+                <div className="text-right">股息金額</div>
+                <div className="text-right pr-2">領用金額</div>
+              </div>
+              <div className="flex-1 overflow-y-auto no-scrollbar divide-y divide-slate-100">
+                {dividendTableData?.map(item => (
+                  <div key={item.year} className="grid grid-cols-[1fr_2fr_2fr_2fr] p-3 items-center hover:bg-slate-50 transition-colors text-slate-600">
+                    <div className="font-bold text-indigo-700 text-center">{item.year}</div>
+                    <div className="text-right">{formatCurrency(item.purchase)}</div>
+                    <div className="text-right text-green-600 font-bold">{formatCurrency(item.dividend)}</div>
+                    <div className="text-right text-indigo-600 font-bold pr-2">{formatCurrency(item.withdrawal)}</div>
+                  </div>
+                ))}
+                {(!dividendTableData || dividendTableData.length === 0) && (
+                  <div className="flex items-center justify-center h-32 text-slate-400">
+                    尚無資料
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+        {overviewSubTab === 'year' && (
           <div className="flex-1 flex flex-col items-center justify-center text-slate-400 text-sm pb-20">
-            <span className="font-bold">{overviewSubTab === 'dividend' ? '股息領用' : 'YYYY'} 規劃中</span>
+            <span className="font-bold">YYYY 規劃中</span>
           </div>
         )}
       </div>
@@ -402,6 +589,16 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
                 ))}
               </div>
             ))}
+            {tree.length > 0 && (
+              <div className="grid grid-cols-[2fr_1.5fr_0.5fr_1.5fr_0.5fr_1.5fr] p-1.5 items-center bg-indigo-100/50 sticky bottom-0 border-t border-indigo-200">
+                <div className="font-bold truncate text-left text-indigo-900 pl-1">合計</div>
+                <div className="text-right text-indigo-700 font-bold">{formatCurrency(tree.reduce((sum, m) => sum + m.current, 0))}</div>
+                <div></div>
+                <div className="text-right font-bold text-slate-700">{formatCurrency(tree.reduce((sum, m) => sum + m.prev, 0))}</div>
+                <div></div>
+                <div className="text-right font-bold text-slate-800 pr-1">{formatCurrency(tree.reduce((sum, m) => sum + m.total, 0))}</div>
+              </div>
+            )}
           </div>
         </div>
       </div>
