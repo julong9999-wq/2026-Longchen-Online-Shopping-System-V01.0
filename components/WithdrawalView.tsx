@@ -219,12 +219,12 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
        current: v.current,
        prev: v.prev,
        total: v.total,
-       children: Array.from(v.children.entries()).map(([cName, cV]) => ({ name: cName, ...cV }))
-    }));
+       children: Array.from(v.children.entries()).map(([cName, cV]) => ({ name: cName, ...cV })).sort((a,b) => a.name.localeCompare(b.name, 'zh-TW'))
+    })).sort((a,b) => a.name.localeCompare(b.name, 'zh-TW'));
 
     return {
       chartData: Array.from(chartMap.values()).sort((a, b) => a.year - b.year),
-      allFeeTypes: Array.from(new Set(filteredRecords.filter(r => r.feeType !== '虛擬帳戶').map(r => r.feeType).filter(Boolean))),
+      allFeeTypes: Array.from(new Set(filteredRecords.filter(r => r.feeType !== '虛擬帳戶').map(r => r.feeType).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'zh-TW')),
       tree
     };
   }, [filteredRecords, activeTab, overviewSubTab, selectedYear]);
@@ -336,12 +336,12 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
        current: v.current,
        prev: v.prev,
        total: v.total,
-       children: Array.from(v.children.entries()).map(([cName, cV]) => ({ name: cName, ...cV }))
-    }));
+       children: Array.from(v.children.entries()).map(([cName, cV]) => ({ name: cName, ...cV })).sort((a,b) => a.name.localeCompare(b.name, 'zh-TW'))
+    })).sort((a,b) => a.name.localeCompare(b.name, 'zh-TW'));
 
     return {
       chartData: Array.from(chartMap.values()).sort((a, b) => a.year - b.year),
-      allUsageTypes: Array.from(new Set(filtered.map(r => r.usageType).filter(Boolean))),
+      allUsageTypes: Array.from(new Set(filtered.map(r => r.usageType).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'zh-TW')),
       tree
     };
   }, [filteredRecords, activeTab, selectedYear]);
@@ -351,11 +351,17 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
     const targetFeeType = activeTab === 'life' ? '生活費用' : '虛擬帳戶';
     const sourceRecords = activeTab === 'virtual' ? records : filteredRecords;
     const filtered = sourceRecords.filter(r => r.feeType === targetFeeType);
-    let allUsageTypes = Array.from(new Set(filtered.map(r => r.usageType).filter(Boolean)));
+    let allUsageTypes = Array.from(new Set(filtered.map(r => r.usageType).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'zh-TW'));
     if (activeTab === 'virtual') {
       allUsageTypes = allUsageTypes.filter(t => t !== '銀行費用');
     }
-    const yearFiltered = filtered.filter(r => r.year === selectedYear && r.usageType === lifeUsageType);
+
+    let currentUsageType = lifeUsageType;
+    if (allUsageTypes.length > 0 && !allUsageTypes.includes(currentUsageType)) {
+      currentUsageType = allUsageTypes[0];
+    }
+
+    const yearFiltered = filtered.filter(r => r.year === selectedYear && r.usageType === currentUsageType);
     
     const chartMap = new Map<number, any>();
     const expenseTypeTotals = new Map<string, number[]>();
@@ -376,11 +382,12 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
     
     return {
       allUsageTypes,
+      activeUsageType: currentUsageType,
       chartData: Array.from({length: 12}, (_, i) => ({ month: i+1, ...chartMap.get(i+1) || {} })),
-      allExpenseTypes: Array.from(allExpenseTypes),
-      expenseTypeTotals: Array.from(expenseTypeTotals.entries()).map(([name, months]) => ({ name, months, total: months.reduce((a,b)=>a+b, 0) }))
+      allExpenseTypes: Array.from(allExpenseTypes).sort((a,b) => a.localeCompare(b, 'zh-TW')),
+      expenseTypeTotals: Array.from(expenseTypeTotals.entries()).map(([name, months]) => ({ name, months, total: months.reduce((a,b)=>a+b, 0) })).sort((a,b) => a.name.localeCompare(b.name, 'zh-TW'))
     };
-  }, [filteredRecords, activeTab, selectedYear, lifeUsageType]);
+  }, [filteredRecords, records, activeTab, selectedYear, lifeUsageType]);
 
   const formatCurrency = (val: number) => val === 0 ? '-' : val.toLocaleString();
   const COLORS = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#eab308'];
@@ -515,6 +522,14 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
                     尚無資料
                   </div>
                 )}
+                {dividendTableData && dividendTableData.length > 0 && (
+                  <div className="grid grid-cols-[1fr_2fr_2fr_2fr] p-3 items-center bg-indigo-100/50 sticky bottom-0 border-t border-indigo-200 text-slate-600">
+                    <div className="font-bold text-indigo-900 text-center">合計</div>
+                    <div className="text-right text-indigo-700 font-bold">{formatCurrency(dividendTableData.reduce((sum, item) => sum + item.purchase, 0))}</div>
+                    <div className="text-right text-green-700 font-bold">{formatCurrency(dividendTableData.reduce((sum, item) => sum + item.dividend, 0))}</div>
+                    <div className="text-right text-indigo-700 font-bold pr-2">{formatCurrency(dividendTableData.reduce((sum, item) => sum + item.withdrawal, 0))}</div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -607,7 +622,7 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
 
   const renderLifeOrVirtual = () => {
     if (!lifeVirtualData) return null;
-    const { allUsageTypes, chartData, allExpenseTypes, expenseTypeTotals } = lifeVirtualData;
+    const { allUsageTypes, activeUsageType, chartData, allExpenseTypes, expenseTypeTotals } = lifeVirtualData;
 
     return (
       <div className="flex-1 flex flex-col min-h-0 px-2 space-y-2 pb-20 pt-2">
@@ -616,7 +631,7 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
             <button 
               key={item} 
               onClick={() => setLifeUsageType(item)}
-              className={`px-3 py-1 bg-white border rounded-md text-xs font-bold whitespace-nowrap shadow-sm transition-colors ${item === lifeUsageType ? 'border-indigo-500 text-indigo-700 bg-indigo-50' : 'border-slate-200 text-slate-600 hover:border-indigo-300'}`}
+              className={`px-3 py-1 bg-white border rounded-md text-xs font-bold whitespace-nowrap shadow-sm transition-colors ${item === activeUsageType ? 'border-indigo-500 text-indigo-700 bg-indigo-50' : 'border-slate-200 text-slate-600 hover:border-indigo-300'}`}
             >
               {item}
             </button>
