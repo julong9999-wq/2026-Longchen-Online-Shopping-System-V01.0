@@ -8,6 +8,7 @@ import TravelSystem from './components/TravelSystem';
 import PurchasingSystem from './components/PurchasingSystem';
 import EcommerceAnalysisSystem from './components/EcommerceAnalysisSystem';
 import ShiftSystem from './components/ShiftSystem';
+import DataAnalysisSystem from './components/DataAnalysisSystem';
 import { Trash2, Edit, Plus, Package, ShoppingCart, List, BarChart2, ChevronRight, ChevronDown, User, Box, X, Calculator, Download, Save, Wallet, ArrowUpCircle, ArrowDownCircle, Grid, PieChart, Map as MapIcon, Check, Database, Upload, AlertTriangle, Home, Calendar, TrendingUp } from 'lucide-react';
 import { db } from './firebase';
 import { 
@@ -1456,27 +1457,7 @@ const App: React.FC = () => {
   }
 
   if (appMode === 'investment') {
-      return (
-          <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6">
-              <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-sm border border-slate-100 flex flex-col items-center text-center">
-                  <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 mb-4 shadow-inner">
-                      <TrendingUp size={36} />
-                  </div>
-                  <h2 className="text-2xl font-bold text-slate-800 mb-2 font-sans">投資分析</h2>
-                  <p className="text-slate-500 text-sm mb-6 leading-relaxed font-sans">
-                      投資分析功能正在全力規劃與開發中！<br />
-                      後續將提供更多分析圖表與精準收益計算，敬請期待！
-                  </p>
-                  <button 
-                      onClick={() => setAppMode('home')}
-                      className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 text-sm"
-                  >
-                      <Home size={18} />
-                      <span>返回首頁</span>
-                  </button>
-              </div>
-          </div>
-      );
+      return <DataAnalysisSystem onNavigateHome={() => setAppMode('home')} />;
   }
 
   return (
