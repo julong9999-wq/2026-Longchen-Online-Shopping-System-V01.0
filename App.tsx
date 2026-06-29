@@ -1349,8 +1349,8 @@ const App: React.FC = () => {
   if (appMode === 'home') {
       return (
           <div className="min-h-screen fixed inset-0 overflow-y-auto bg-slate-50 flex flex-col items-center justify-center p-6 py-12">
-              <img src="/logo.png" alt="龍辰系統" className="w-20 h-20 mb-4 rounded-xl object-cover shadow-sm bg-white" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-              <h1 className="text-2xl font-bold text-slate-800 mb-6 tracking-tight text-center">龍辰系統</h1>
+              <img src="/logo.png" alt="2026 龍辰系統 V01" className="w-20 h-20 mb-4 rounded-xl object-cover shadow-sm bg-white" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+              <h1 className="text-2xl font-bold text-slate-800 mb-6 tracking-tight text-center">2026 龍辰系統 V01</h1>
               <div className="w-full max-w-sm space-y-3">
                   <button 
                       onClick={() => setAppMode('ecommerce')}

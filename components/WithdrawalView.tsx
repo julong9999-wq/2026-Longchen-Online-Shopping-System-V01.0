@@ -679,10 +679,20 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
         )}
   
         <div className="shrink-0 bg-white rounded-lg shadow-sm border border-slate-200 p-1.5 h-52 relative flex flex-col">
-          <div className="flex justify-start items-center gap-2 px-1 mb-1 z-10">
-            <button onClick={handlePrevYear} disabled={!availableYears.find(y => y < selectedYear)} className="p-1 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors disabled:opacity-30"><ChevronLeft size={16}/></button>
-            <span className="text-xs font-bold text-slate-700">{selectedYear} 年</span>
-            <button onClick={handleNextYear} disabled={!availableYears.find(y => y > selectedYear)} className="p-1 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors disabled:opacity-30"><ChevronRight size={16}/></button>
+          <div className="flex justify-between items-start gap-2 px-1 mb-1 z-10">
+            <div className="flex justify-start items-center gap-2 shrink-0">
+              <button onClick={handlePrevYear} disabled={!availableYears.find(y => y < selectedYear)} className="p-1 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors disabled:opacity-30"><ChevronLeft size={16}/></button>
+              <span className="text-xs font-bold text-slate-700">{selectedYear} 年</span>
+              <button onClick={handleNextYear} disabled={!availableYears.find(y => y > selectedYear)} className="p-1 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors disabled:opacity-30"><ChevronRight size={16}/></button>
+            </div>
+            <ul className="flex flex-wrap justify-end gap-x-1 gap-y-1">
+              {allExpenseTypes.map((type, index) => (
+                <li key={`item-${index}`} className="flex items-center gap-0.5">
+                  <span className="w-2 h-2 rounded-sm shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                  <span className="text-slate-600 text-[9px]">{type}</span>
+                </li>
+              ))}
+            </ul>
           </div>
           <div className="flex-1 min-h-0 relative">
             {chartData.length > 0 ? (
@@ -692,7 +702,6 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
                   <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} tickFormatter={(val) => `${val}月`} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} tickFormatter={(val) => `${val/1000}k`} />
                   <Tooltip cursor={{fill: '#f1f5f9'}} contentStyle={{fontSize: '12px', borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} formatter={(val: number) => val.toLocaleString()} />
-                  <Legend verticalAlign="top" align="right" content={renderCustomLegend} />
                   {allExpenseTypes.map((type, idx) => (
                     <Bar key={type} dataKey={type} stackId="a" fill={COLORS[idx % COLORS.length]} />
                   ))}
@@ -713,9 +722,9 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
                 <tr className="bg-indigo-50/90 backdrop-blur-sm border-b border-slate-200 text-indigo-800">
                   <th className="p-1.5 font-bold sticky left-0 bg-indigo-50/90 backdrop-blur-sm border-r border-slate-200 z-40 shadow-[1px_0_0_0_#e2e8f0]">月份</th>
                   {allExpenseTypes.map(type => (
-                    <th key={type} className="p-1.5 font-bold">{type}</th>
+                    <th key={type} className="p-1.5 font-bold" style={activeUsageType === '全部支出' ? { minWidth: '25vw', width: '25vw' } : {}}>{type}</th>
                   ))}
-                  <th className="p-1.5 font-bold text-indigo-600">合計</th>
+                  <th className="p-1.5 font-bold text-indigo-600 sticky right-0 bg-indigo-50/90 backdrop-blur-sm border-l border-slate-200 z-40 shadow-[-1px_0_0_0_#e2e8f0]">合計</th>
                 </tr>
               </thead>
               <tbody className="text-slate-600 divide-y divide-slate-100">
@@ -727,9 +736,9 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
                       {allExpenseTypes.map(type => {
                         const amount = expenseTypeTotals.find(e => e.name === type)?.months[i] || 0;
                         rowTotal += amount;
-                        return <td key={type} className="p-1.5">{formatCurrency(amount)}</td>;
+                        return <td key={type} className="p-1.5" style={activeUsageType === '全部支出' ? { minWidth: '25vw', width: '25vw' } : {}}>{formatCurrency(amount)}</td>;
                       })}
-                      <td className="p-1.5 font-bold text-indigo-600">{formatCurrency(rowTotal)}</td>
+                      <td className="p-1.5 font-bold text-indigo-600 sticky right-0 bg-slate-50/50 border-l border-slate-200 z-10 shadow-[-1px_0_0_0_#e2e8f0]">{formatCurrency(rowTotal)}</td>
                     </tr>
                   );
                 })}
@@ -737,9 +746,9 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
                   <td className="p-1.5 font-bold border-r border-slate-200 sticky left-0 z-10 shadow-[1px_0_0_0_#e2e8f0]">合計</td>
                   {allExpenseTypes.map(type => {
                     const total = expenseTypeTotals.find(e => e.name === type)?.total || 0;
-                    return <td key={type} className="p-1.5 font-bold">{formatCurrency(total)}</td>;
+                    return <td key={type} className="p-1.5 font-bold" style={activeUsageType === '全部支出' ? { minWidth: '25vw', width: '25vw' } : {}}>{formatCurrency(total)}</td>;
                   })}
-                  <td className="p-1.5 font-bold text-indigo-600">
+                  <td className="p-1.5 font-bold text-indigo-600 sticky right-0 bg-slate-50/50 border-l border-slate-200 z-10 shadow-[-1px_0_0_0_#e2e8f0]">
                     {formatCurrency(expenseTypeTotals.reduce((sum, e) => sum + e.total, 0))}
                   </td>
                 </tr>

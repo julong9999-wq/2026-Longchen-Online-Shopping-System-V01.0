@@ -1,13 +1,16 @@
 import { useState } from 'react';
 import { RefreshCw, CornerUpLeft, Banknote, FileText, Lock, LineChart } from 'lucide-react';
 import WithdrawalView from './WithdrawalView';
+import LendingView from './LendingView';
+import PledgeView from './PledgeView';
+import InvestmentXXXXView from './InvestmentXXXXView';
 
 interface DataAnalysisSystemProps {
   onNavigateHome: () => void;
 }
 
 export default function DataAnalysisSystem({ onNavigateHome }: DataAnalysisSystemProps) {
-  const [mainModule, setMainModule] = useState<'investment' | 'withdrawal'>('investment');
+  const [mainModule, setMainModule] = useState<'investment' | 'withdrawal' | 'lending' | 'pledge'>('investment');
   const [activeTab, setActiveTab] = useState('year');
   const [activeAccount, setActiveAccount] = useState('all');
   const [refreshKey, setRefreshKey] = useState(0);
@@ -26,7 +29,7 @@ export default function DataAnalysisSystem({ onNavigateHome }: DataAnalysisSyste
             <RefreshCw size={20} className="opacity-90" />
           </button>
           <h1 className="text-lg font-bold tracking-wide">
-            {mainModule === 'withdrawal' ? '資金領用' : '績效分析'}
+            {mainModule === 'withdrawal' ? '資金領用' : mainModule === 'lending' ? '借劵系統' : mainModule === 'pledge' ? '質押系統' : '績效分析'}
           </h1>
         </div>
         
@@ -98,6 +101,18 @@ export default function DataAnalysisSystem({ onNavigateHome }: DataAnalysisSyste
             >
               月股息
             </button>
+            <button 
+              onClick={() => setActiveTab('XXXX')}
+              className={`px-2 py-1.5 rounded-xl text-xs transition-all flex-1 text-center ${activeTab === 'XXXX' ? 'bg-white shadow-[0_2px_8px_rgba(0,0,0,0.1)] font-bold text-slate-800' : 'text-slate-500'}`}
+            >
+              XXXX
+            </button>
+            <button 
+              onClick={() => setActiveTab('YYYY')}
+              className={`px-2 py-1.5 rounded-xl text-xs transition-all flex-1 text-center ${activeTab === 'YYYY' ? 'bg-white shadow-[0_2px_8px_rgba(0,0,0,0.1)] font-bold text-slate-800' : 'text-slate-500'}`}
+            >
+              YYYY
+            </button>
           </div>
 
           {/* 3. 第三區域 合計列 */}
@@ -130,32 +145,48 @@ export default function DataAnalysisSystem({ onNavigateHome }: DataAnalysisSyste
 
           {/* 4. 第四區為 介面資料或表格 (佔位區) */}
           <div className="flex-1 overflow-y-auto p-2 pb-20 bg-slate-50 space-y-3">
-            {/* 圖表佔位 */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 h-64 flex flex-col items-center justify-center text-slate-400">
-               <LineChart size={40} className="mb-2 opacity-50" />
-               <span className="font-bold text-sm">歷年變動趨勢圖表區塊</span>
-               <span className="text-[10px] mt-1">（規劃中）</span>
-            </div>
-            
-            {/* 表格佔位 */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="grid grid-cols-5 bg-slate-50 p-2 border-b border-slate-100 text-[10px] text-slate-500 font-bold text-center">
-                <div>年份</div>
-                <div>資產市值</div>
-                <div>股息收益</div>
-                <div>投資金額</div>
-                <div>損益變化</div>
-              </div>
-              <div className="p-6 text-center text-slate-400 font-bold flex flex-col items-center">
-                <FileText size={24} className="mb-2 opacity-50" />
-                <span className="text-sm">詳細資料表格區塊</span>
+            {activeTab === 'XXXX' ? (
+              <InvestmentXXXXView activeAccount={activeAccount} refreshKey={refreshKey} />
+            ) : activeTab === 'YYYY' ? (
+              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col items-center justify-center text-slate-400 h-full">
+                <FileText size={40} className="mb-2 opacity-50" />
+                <span className="font-bold text-sm">YYYY 視圖區塊</span>
                 <span className="text-[10px] mt-1">（規劃中）</span>
               </div>
-            </div>
+            ) : (
+              <>
+                {/* 圖表佔位 */}
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 h-64 flex flex-col items-center justify-center text-slate-400">
+                   <LineChart size={40} className="mb-2 opacity-50" />
+                   <span className="font-bold text-sm">歷年變動趨勢圖表區塊</span>
+                   <span className="text-[10px] mt-1">（規劃中）</span>
+                </div>
+                
+                {/* 表格佔位 */}
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                  <div className="grid grid-cols-5 bg-slate-50 p-2 border-b border-slate-100 text-[10px] text-slate-500 font-bold text-center">
+                    <div>年份</div>
+                    <div>資產市值</div>
+                    <div>股息收益</div>
+                    <div>投資金額</div>
+                    <div>損益變化</div>
+                  </div>
+                  <div className="p-6 text-center text-slate-400 font-bold flex flex-col items-center">
+                    <FileText size={24} className="mb-2 opacity-50" />
+                    <span className="text-sm">詳細資料表格區塊</span>
+                    <span className="text-[10px] mt-1">（規劃中）</span>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </>
-      ) : (
+      ) : mainModule === 'withdrawal' ? (
         <WithdrawalView activeAccount={activeAccount} refreshKey={refreshKey} />
+      ) : mainModule === 'lending' ? (
+        <LendingView activeAccount={activeAccount} refreshKey={refreshKey} />
+      ) : (
+        <PledgeView activeAccount={activeAccount} refreshKey={refreshKey} />
       )}
 
       {/* 5. 最下列為 功能列 */}
@@ -168,11 +199,17 @@ export default function DataAnalysisSystem({ onNavigateHome }: DataAnalysisSyste
             <Banknote size={22} className="mb-0.5" />
             <span className="text-[11px] font-bold">領錢</span>
           </button>
-          <button className="flex flex-col items-center justify-center flex-1 py-1.5 hover:bg-white/10 rounded-lg transition-colors">
+          <button 
+            onClick={() => setMainModule('lending')}
+            className={`flex flex-col items-center justify-center flex-1 py-1.5 rounded-lg transition-colors ${mainModule === 'lending' ? 'bg-white/20' : 'hover:bg-white/10'}`}
+          >
             <FileText size={22} className="mb-0.5" />
             <span className="text-[11px] font-bold">借劵</span>
           </button>
-          <button className="flex flex-col items-center justify-center flex-1 py-1.5 hover:bg-white/10 rounded-lg transition-colors">
+          <button 
+            onClick={() => setMainModule('pledge')}
+            className={`flex flex-col items-center justify-center flex-1 py-1.5 rounded-lg transition-colors ${mainModule === 'pledge' ? 'bg-white/20' : 'hover:bg-white/10'}`}
+          >
             <Lock size={22} className="mb-0.5" />
             <span className="text-[11px] font-bold">質押</span>
           </button>
