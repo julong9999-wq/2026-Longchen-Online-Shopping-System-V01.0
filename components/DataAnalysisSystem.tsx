@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { RefreshCw, CornerUpLeft, Banknote, FileText, Lock, LineChart } from 'lucide-react';
+import { CornerUpLeft, Banknote, FileText, Lock, LineChart } from 'lucide-react';
 import WithdrawalView from './WithdrawalView';
 import LendingView from './LendingView';
 import PledgeView from './PledgeView';
@@ -13,11 +13,7 @@ export default function DataAnalysisSystem({ onNavigateHome }: DataAnalysisSyste
   const [mainModule, setMainModule] = useState<'investment' | 'withdrawal' | 'lending' | 'pledge'>('investment');
   const [activeTab, setActiveTab] = useState('year');
   const [activeAccount, setActiveAccount] = useState('all');
-  const [refreshKey, setRefreshKey] = useState(0);
-
-  const handleRefresh = () => {
-    setRefreshKey(prev => prev + 1);
-  };
+  const [refreshKey] = useState(0);
   
   return (
     <div className="flex flex-col h-screen bg-slate-100 font-sans text-slate-900 overflow-hidden">
@@ -25,11 +21,8 @@ export default function DataAnalysisSystem({ onNavigateHome }: DataAnalysisSyste
       {/* 1. 最上方 標語列 & 帳戶選擇紐 */}
       <div className="bg-indigo-600 text-white shrink-0 z-10 p-2.5 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <button onClick={handleRefresh} className="p-1 hover:bg-white/10 rounded-md transition-colors">
-            <RefreshCw size={20} className="opacity-90" />
-          </button>
-          <h1 className="text-lg font-bold tracking-wide">
-            {mainModule === 'withdrawal' ? '資金領用' : mainModule === 'lending' ? '借劵系統' : mainModule === 'pledge' ? '質押系統' : '績效分析'}
+          <h1 className="font-bold tracking-wide">
+            {mainModule === 'withdrawal' ? <span className="text-base">資金領用</span> : <span className="text-lg">{mainModule === 'lending' ? '借劵系統' : mainModule === 'pledge' ? '質押系統' : '績效分析'}</span>}
           </h1>
         </div>
         

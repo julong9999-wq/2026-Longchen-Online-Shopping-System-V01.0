@@ -445,7 +445,6 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
         <div className="flex gap-2 p-1.5 bg-white border-b border-slate-200">
           <button onClick={() => setOverviewSubTab('amount')} className={`px-2.5 py-1 text-xs rounded-md font-bold transition-colors ${overviewSubTab === 'amount' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}>領用金額</button>
           <button onClick={() => setOverviewSubTab('dividend')} className={`px-2.5 py-1 text-xs rounded-md font-bold transition-colors ${overviewSubTab === 'dividend' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}>股息領用</button>
-          <button onClick={() => setOverviewSubTab('year')} className={`px-2.5 py-1 text-xs rounded-md font-bold transition-colors ${overviewSubTab === 'year' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}>YYYY</button>
         </div>
         
         {overviewSubTab === 'amount' && (
@@ -570,11 +569,6 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
                 )}
               </div>
             </div>
-          </div>
-        )}
-        {overviewSubTab === 'year' && (
-          <div className="flex-1 flex flex-col items-center justify-center text-slate-400 text-sm pb-16">
-            <span className="font-bold">YYYY 規劃中</span>
           </div>
         )}
       </div>
