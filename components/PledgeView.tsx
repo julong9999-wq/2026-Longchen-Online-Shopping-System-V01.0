@@ -160,7 +160,7 @@ export default function PledgeView({ activeAccount, refreshKey }: { activeAccoun
         </a>
       </div>
       
-      <div className="flex-1 overflow-y-auto px-1 pt-1 pb-20 flex flex-col space-y-1">
+      <div className="flex-1 overflow-y-auto px-1 pt-1 pb-2 flex flex-col space-y-1">
         {activeTab === 'loan' && (
           <>
             <div className="shrink-0 bg-white rounded-lg shadow-sm border border-slate-200 p-1.5 h-52">

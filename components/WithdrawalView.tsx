@@ -734,12 +734,12 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
           <div className="flex-1 overflow-auto no-scrollbar">
             <table className="w-full text-[10px] text-center whitespace-nowrap">
               <thead className="sticky top-0 z-30">
-                <tr className="bg-indigo-50/90 backdrop-blur-sm border-b border-slate-200 text-indigo-800">
-                  <th className="p-1.5 font-bold sticky left-0 bg-indigo-50/90 backdrop-blur-sm border-r border-slate-200 z-40 shadow-[1px_0_0_0_#e2e8f0]">月份</th>
+                <tr className="bg-indigo-50 border-b border-slate-200 text-indigo-800">
+                  <th className="p-1.5 font-bold sticky left-0 bg-indigo-50 border-r border-slate-200 z-40 shadow-[1px_0_0_0_#e2e8f0]">月份</th>
                   {allExpenseTypes.map(type => (
                     <th key={type} className="p-1.5 font-bold text-right pr-2" style={activeUsageType === '全部支出' ? { minWidth: '25vw', width: '25vw' } : {}}>{type}</th>
                   ))}
-                  <th className="p-1.5 font-bold text-indigo-600 sticky right-0 bg-indigo-50/90 backdrop-blur-sm border-l border-slate-200 z-40 shadow-[-1px_0_0_0_#e2e8f0] text-right pr-2">合計</th>
+                  <th className="p-1.5 font-bold text-indigo-600 sticky right-0 bg-indigo-50 border-l border-slate-200 z-40 shadow-[-1px_0_0_0_#e2e8f0] text-right pr-2">合計</th>
                 </tr>
               </thead>
               <tbody className="text-slate-600 divide-y divide-slate-100">
