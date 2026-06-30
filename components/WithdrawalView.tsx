@@ -42,7 +42,9 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
   const [activeTab, setActiveTab] = useState('overview'); // overview, company, life, highschool, virtual
   const [overviewSubTab, setOverviewSubTab] = useState('amount'); // amount, dividend, year
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [lifeUsageType, setLifeUsageType] = useState<string>(''); // For life and virtual tabs
+  const [categorySubTabs, setCategorySubTabs] = useState<Record<string, string>>({
+    company: 'summary', life: 'summary', highschool: 'summary', virtual: 'summary'
+  });
   const [dividendChartMode, setDividendChartMode] = useState<'purchase' | 'dividend'>('purchase');
 
   const filteredRecords = useMemo(() => {
@@ -305,18 +307,23 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
     }));
   }, [dividendTableData]);
 
-  const companySchoolData = useMemo(() => {
-    if (activeTab !== 'company' && activeTab !== 'highschool') return null;
-    const targetFeeType = activeTab === 'company' ? '公司費用' : '高中費用';
-    const filtered = filteredRecords.filter(r => r.feeType === targetFeeType);
+  const summaryData = useMemo(() => {
+    if (activeTab === 'overview') return null;
+    const targetFeeType = activeTab === 'company' ? '公司費用' : activeTab === 'highschool' ? '高中費用' : activeTab === 'life' ? '生活費用' : '虛擬帳戶';
+    const sourceRecords = activeTab === 'virtual' ? records : filteredRecords;
+    const filtered = sourceRecords.filter(r => r.feeType === targetFeeType);
     
     const chartMap = new Map<number, any>();
     const usageTypeMap = new Map<string, { current: number, prev: number, total: number, children: Map<string, { current: number, prev: number, total: number }> }>();
+    const chartKeysSet = new Set<string>();
   
     filtered.forEach(r => {
       if (!chartMap.has(r.year)) chartMap.set(r.year, { year: r.year });
       const cData = chartMap.get(r.year);
-      cData[r.usageType] = (cData[r.usageType] || 0) + r.amount;
+      
+      const stackKey = activeTab === 'virtual' ? (r.expenseType || '未分類') : (r.usageType || '未分類');
+      cData[stackKey] = (cData[stackKey] || 0) + r.amount;
+      chartKeysSet.add(stackKey);
   
       if (r.usageType) {
         if (!usageTypeMap.has(r.usageType)) usageTypeMap.set(r.usageType, { current: 0, prev: 0, total: 0, children: new Map() });
@@ -346,26 +353,23 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
     return {
       chartData: Array.from(chartMap.values()).sort((a, b) => a.year - b.year),
       allUsageTypes: Array.from(new Set(filtered.map(r => r.usageType).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'zh-TW')),
+      chartKeys: Array.from(chartKeysSet).sort((a, b) => a.localeCompare(b, 'zh-TW')),
       tree
     };
   }, [filteredRecords, activeTab, selectedYear]);
 
-  const lifeVirtualData = useMemo(() => {
-    if (activeTab !== 'life' && activeTab !== 'virtual') return null;
-    const targetFeeType = activeTab === 'life' ? '生活費用' : '虛擬帳戶';
+  const monthlyData = useMemo(() => {
+    if (activeTab === 'overview') return null;
+    const targetFeeType = activeTab === 'company' ? '公司費用' : activeTab === 'highschool' ? '高中費用' : activeTab === 'life' ? '生活費用' : '虛擬帳戶';
     const sourceRecords = activeTab === 'virtual' ? records : filteredRecords;
     const filtered = sourceRecords.filter(r => r.feeType === targetFeeType);
     let allUsageTypes = Array.from(new Set(filtered.map(r => r.usageType).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'zh-TW'));
-    if (activeTab === 'life') {
-      allUsageTypes = ['全部支出', ...allUsageTypes];
-    } else if (activeTab === 'virtual') {
-      allUsageTypes = allUsageTypes.filter(t => t !== '銀行費用');
-      allUsageTypes = ['全部支出', ...allUsageTypes];
-    }
-
-    let currentUsageType = lifeUsageType;
-    if (allUsageTypes.length > 0 && !allUsageTypes.includes(currentUsageType)) {
-      currentUsageType = allUsageTypes[0];
+    
+    // Default subTab is 'monthly' or 'summary'
+    let currentUsageType = '全部支出';
+    const subTab = categorySubTabs[activeTab] || 'summary';
+    if (subTab !== 'summary' && subTab !== 'monthly') {
+      currentUsageType = subTab;
     }
 
     const yearFiltered = filtered.filter(r => r.year === selectedYear && (currentUsageType === '全部支出' ? true : r.usageType === currentUsageType));
@@ -394,34 +398,65 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
       allExpenseTypes: Array.from(allExpenseTypes).sort((a,b) => a.localeCompare(b, 'zh-TW')),
       expenseTypeTotals: Array.from(expenseTypeTotals.entries()).map(([name, months]) => ({ name, months, total: months.reduce((a,b)=>a+b, 0) })).sort((a,b) => a.name.localeCompare(b.name, 'zh-TW'))
     };
-  }, [filteredRecords, records, activeTab, selectedYear, lifeUsageType]);
+  }, [filteredRecords, records, activeTab, selectedYear, categorySubTabs]);
 
   const formatCurrency = (val: number) => val === 0 ? '-' : val.toLocaleString();
   const COLORS = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#eab308'];
   
   // Render sub-tabs for withdrawal
   const renderNav = () => (
-    <div className="bg-white px-2 py-1.5 flex justify-between gap-1 shrink-0 border-b border-slate-200 overflow-x-auto no-scrollbar">
-      {[
-        { id: 'overview', label: '總表' },
-        { id: 'company', label: '公司' },
-        { id: 'life', label: '生活' },
-        { id: 'highschool', label: '高中' },
-        { id: 'virtual', label: '虛擬' }
-      ].map(tab => (
-        <button 
-          key={tab.id}
-          onClick={() => setActiveTab(tab.id)}
-          className={`px-3 py-1.5 rounded-md text-xs transition-all flex-none text-center ${activeTab === tab.id ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-500'}`}
-        >
-          {tab.label}
+    <div className="flex flex-col shrink-0">
+      <div className="bg-white px-2 py-1.5 flex justify-between gap-1 border-b border-slate-200 overflow-x-auto no-scrollbar">
+        {[
+          { id: 'overview', label: '總表' },
+          { id: 'company', label: '公司' },
+          { id: 'life', label: '生活' },
+          { id: 'highschool', label: '高中' },
+          { id: 'virtual', label: '虛擬' }
+        ].map(tab => (
+          <button 
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`px-3 py-1.5 rounded-md text-xs transition-all flex-none text-center ${activeTab === tab.id ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-500'}`}
+          >
+            {tab.label}
+          </button>
+        ))}
+        <button className="px-3 py-1.5 rounded-md text-xs transition-all flex-none text-center text-indigo-600 font-bold bg-indigo-50/50 flex items-center gap-1">
+          <Plus size={14} /> 新增
         </button>
-      ))}
-      <button className="px-3 py-1.5 rounded-md text-xs transition-all flex-none text-center text-indigo-600 font-bold bg-indigo-50/50 flex items-center gap-1">
-        <Plus size={14} /> 新增
-      </button>
+      </div>
+      {activeTab !== 'overview' && (
+        <div className="bg-slate-50 px-2 py-1 flex gap-2 border-b border-slate-200 overflow-x-auto no-scrollbar">
+          {getSubTabsForCategory(activeTab).map(sub => (
+            <button
+              key={sub.id}
+              onClick={() => setCategorySubTabs(prev => ({ ...prev, [activeTab]: sub.id }))}
+              className={`px-3 py-1 rounded-md text-xs font-bold transition-colors ${
+                (categorySubTabs[activeTab] || 'summary') === sub.id
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'bg-white text-slate-600 border border-slate-200 hover:border-indigo-300'
+              }`}
+            >
+              {sub.label}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
+
+  const getSubTabsForCategory = (cat: string) => {
+    const summary = { id: 'summary', label: '總表明細' };
+    const monthly = { id: 'monthly', label: '月份明細' };
+    const life = { id: '生活支出', label: '生活支出' };
+    const bank = { id: '銀行支出', label: '銀行支出' };
+    
+    if (cat === 'life') return [summary, life, bank];
+    if (cat === 'highschool') return [summary, { id: '禹君學習', label: '禹君學習' }, { id: '禹辰學習', label: '禹辰學習' }];
+    if (cat === 'company') return [summary, { id: '公司支出', label: '公司支出' }, { id: '公司紅利', label: '公司紅利' }];
+    return [summary, monthly];
+  };
 
   const renderCustomLegend = (props: any) => {
     const { payload } = props;
@@ -444,7 +479,7 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
       <div className="flex flex-col h-full space-y-2">
         <div className="flex gap-2 p-1.5 bg-white border-b border-slate-200">
           <button onClick={() => setOverviewSubTab('amount')} className={`px-2.5 py-1 text-xs rounded-md font-bold transition-colors ${overviewSubTab === 'amount' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}>領用金額</button>
-          <button onClick={() => setOverviewSubTab('dividend')} className={`px-2.5 py-1 text-xs rounded-md font-bold transition-colors ${overviewSubTab === 'dividend' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}>股息領用</button>
+          <button onClick={() => setOverviewSubTab('dividend')} className={`px-2.5 py-1 text-xs rounded-md font-bold transition-colors ${overviewSubTab === 'dividend' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}>領用率</button>
         </div>
         
         {overviewSubTab === 'amount' && (
@@ -523,8 +558,8 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
           <div className="flex-1 flex flex-col min-h-0 px-1 space-y-1 pb-16">
             <div className="shrink-0 bg-white rounded-lg shadow-sm border border-slate-200 p-1.5 h-52 flex flex-col">
               <div className="flex justify-start gap-2 mb-1 shrink-0 pl-1">
-                <button onClick={() => setDividendChartMode('purchase')} className={`px-3 py-1 rounded-md text-[10px] font-bold border ${dividendChartMode === 'purchase' ? 'border-indigo-500 text-indigo-700 bg-indigo-50' : 'border-slate-200 text-slate-600 hover:border-indigo-300'}`}>購買分析圖</button>
-                <button onClick={() => setDividendChartMode('dividend')} className={`px-3 py-1 rounded-md text-[10px] font-bold border ${dividendChartMode === 'dividend' ? 'border-indigo-500 text-indigo-700 bg-indigo-50' : 'border-slate-200 text-slate-600 hover:border-indigo-300'}`}>股息分析圖</button>
+                <button onClick={() => setDividendChartMode('purchase')} className={`px-3 py-1 rounded-md text-[10px] font-bold border ${dividendChartMode === 'purchase' ? 'border-indigo-500 text-indigo-700 bg-indigo-50' : 'border-slate-200 text-slate-600 hover:border-indigo-300'}`}>本金領用率</button>
+                <button onClick={() => setDividendChartMode('dividend')} className={`px-3 py-1 rounded-md text-[10px] font-bold border ${dividendChartMode === 'dividend' ? 'border-indigo-500 text-indigo-700 bg-indigo-50' : 'border-slate-200 text-slate-600 hover:border-indigo-300'}`}>股息領用率</button>
               </div>
               <div className="flex-1 min-h-0">
                 <ResponsiveContainer width="100%" height="100%">
@@ -575,9 +610,9 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
     );
   };
 
-  const renderCompanyOrHighSchool = () => {
-    if (!companySchoolData) return null;
-    const { chartData, allUsageTypes, tree } = companySchoolData;
+  const renderSummaryView = () => {
+    if (!summaryData) return null;
+    const { chartData, chartKeys = [], tree } = summaryData;
 
     return (
       <div className="flex-1 flex flex-col min-h-0 px-1 space-y-1 pb-16 pt-1">
@@ -590,7 +625,7 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} tickFormatter={(val) => `${val/10000}W`} />
                 <Tooltip cursor={{fill: '#f1f5f9'}} contentStyle={{fontSize: '12px', borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} formatter={(val: number) => val.toLocaleString()} />
                 <Legend verticalAlign="top" align="right" content={renderCustomLegend} />
-                {allUsageTypes.map((type, idx) => (
+                {chartKeys.map((type, idx) => (
                   <Bar key={type} dataKey={type} stackId="a" fill={COLORS[idx % COLORS.length]} />
                 ))}
               </BarChart>
@@ -652,26 +687,12 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
     );
   };
 
-  const renderLifeOrVirtual = () => {
-    if (!lifeVirtualData) return null;
-    const { allUsageTypes, activeUsageType, chartData, allExpenseTypes, expenseTypeTotals } = lifeVirtualData;
+  const renderMonthlyView = () => {
+    if (!monthlyData) return null;
+    const { activeUsageType, chartData, allExpenseTypes, expenseTypeTotals } = monthlyData;
 
     return (
       <div className="flex-1 flex flex-col min-h-0 px-1 space-y-1 pb-16 pt-1">
-        {(activeTab === 'life' || allUsageTypes.length > 1) && (
-          <div className="shrink-0 flex gap-2 overflow-x-auto no-scrollbar pb-1">
-            {allUsageTypes.map(item => (
-              <button 
-                key={item} 
-                onClick={() => setLifeUsageType(item)}
-                className={`px-3 py-1 bg-white border rounded-md text-xs font-bold whitespace-nowrap shadow-sm transition-colors ${item === activeUsageType ? 'border-indigo-500 text-indigo-700 bg-indigo-50' : 'border-slate-200 text-slate-600 hover:border-indigo-300'}`}
-              >
-                {item}
-              </button>
-            ))}
-          </div>
-        )}
-  
         <div className="shrink-0 bg-white rounded-lg shadow-sm border border-slate-200 p-1.5 h-52 relative flex flex-col">
           <div className="flex justify-between items-start gap-2 px-1 mb-1 z-10">
             <div className="flex justify-start items-center gap-2 shrink-0">
@@ -716,9 +737,9 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
                 <tr className="bg-indigo-50/90 backdrop-blur-sm border-b border-slate-200 text-indigo-800">
                   <th className="p-1.5 font-bold sticky left-0 bg-indigo-50/90 backdrop-blur-sm border-r border-slate-200 z-40 shadow-[1px_0_0_0_#e2e8f0]">月份</th>
                   {allExpenseTypes.map(type => (
-                    <th key={type} className="p-1.5 font-bold" style={activeUsageType === '全部支出' ? { minWidth: '25vw', width: '25vw' } : {}}>{type}</th>
+                    <th key={type} className="p-1.5 font-bold text-right pr-2" style={activeUsageType === '全部支出' ? { minWidth: '25vw', width: '25vw' } : {}}>{type}</th>
                   ))}
-                  <th className="p-1.5 font-bold text-indigo-600 sticky right-0 bg-indigo-50/90 backdrop-blur-sm border-l border-slate-200 z-40 shadow-[-1px_0_0_0_#e2e8f0]">合計</th>
+                  <th className="p-1.5 font-bold text-indigo-600 sticky right-0 bg-indigo-50/90 backdrop-blur-sm border-l border-slate-200 z-40 shadow-[-1px_0_0_0_#e2e8f0] text-right pr-2">合計</th>
                 </tr>
               </thead>
               <tbody className="text-slate-600 divide-y divide-slate-100">
@@ -726,23 +747,23 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
                   let rowTotal = 0;
                   return (
                     <tr key={i} className="hover:bg-slate-50 transition-colors">
-                      <td className="p-1.5 font-bold bg-slate-50/50 border-r border-slate-200 sticky left-0 z-10 text-slate-700 shadow-[1px_0_0_0_#e2e8f0]">{i + 1}月</td>
+                      <td className="p-1.5 font-bold bg-slate-50/50 border-r border-slate-200 sticky left-0 z-10 text-slate-700 shadow-[1px_0_0_0_#e2e8f0] text-center">{i + 1}月</td>
                       {allExpenseTypes.map(type => {
                         const amount = expenseTypeTotals.find(e => e.name === type)?.months[i] || 0;
                         rowTotal += amount;
-                        return <td key={type} className="p-1.5" style={activeUsageType === '全部支出' ? { minWidth: '25vw', width: '25vw' } : {}}>{formatCurrency(amount)}</td>;
+                        return <td key={type} className="p-1.5 text-right pr-2" style={activeUsageType === '全部支出' ? { minWidth: '25vw', width: '25vw' } : {}}>{formatCurrency(amount)}</td>;
                       })}
-                      <td className="p-1.5 font-bold text-indigo-600 sticky right-0 bg-slate-50/50 border-l border-slate-200 z-10 shadow-[-1px_0_0_0_#e2e8f0]">{formatCurrency(rowTotal)}</td>
+                      <td className="p-1.5 font-bold text-indigo-600 sticky right-0 bg-slate-50/50 border-l border-slate-200 z-10 shadow-[-1px_0_0_0_#e2e8f0] text-right pr-2">{formatCurrency(rowTotal)}</td>
                     </tr>
                   );
                 })}
                 <tr className="bg-slate-50/50">
-                  <td className="p-1.5 font-bold border-r border-slate-200 sticky left-0 z-10 shadow-[1px_0_0_0_#e2e8f0]">合計</td>
+                  <td className="p-1.5 font-bold border-r border-slate-200 sticky left-0 z-10 shadow-[1px_0_0_0_#e2e8f0] text-center">合計</td>
                   {allExpenseTypes.map(type => {
                     const total = expenseTypeTotals.find(e => e.name === type)?.total || 0;
-                    return <td key={type} className="p-1.5 font-bold" style={activeUsageType === '全部支出' ? { minWidth: '25vw', width: '25vw' } : {}}>{formatCurrency(total)}</td>;
+                    return <td key={type} className="p-1.5 font-bold text-right pr-2" style={activeUsageType === '全部支出' ? { minWidth: '25vw', width: '25vw' } : {}}>{formatCurrency(total)}</td>;
                   })}
-                  <td className="p-1.5 font-bold text-indigo-600 sticky right-0 bg-slate-50/50 border-l border-slate-200 z-10 shadow-[-1px_0_0_0_#e2e8f0]">
+                  <td className="p-1.5 font-bold text-indigo-600 sticky right-0 bg-slate-50/50 border-l border-slate-200 z-10 shadow-[-1px_0_0_0_#e2e8f0] text-right pr-2">
                     {formatCurrency(expenseTypeTotals.reduce((sum, e) => sum + e.total, 0))}
                   </td>
                 </tr>
@@ -758,10 +779,9 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
     <div className="flex flex-col h-full bg-slate-50 flex-1 overflow-hidden">
       {renderNav()}
       {activeTab === 'overview' && renderOverview()}
-      {activeTab === 'company' && renderCompanyOrHighSchool()}
-      {activeTab === 'highschool' && renderCompanyOrHighSchool()}
-      {activeTab === 'life' && renderLifeOrVirtual()}
-      {activeTab === 'virtual' && renderLifeOrVirtual()}
+      {activeTab !== 'overview' && (
+        (categorySubTabs[activeTab] || 'summary') === 'summary' ? renderSummaryView() : renderMonthlyView()
+      )}
     </div>
   );
 }

@@ -275,24 +275,24 @@ export default function InvestmentXXXXView({ activeAccount, refreshKey }: { acti
           <thead className="sticky top-0 z-30">
             <tr className="bg-indigo-50/90 backdrop-blur-sm border-b border-slate-200 text-indigo-800">
               <th className="p-1.5 font-bold sticky left-0 bg-indigo-50/90 backdrop-blur-sm border-r border-slate-200 z-40">年月</th>
-              <th className="p-1.5 font-bold">投資金額</th>
-              <th className="p-1.5 font-bold">損益金額</th>
-              <th className="p-1.5 font-bold">股息收益</th>
-              <th className="p-1.5 font-bold">領錢金額</th>
-              <th className="p-1.5 font-bold">借劵收入</th>
-              <th className="p-1.5 font-bold">貸款利息</th>
+              <th className="p-1.5 font-bold text-right pr-4">投資金額</th>
+              <th className="p-1.5 font-bold text-right pr-4">損益金額</th>
+              <th className="p-1.5 font-bold text-right pr-4">股息收益</th>
+              <th className="p-1.5 font-bold text-right pr-4">領錢金額</th>
+              <th className="p-1.5 font-bold text-right pr-4">借劵收入</th>
+              <th className="p-1.5 font-bold text-right pr-4">貸款利息</th>
             </tr>
           </thead>
           <tbody className="text-slate-600 divide-y divide-slate-100">
             {data.map(d => (
               <tr key={d.yearMonth} className="hover:bg-slate-50 transition-colors">
                 <td className="p-1.5 font-bold bg-slate-50/50 border-r border-slate-200 sticky left-0 z-10">{d.yearMonth}</td>
-                <td className="p-1.5">{formatCurrency(d.investmentAmount)}</td>
-                <td className="p-1.5 text-indigo-600 font-bold">{formatCurrency(d.profitLoss)}</td>
-                <td className="p-1.5 text-green-600 font-bold">{formatCurrency(d.dividendIncome)}</td>
-                <td className="p-1.5">{formatCurrency(d.withdrawalAmount)}</td>
-                <td className="p-1.5">{formatCurrency(d.lendingIncome)}</td>
-                <td className="p-1.5">{formatCurrency(d.pledgeInterest)}</td>
+                <td className="p-1.5 text-right pr-4">{formatCurrency(d.investmentAmount)}</td>
+                <td className="p-1.5 text-indigo-600 font-bold text-right pr-4">{formatCurrency(d.profitLoss)}</td>
+                <td className="p-1.5 text-green-600 font-bold text-right pr-4">{formatCurrency(d.dividendIncome)}</td>
+                <td className="p-1.5 text-right pr-4">{formatCurrency(d.withdrawalAmount)}</td>
+                <td className="p-1.5 text-right pr-4">{formatCurrency(d.lendingIncome)}</td>
+                <td className="p-1.5 text-right pr-4">{formatCurrency(d.pledgeInterest)}</td>
               </tr>
             ))}
             {data.length === 0 && (

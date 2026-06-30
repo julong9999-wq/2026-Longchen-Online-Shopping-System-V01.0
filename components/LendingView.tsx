@@ -257,26 +257,26 @@ export default function LendingView({ activeAccount, refreshKey }: { activeAccou
                 <table className="w-full text-[10px] text-center whitespace-nowrap">
                   <thead className="sticky top-0 z-30">
                     <tr className="bg-indigo-50/90 backdrop-blur-sm border-b border-slate-200 text-indigo-800">
-                      <th className="p-1.5 font-bold sticky left-0 bg-indigo-50/90 backdrop-blur-sm border-r border-slate-200 z-40">月份</th>
-                      <th className="p-1.5 font-bold">2026 &gt;</th>
-                      <th className="p-1.5 font-bold">2025 &lt;</th>
-                      <th className="p-1.5 font-bold text-indigo-600">合計</th>
+                      <th className="p-1.5 font-bold sticky left-0 bg-indigo-50/90 backdrop-blur-sm border-r border-slate-200 z-40 text-center">月份</th>
+                      <th className="p-1.5 font-bold text-right pr-4">2026 &gt;</th>
+                      <th className="p-1.5 font-bold text-right pr-4">2025 &lt;</th>
+                      <th className="p-1.5 font-bold text-indigo-600 text-right pr-4">合計</th>
                     </tr>
                   </thead>
                   <tbody className="text-slate-600 divide-y divide-slate-100">
                     {yearMonthData.map(d => (
                       <tr key={d.month} className="hover:bg-slate-50 transition-colors">
-                        <td className="p-1.5 font-bold bg-slate-50/50 border-r border-slate-200 sticky left-0 z-10">{d.month}月</td>
-                        <td className="p-1.5">{formatCurrency(d['2026 >'])}</td>
-                        <td className="p-1.5">{formatCurrency(d['2025 <'])}</td>
-                        <td className="p-1.5 font-bold text-indigo-600">{formatCurrency(d['2026 >'] + d['2025 <'])}</td>
+                        <td className="p-1.5 font-bold bg-slate-50/50 border-r border-slate-200 sticky left-0 z-10 text-center">{d.month}月</td>
+                        <td className="p-1.5 text-right pr-4">{formatCurrency(d['2026 >'])}</td>
+                        <td className="p-1.5 text-right pr-4">{formatCurrency(d['2025 <'])}</td>
+                        <td className="p-1.5 font-bold text-indigo-600 text-right pr-4">{formatCurrency(d['2026 >'] + d['2025 <'])}</td>
                       </tr>
                     ))}
                     <tr className="bg-slate-50/50">
-                      <td className="p-1.5 font-bold border-r border-slate-200 sticky left-0 z-10">合計</td>
-                      <td className="p-1.5 font-bold">{formatCurrency(yearMonthData.reduce((s, d) => s + d['2026 >'], 0))}</td>
-                      <td className="p-1.5 font-bold">{formatCurrency(yearMonthData.reduce((s, d) => s + d['2025 <'], 0))}</td>
-                      <td className="p-1.5 font-bold text-indigo-600">{formatCurrency(yearMonthData.reduce((s, d) => s + d['2026 >'] + d['2025 <'], 0))}</td>
+                      <td className="p-1.5 font-bold border-r border-slate-200 sticky left-0 z-10 text-center">合計</td>
+                      <td className="p-1.5 font-bold text-right pr-4">{formatCurrency(yearMonthData.reduce((s, d) => s + d['2026 >'], 0))}</td>
+                      <td className="p-1.5 font-bold text-right pr-4">{formatCurrency(yearMonthData.reduce((s, d) => s + d['2025 <'], 0))}</td>
+                      <td className="p-1.5 font-bold text-indigo-600 text-right pr-4">{formatCurrency(yearMonthData.reduce((s, d) => s + d['2026 >'] + d['2025 <'], 0))}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -306,26 +306,26 @@ export default function LendingView({ activeAccount, refreshKey }: { activeAccou
                 <table className="w-full text-[10px] text-center whitespace-nowrap">
                   <thead className="sticky top-0 z-30">
                     <tr className="bg-indigo-50/90 backdrop-blur-sm border-b border-slate-200 text-indigo-800">
-                      <th className="p-1.5 font-bold sticky left-0 bg-indigo-50/90 backdrop-blur-sm border-r border-slate-200 z-40">股名</th>
-                      <th className="p-1.5 font-bold">2026 &gt;</th>
-                      <th className="p-1.5 font-bold">2025 &lt;</th>
-                      <th className="p-1.5 font-bold text-indigo-600">合計</th>
+                      <th className="p-1.5 font-bold sticky left-0 bg-indigo-50/90 backdrop-blur-sm border-r border-slate-200 z-40 text-center">股名</th>
+                      <th className="p-1.5 font-bold text-right pr-4">2026 &gt;</th>
+                      <th className="p-1.5 font-bold text-right pr-4">2025 &lt;</th>
+                      <th className="p-1.5 font-bold text-indigo-600 text-right pr-4">合計</th>
                     </tr>
                   </thead>
                   <tbody className="text-slate-600 divide-y divide-slate-100">
                     {stockData.map((d, i) => (
                       <tr key={i} className="hover:bg-slate-50 transition-colors">
-                        <td className="p-1.5 font-bold bg-slate-50/50 border-r border-slate-200 sticky left-0 z-10">{d.stockName}</td>
-                        <td className="p-1.5">{formatCurrency(d['2026 >'])}</td>
-                        <td className="p-1.5">{formatCurrency(d['2025 <'])}</td>
-                        <td className="p-1.5 font-bold text-indigo-600">{formatCurrency(d['2026 >'] + d['2025 <'])}</td>
+                        <td className="p-1.5 font-bold bg-slate-50/50 border-r border-slate-200 sticky left-0 z-10 text-center">{d.stockName}</td>
+                        <td className="p-1.5 text-right pr-4">{formatCurrency(d['2026 >'])}</td>
+                        <td className="p-1.5 text-right pr-4">{formatCurrency(d['2025 <'])}</td>
+                        <td className="p-1.5 font-bold text-indigo-600 text-right pr-4">{formatCurrency(d['2026 >'] + d['2025 <'])}</td>
                       </tr>
                     ))}
                     <tr className="bg-slate-50/50">
-                      <td className="p-1.5 font-bold border-r border-slate-200 sticky left-0 z-10">合計</td>
-                      <td className="p-1.5 font-bold">{formatCurrency(stockData.reduce((s, d) => s + d['2026 >'], 0))}</td>
-                      <td className="p-1.5 font-bold">{formatCurrency(stockData.reduce((s, d) => s + d['2025 <'], 0))}</td>
-                      <td className="p-1.5 font-bold text-indigo-600">{formatCurrency(stockData.reduce((s, d) => s + d['2026 >'] + d['2025 <'], 0))}</td>
+                      <td className="p-1.5 font-bold border-r border-slate-200 sticky left-0 z-10 text-center">合計</td>
+                      <td className="p-1.5 font-bold text-right pr-4">{formatCurrency(stockData.reduce((s, d) => s + d['2026 >'], 0))}</td>
+                      <td className="p-1.5 font-bold text-right pr-4">{formatCurrency(stockData.reduce((s, d) => s + d['2025 <'], 0))}</td>
+                      <td className="p-1.5 font-bold text-indigo-600 text-right pr-4">{formatCurrency(stockData.reduce((s, d) => s + d['2026 >'] + d['2025 <'], 0))}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -357,18 +357,18 @@ export default function LendingView({ activeAccount, refreshKey }: { activeAccou
                   <tr className="bg-indigo-50/90 backdrop-blur-sm border-b border-slate-200 text-indigo-800">
                     {detailTab === 'estimate' && (
                       <>
-                        <th className="p-1.5 font-bold sticky left-0 bg-indigo-50/90 backdrop-blur-sm border-r border-slate-200 z-40">股名</th>
-                        <th className="p-1.5 font-bold">借劵方式</th>
-                        <th className="p-1.5 font-bold">張數</th>
-                        <th className="p-1.5 font-bold">天數</th>
-                        <th className="p-1.5 font-bold text-indigo-600">預估金額</th>
+                        <th className="p-1.5 font-bold sticky left-0 bg-indigo-50/90 backdrop-blur-sm border-r border-slate-200 z-40 text-center">股名</th>
+                        <th className="p-1.5 font-bold text-center">借劵方式</th>
+                        <th className="p-1.5 font-bold text-right pr-4">張數</th>
+                        <th className="p-1.5 font-bold text-right pr-4">天數</th>
+                        <th className="p-1.5 font-bold text-indigo-600 text-right pr-4">預估金額</th>
                       </>
                     )}
                     {(detailTab === 'lent' || detailTab === 'inventory') && (
                       <>
-                        <th className="p-1.5 font-bold">股號</th>
-                        <th className="p-1.5 font-bold">股名</th>
-                        <th className="p-1.5 font-bold text-indigo-600">張數</th>
+                        <th className="p-1.5 font-bold text-center">股號</th>
+                        <th className="p-1.5 font-bold text-center">股名</th>
+                        <th className="p-1.5 font-bold text-indigo-600 text-right pr-4">張數</th>
                       </>
                     )}
                   </tr>
@@ -376,31 +376,31 @@ export default function LendingView({ activeAccount, refreshKey }: { activeAccou
                 <tbody className="text-slate-600 divide-y divide-slate-100">
                   {detailTab === 'estimate' && detailData.map((d: any, i) => (
                     <tr key={i} className="hover:bg-slate-50 transition-colors">
-                      <td className="p-1.5 font-bold bg-slate-50/50 border-r border-slate-200 sticky left-0 z-10">{d.stockName}</td>
-                      <td className="p-1.5">{d.type}</td>
-                      <td className="p-1.5">{d.shares}</td>
-                      <td className="p-1.5">{d.days}</td>
-                      <td className="p-1.5 font-bold text-indigo-600">{formatCurrency(d.estimate)}</td>
+                      <td className="p-1.5 font-bold bg-slate-50/50 border-r border-slate-200 sticky left-0 z-10 text-center">{d.stockName}</td>
+                      <td className="p-1.5 text-center">{d.type}</td>
+                      <td className="p-1.5 text-right pr-4">{d.shares}</td>
+                      <td className="p-1.5 text-right pr-4">{d.days}</td>
+                      <td className="p-1.5 font-bold text-indigo-600 text-right pr-4">{formatCurrency(d.estimate)}</td>
                     </tr>
                   ))}
                   {detailTab === 'estimate' && (
                     <tr className="bg-slate-50/50">
-                      <td colSpan={4} className="p-1.5 font-bold text-right border-r border-slate-200">合計</td>
-                      <td className="p-1.5 font-bold text-indigo-600">{formatCurrency(detailData.reduce((s: number, d: any) => s + d.estimate, 0))}</td>
+                      <td colSpan={4} className="p-1.5 font-bold text-right border-r border-slate-200 pr-4">合計</td>
+                      <td className="p-1.5 font-bold text-indigo-600 text-right pr-4">{formatCurrency(detailData.reduce((s: number, d: any) => s + d.estimate, 0))}</td>
                     </tr>
                   )}
                   
                   {(detailTab === 'lent' || detailTab === 'inventory') && detailData.map((d: any, i) => (
                     <tr key={i} className="hover:bg-slate-50 transition-colors">
-                      <td className="p-1.5">{d.stockId}</td>
-                      <td className="p-1.5 font-bold">{d.stockName}</td>
-                      <td className="p-1.5 font-bold text-indigo-600">{formatCurrency(d.shares)}</td>
+                      <td className="p-1.5 text-center">{d.stockId}</td>
+                      <td className="p-1.5 font-bold text-center">{d.stockName}</td>
+                      <td className="p-1.5 font-bold text-indigo-600 text-right pr-4">{formatCurrency(d.shares)}</td>
                     </tr>
                   ))}
                   {(detailTab === 'lent' || detailTab === 'inventory') && (
                     <tr className="bg-slate-50/50">
-                      <td colSpan={2} className="p-1.5 font-bold text-right border-r border-slate-200">合計</td>
-                      <td className="p-1.5 font-bold text-indigo-600">{formatCurrency(detailData.reduce((s: number, d: any) => s + d.shares, 0))}</td>
+                      <td colSpan={2} className="p-1.5 font-bold text-right border-r border-slate-200 pr-4">合計</td>
+                      <td className="p-1.5 font-bold text-indigo-600 text-right pr-4">{formatCurrency(detailData.reduce((s: number, d: any) => s + d.shares, 0))}</td>
                     </tr>
                   )}
                 </tbody>

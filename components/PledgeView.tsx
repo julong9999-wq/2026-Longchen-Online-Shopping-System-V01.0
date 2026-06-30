@@ -182,19 +182,19 @@ export default function PledgeView({ activeAccount, refreshKey }: { activeAccoun
                 <table className="w-full text-[10px] text-center whitespace-nowrap">
                   <thead className="sticky top-0 z-30">
                     <tr className="bg-indigo-50/90 backdrop-blur-sm border-b border-slate-200 text-indigo-800">
-                      <th className="p-1.5 font-bold sticky left-0 bg-indigo-50/90 backdrop-blur-sm border-r border-slate-200 z-40">年月</th>
-                      <th className="p-1.5 font-bold">貸款金額</th>
-                      <th className="p-1.5 font-bold">還款金額</th>
-                      <th className="p-1.5 font-bold text-indigo-600">貸款總額</th>
+                      <th className="p-1.5 font-bold sticky left-0 bg-indigo-50/90 backdrop-blur-sm border-r border-slate-200 z-40 text-center">年月</th>
+                      <th className="p-1.5 font-bold text-right pr-4">貸款金額</th>
+                      <th className="p-1.5 font-bold text-right pr-4">還款金額</th>
+                      <th className="p-1.5 font-bold text-indigo-600 text-right pr-4">貸款總額</th>
                     </tr>
                   </thead>
                   <tbody className="text-slate-600 divide-y divide-slate-100">
                     {[...monthlyData].reverse().map(d => (
                       <tr key={d.month} className="hover:bg-slate-50 transition-colors">
-                        <td className="p-1.5 font-bold bg-slate-50/50 border-r border-slate-200 sticky left-0 z-10">{d.month}</td>
-                        <td className="p-1.5">{formatCurrency(d.loan)}</td>
-                        <td className="p-1.5">{formatCurrency(d.repay)}</td>
-                        <td className="p-1.5 font-bold text-indigo-600">{formatCurrency(d.netLoan)}</td>
+                        <td className="p-1.5 font-bold bg-slate-50/50 border-r border-slate-200 sticky left-0 z-10 text-center">{d.month}</td>
+                        <td className="p-1.5 text-right pr-4">{formatCurrency(d.loan)}</td>
+                        <td className="p-1.5 text-right pr-4">{formatCurrency(d.repay)}</td>
+                        <td className="p-1.5 font-bold text-indigo-600 text-right pr-4">{formatCurrency(d.netLoan)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -225,19 +225,19 @@ export default function PledgeView({ activeAccount, refreshKey }: { activeAccoun
                 <table className="w-full text-[10px] text-center whitespace-nowrap">
                   <thead className="sticky top-0 z-30">
                     <tr className="bg-indigo-50/90 backdrop-blur-sm border-b border-slate-200 text-indigo-800">
-                      <th className="p-1.5 font-bold sticky left-0 bg-indigo-50/90 backdrop-blur-sm border-r border-slate-200 z-40">年月</th>
-                      <th className="p-1.5 font-bold">貸款金額</th>
-                      <th className="p-1.5 font-bold">還款利息</th>
-                      <th className="p-1.5 font-bold text-indigo-600">貸款利息</th>
+                      <th className="p-1.5 font-bold sticky left-0 bg-indigo-50/90 backdrop-blur-sm border-r border-slate-200 z-40 text-center">年月</th>
+                      <th className="p-1.5 font-bold text-right pr-4">貸款金額</th>
+                      <th className="p-1.5 font-bold text-right pr-4">還款利息</th>
+                      <th className="p-1.5 font-bold text-indigo-600 text-right pr-4">貸款利息</th>
                     </tr>
                   </thead>
                   <tbody className="text-slate-600 divide-y divide-slate-100">
                     {[...monthlyData].reverse().map(d => (
                       <tr key={d.month} className="hover:bg-slate-50 transition-colors">
-                        <td className="p-1.5 font-bold bg-slate-50/50 border-r border-slate-200 sticky left-0 z-10">{d.month}</td>
-                        <td className="p-1.5">{formatCurrency(d.loan)}</td>
-                        <td className="p-1.5">{formatCurrency(d.interest)}</td>
-                        <td className="p-1.5 font-bold text-indigo-600">{formatCurrency(d.cumInterest)}</td>
+                        <td className="p-1.5 font-bold bg-slate-50/50 border-r border-slate-200 sticky left-0 z-10 text-center">{d.month}</td>
+                        <td className="p-1.5 text-right pr-4">{formatCurrency(d.loan)}</td>
+                        <td className="p-1.5 text-right pr-4">{formatCurrency(d.interest)}</td>
+                        <td className="p-1.5 font-bold text-indigo-600 text-right pr-4">{formatCurrency(d.cumInterest)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -266,29 +266,29 @@ export default function PledgeView({ activeAccount, refreshKey }: { activeAccoun
                 <table className="w-full text-[10px] text-center whitespace-nowrap">
                   <thead className="sticky top-0 z-30">
                     <tr className="bg-indigo-50/90 backdrop-blur-sm border-b border-slate-200 text-indigo-800">
-                      <th className="p-1.5 font-bold sticky left-0 bg-indigo-50/90 backdrop-blur-sm border-r border-slate-200 z-40">股名</th>
-                      <th className="p-1.5 font-bold">張數</th>
-                      <th className="p-1.5 font-bold">貸款金額</th>
-                      <th className="p-1.5 font-bold">貸款利率</th>
-                      <th className="p-1.5 font-bold text-indigo-600">預估金額</th>
+                      <th className="p-1.5 font-bold sticky left-0 bg-indigo-50/90 backdrop-blur-sm border-r border-slate-200 z-40 text-center">股名</th>
+                      <th className="p-1.5 font-bold text-right pr-4">張數</th>
+                      <th className="p-1.5 font-bold text-right pr-4">貸款金額</th>
+                      <th className="p-1.5 font-bold text-right pr-4">貸款利率</th>
+                      <th className="p-1.5 font-bold text-indigo-600 text-right pr-4">預估金額</th>
                     </tr>
                   </thead>
                   <tbody className="text-slate-600 divide-y divide-slate-100">
                     {estimateData.map((d, i) => (
                       <tr key={i} className="hover:bg-slate-50 transition-colors">
-                        <td className="p-1.5 font-bold bg-slate-50/50 border-r border-slate-200 sticky left-0 z-10">{d.stockName}</td>
-                        <td className="p-1.5">{d.shares}</td>
-                        <td className="p-1.5">{formatCurrency(d.loanAmount)}</td>
-                        <td className="p-1.5">{formatRate(d.rate)}</td>
-                        <td className="p-1.5 font-bold text-indigo-600">{formatCurrency(d.estimate)}</td>
+                        <td className="p-1.5 font-bold bg-slate-50/50 border-r border-slate-200 sticky left-0 z-10 text-center">{d.stockName}</td>
+                        <td className="p-1.5 text-right pr-4">{d.shares}</td>
+                        <td className="p-1.5 text-right pr-4">{formatCurrency(d.loanAmount)}</td>
+                        <td className="p-1.5 text-right pr-4">{formatRate(d.rate)}</td>
+                        <td className="p-1.5 font-bold text-indigo-600 text-right pr-4">{formatCurrency(d.estimate)}</td>
                       </tr>
                     ))}
                     {estimateData.length > 0 && (
                       <tr className="bg-slate-50/50">
-                        <td colSpan={2} className="p-1.5 font-bold text-right border-r border-slate-200 sticky left-0 z-10">合計</td>
-                        <td className="p-1.5 font-bold">{formatCurrency(estimateData.reduce((s, d) => s + d.loanAmount, 0))}</td>
+                        <td colSpan={2} className="p-1.5 font-bold text-right border-r border-slate-200 sticky left-0 z-10 pr-4">合計</td>
+                        <td className="p-1.5 font-bold text-right pr-4">{formatCurrency(estimateData.reduce((s, d) => s + d.loanAmount, 0))}</td>
                         <td className="p-1.5"></td>
-                        <td className="p-1.5 font-bold text-indigo-600">{formatCurrency(estimateData.reduce((s, d) => s + d.estimate, 0))}</td>
+                        <td className="p-1.5 font-bold text-indigo-600 text-right pr-4">{formatCurrency(estimateData.reduce((s, d) => s + d.estimate, 0))}</td>
                       </tr>
                     )}
                   </tbody>
