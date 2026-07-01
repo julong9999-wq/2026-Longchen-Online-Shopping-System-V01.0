@@ -59,6 +59,8 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
     const [planEndTime, setPlanEndTime] = useState('');
     const [planRemarks, setPlanRemarks] = useState('');
     const [editPlanId, setEditPlanId] = useState<string | null>(null);
+    const [showPlanModal, setShowPlanModal] = useState(false);
+    const [planListLocFilter, setPlanListLocFilter] = useState<string>('all');
     const [upcomingSort, setUpcomingSort] = useState<'date_asc' | 'date_desc' | 'time_asc' | 'time_desc'>('date_asc');
     
     const [quickEditDate, setQuickEditDate] = useState<string | null>(null);
@@ -134,16 +136,19 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
     }), [records, activePerson]);
     const upcomingRecords = useMemo(() => {
         const today = new Date().toISOString().split('T')[0];
-        let sorted = currentRecords.filter(r => r.date >= today);
-        sorted.sort((a, b) => {
-            if (upcomingSort === 'date_asc') return a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime);
-            if (upcomingSort === 'date_desc') return b.date.localeCompare(a.date) || a.startTime.localeCompare(b.startTime);
-            if (upcomingSort === 'time_asc') return a.startTime.localeCompare(b.startTime) || a.date.localeCompare(b.date);
-            if (upcomingSort === 'time_desc') return b.startTime.localeCompare(a.startTime) || a.date.localeCompare(b.date);
+        let filtered = currentRecords.filter(r => r.date >= today);
+        if (planListLocFilter !== 'all') {
+            filtered = filtered.filter(r => r.locationId === planListLocFilter);
+        }
+        filtered.sort((a, b) => {
+            if (upcomingSort === 'date_asc') return a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime) || a.endTime.localeCompare(b.endTime);
+            if (upcomingSort === 'date_desc') return b.date.localeCompare(a.date) || a.startTime.localeCompare(b.startTime) || a.endTime.localeCompare(b.endTime);
+            if (upcomingSort === 'time_asc') return a.startTime.localeCompare(b.startTime) || a.endTime.localeCompare(b.endTime) || a.date.localeCompare(b.date);
+            if (upcomingSort === 'time_desc') return b.startTime.localeCompare(a.startTime) || b.endTime.localeCompare(a.endTime) || a.date.localeCompare(b.date);
             return 0;
         });
-        return sorted;
-    }, [currentRecords, upcomingSort]);
+        return filtered;
+    }, [currentRecords, upcomingSort, planListLocFilter]);
 
     const upcomingSummary = useMemo(() => {
         const summary = new Map<string, number>();
@@ -211,7 +216,7 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
             });
             await batch.commit();
         }
-        setPlanDates([]); setPlanStartTime(''); setPlanEndTime(''); setPlanRemarks(''); setEditPlanId(null);
+        setPlanDates([]); setPlanStartTime(''); setPlanEndTime(''); setPlanRemarks(''); setEditPlanId(null); setShowPlanModal(false);
     };
 
     const handleEditRecord = (r: ShiftRecord) => {
@@ -221,6 +226,7 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
         setPlanEndTime(r.endTime);
         setPlanRemarks(r.remarks);
         setEditPlanId(r.id);
+        setShowPlanModal(true);
         setView('plan');
     };
 
@@ -452,54 +458,38 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                 {view === 'plan' && (
                     <div className="p-2 flex-1 overflow-y-auto flex flex-col gap-1.5">
                         {renderPersonToggle()}
-                        <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-200 flex flex-col gap-1.5">
-                            <div>
+                        <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-200 flex flex-col gap-2">
+                            <div className="flex justify-between items-center">
                                 <div className="flex flex-wrap gap-1.5">
+                                    <button 
+                                        onClick={() => setPlanListLocFilter('all')}
+                                        className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-colors ${planListLocFilter === 'all' ? activeBtnClass : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
+                                    >全部</button>
                                     {activeCurrentLocs.map(l => (
                                         <button 
                                             key={l.id} 
-                                            onClick={() => setPlanLocationId(l.id)}
-                                            className={`px-3 py-1 rounded-lg border text-sm font-bold transition-colors ${planLocationId === l.id ? activeBtnClass : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
+                                            onClick={() => setPlanListLocFilter(l.id)}
+                                            className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-colors ${planListLocFilter === l.id ? activeBtnClass : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
                                         >
                                             {l.name}
                                         </button>
                                     ))}
                                     {activeCurrentLocs.length === 0 && <span className="text-sm text-slate-400">請先至詞庫新增顯示的打工地點</span>}
                                 </div>
-                            </div>
-                            <div>
-                                <div className="flex flex-col gap-1.5 mb-1.5">
-                                    <input type="date" className="flex-1 h-9 px-2 border rounded-lg bg-slate-50 font-mono text-sm" value={planDates.length === 1 ? planDates[0] : ''} onChange={e => {
-                                        const d = e.target.value;
-                                        if (d && !planDates.includes(d)) {
-                                            setPlanDates(editPlanId ? [d] : [...planDates, d].sort());
-                                        } else if (d && planDates.includes(d) && planDates.length === 1) {
-                                            setPlanDates([d]);
-                                        }
-                                    }} />
-                                    {planDates.length > 0 && (
-                                        <div className="flex flex-wrap gap-1">
-                                            {planDates.map(date => (
-                                                <span key={date} className={`bg-${mainColor}-100 text-${mainColor}-700 px-2 py-0.5 rounded text-xs font-bold flex items-center gap-1 shadow-sm`}>
-                                                    {date}
-                                                    <button onClick={() => setPlanDates(planDates.filter(d => d !== date))} className="hover:text-rose-500 rounded-full bg-white/50 p-0.5"><X size={10}/></button>
-                                                </span>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="flex gap-1.5 items-center">
-                                    <input type="time" step="1800" className="flex-1 h-9 px-2 border rounded-lg bg-slate-50 font-mono text-sm" required value={planStartTime} onChange={e => setPlanStartTime(e.target.value)} />
-                                    <span className="text-slate-400">~</span>
-                                    <input type="time" step="1800" className="flex-1 h-9 px-2 border rounded-lg bg-slate-50 font-mono text-sm" required value={planEndTime} onChange={e => setPlanEndTime(e.target.value)} />
-                                </div>
-                            </div>
-                            <div>
-                                <input type="text" className="w-full h-9 px-2 border rounded-lg bg-slate-50 text-sm" value={planRemarks} onChange={e => setPlanRemarks(e.target.value)} placeholder="備註說明" />
-                            </div>
-                            <div className="flex gap-1.5 mt-1">
-                                <button onClick={() => {setPlanDates([]); setPlanStartTime(''); setPlanEndTime(''); setPlanRemarks(''); setEditPlanId(null);}} className="flex-1 h-9 rounded-lg border border-slate-300 font-bold text-slate-600">取消</button>
-                                <button onClick={handleSavePlan} disabled={!planLocationId || planDates.length === 0 || !planStartTime || !planEndTime} className={`flex-1 h-9 rounded-lg font-bold text-white transition-opacity ${!planLocationId || planDates.length === 0 || !planStartTime || !planEndTime ? 'opacity-50' : ''} ${mainColorClass}`}>{editPlanId ? '更新' : '存檔'}</button>
+                                <button 
+                                    onClick={() => {
+                                        setPlanLocationId('');
+                                        setPlanDates([]);
+                                        setPlanStartTime('');
+                                        setPlanEndTime('');
+                                        setPlanRemarks('');
+                                        setEditPlanId(null);
+                                        setShowPlanModal(true);
+                                    }}
+                                    className={`shrink-0 px-4 py-1.5 rounded-lg font-bold text-white shadow-sm flex items-center gap-1 ${mainColorClass}`}
+                                >
+                                    <Plus size={16}/> 新增
+                                </button>
                             </div>
                         </div>
 
@@ -545,8 +535,8 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                                 {upcomingRecords.length === 0 && <div className="text-center py-6 text-slate-400 text-sm bg-white rounded-lg border border-slate-100">尚無即將到來的排班</div>}
                             </div>
                             {upcomingSummary.length > 0 && (
-                                <div className="mt-2 bg-slate-50 p-2 rounded-lg border border-slate-200 text-xs shadow-inner">
-                                    <div className="font-bold text-slate-500 mb-1">時數統計</div>
+                                <div className="mt-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200 text-xs shadow-inner">
+                                    
                                     <div className="flex flex-wrap gap-2">
                                         {upcomingSummary.map(([locName, hrs]) => (
                                             <div key={locName} className="flex gap-1 items-center bg-white px-2 py-1 rounded-md border border-slate-200 shadow-sm">
@@ -883,39 +873,26 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
             </div>
 
             {/* Quick Edit Modal */}
-            {quickEditDate && (() => {
-                const dayRecords = currentRecords.filter(r => r.date === quickEditDate).sort((a,b)=>a.startTime.localeCompare(b.startTime));
-                return (
-                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm sm:p-4 pb-safe animate-in fade-in duration-150">
-                    <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full max-w-sm flex flex-col overflow-hidden shadow-2xl animate-in slide-in-from-bottom sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-150 border border-slate-200">
-                        <div className="flex items-center justify-between p-4 border-b bg-slate-50">
-                            <h3 className="text-lg font-bold text-slate-800">{editPlanId ? '編輯排班' : '新增排班'} - {quickEditDate}</h3>
-                            <button onClick={()=>setQuickEditDate(null)} className="p-1 rounded-full text-slate-400 hover:bg-slate-200"><X size={20}/></button>
+            {(showPlanModal || quickEditDate) && (() => {
+            const isQuickEdit = !!quickEditDate;
+            const title = editPlanId ? '編輯排班' : isQuickEdit ? '快速新增排班' : '新增排班';
+            const closeFn = () => {
+                if (isQuickEdit) {
+                    setQuickEditDate(null);
+                } else {
+                    setShowPlanModal(false);
+                }
+                setPlanDates([]); setPlanStartTime(''); setPlanEndTime(''); setPlanRemarks(''); setEditPlanId(null); setPlanLocationId('');
+            };
+            return (
+                <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/40 backdrop-blur-sm sm:items-center sm:justify-center">
+                    <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md shadow-xl flex flex-col overflow-hidden animate-slide-up">
+                        <div className="flex items-center justify-between p-4 border-b">
+                            <h3 className="text-lg font-bold text-slate-800">{title}</h3>
+                            <button onClick={closeFn} className="p-1 rounded-full text-slate-400 hover:bg-slate-100"><X size={20}/></button>
                         </div>
-                        <div className="p-4 flex flex-col gap-4 max-h-[80vh] overflow-y-auto">
-                            {dayRecords.length > 0 && (
-                                <div className="flex flex-col gap-2 pb-4 border-b border-slate-100">
-                                    <div className="text-xs font-bold text-slate-500 flex justify-between items-center mb-1">
-                                        <span>當日排班資料 (選擇以編輯)</span>
-                                        <button onClick={() => { setEditPlanId(null); setPlanLocationId(activeCurrentLocs.length > 0 ? activeCurrentLocs[0].id : ''); setPlanStartTime(''); setPlanEndTime(''); setPlanRemarks(''); }} className={`text-${mainColor}-600 hover:text-${mainColor}-800 px-2 py-1 rounded bg-${mainColor}-50 flex items-center gap-1`}><Plus size={12}/>新增一筆</button>
-                                    </div>
-                                    {dayRecords.map(r => (
-                                        <div key={r.id} onClick={() => {
-                                            setEditPlanId(r.id);
-                                            setPlanLocationId(r.locationId);
-                                            setPlanStartTime(r.startTime);
-                                            setPlanEndTime(r.endTime);
-                                            setPlanRemarks(r.remarks || '');
-                                        }} className={`p-2.5 rounded-lg border text-left transition-colors cursor-pointer ${editPlanId === r.id ? `bg-${mainColor}-50 border-${mainColor}-300` : 'bg-white border-slate-200 hover:bg-slate-50'}`}>
-                                            <div className="text-sm font-bold flex justify-between text-slate-700">
-                                                <span>{currentLocs.find(l=>l.id===r.locationId)?.name}</span>
-                                                <span className="font-mono text-slate-500">{r.startTime} ~ {r.endTime}</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                            <div className="flex flex-wrap gap-2">
+                        <div className="p-4 flex flex-col gap-3">
+                            <div className="flex flex-wrap gap-1.5">
                                 {activeCurrentLocs.map(l => (
                                     <button 
                                         key={l.id} 
@@ -926,6 +903,30 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                                     </button>
                                 ))}
                             </div>
+                            <div className="flex flex-col gap-1.5">
+                                <input type="date" className="flex-1 h-10 px-3 border rounded-lg bg-slate-50 font-mono text-sm"  value={planDates.length === 1 ? planDates[0] : ''} onChange={e => {
+                                    const d = e.target.value;
+                                    if (editPlanId) {
+                                        setPlanDates([d]);
+                                        return;
+                                    }
+                                    if (d && !planDates.includes(d)) {
+                                        setPlanDates([...planDates, d].sort());
+                                    } else if (d && planDates.includes(d) && planDates.length === 1) {
+                                        setPlanDates([d]);
+                                    }
+                                }} />
+                                {planDates.length > 0 && !editPlanId && (
+                                    <div className="flex flex-wrap gap-1">
+                                        {planDates.map(date => (
+                                            <span key={date} className={`bg-${mainColor}-100 text-${mainColor}-700 px-2 py-1 rounded text-xs font-bold flex items-center gap-1 shadow-sm`}>
+                                                {date}
+                                                <button onClick={() => setPlanDates(planDates.filter(d => d !== date))} className="hover:text-rose-500 rounded-full bg-white/50 p-0.5"><X size={12}/></button>
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                             <div className="flex gap-2 items-center">
                                 <input type="time" step="1800" className="flex-1 h-10 px-3 border rounded-lg bg-slate-50 font-mono text-sm" required value={planStartTime} onChange={e => setPlanStartTime(e.target.value)} />
                                 <span className="text-slate-400">~</span>
@@ -934,20 +935,20 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                             <div>
                                 <input type="text" className="w-full h-10 px-3 border rounded-lg bg-slate-50 text-sm" value={planRemarks} onChange={e => setPlanRemarks(e.target.value)} placeholder="備註說明" />
                             </div>
-                            <button onClick={() => { handleSavePlan(); setQuickEditDate(null); }} disabled={!planLocationId || !planStartTime || !planEndTime} className={`w-full py-2.5 rounded-lg font-bold text-white transition-opacity ${(!planLocationId || !planStartTime || !planEndTime) ? 'opacity-50' : ''} ${mainColorClass}`}>
+                            <button onClick={() => { handleSavePlan(); closeFn(); }} disabled={!planLocationId || planDates.length === 0 || !planStartTime || !planEndTime} className={`w-full py-2.5 rounded-lg font-bold text-white transition-opacity ${(!planLocationId || planDates.length === 0 || !planStartTime || !planEndTime) ? 'opacity-50' : ''} ${mainColorClass}`}>
                                 {editPlanId ? '更新' : '存檔'}
                             </button>
                             {editPlanId && (
-                                <button onClick={() => { handleDeleteRecord(editPlanId); setQuickEditDate(null); }} className="w-full py-2.5 rounded-lg font-bold text-rose-500 bg-rose-50 border border-rose-200 mt-2">
+                                <button onClick={() => { handleDeleteRecord(editPlanId); closeFn(); }} className="w-full py-2.5 rounded-lg font-bold text-rose-500 bg-rose-50 border border-rose-200 mt-1">
                                     刪除此排班
                                 </button>
                             )}
                         </div>
                     </div>
                 </div>
-            ); })()}
+            );
+        })()}
 
-{/* Modals for Dictionary */}
             {showLocModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
                     <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl flex flex-col overflow-hidden">
@@ -978,7 +979,7 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                     </div>
                 </div>
             )}
-
+            
             {showWageModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
                     <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl flex flex-col overflow-hidden">
