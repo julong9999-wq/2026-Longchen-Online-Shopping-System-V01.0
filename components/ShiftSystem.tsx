@@ -17,6 +17,20 @@ type ShiftView = 'schedule' | 'plan' | 'salary' | 'dictionary' | 'analysis';
 const getDaysInMonth = (year: number, month: number) => new Date(year, month, 0).getDate();
 const getFirstDayOfMonth = (year: number, month: number) => new Date(year, month - 1, 1).getDay();
 
+const calculateHours = (start: string, end: string, hasBreak: boolean = false) => {
+    const [sh, sm] = start.split(':').map(Number);
+    const [eh, em] = end.split(':').map(Number);
+    let sMins = sh * 60 + sm;
+    let eMins = eh * 60 + em;
+    if (eMins < sMins) eMins += 24 * 60; // assumed overnight
+    let hours = (eMins - sMins) / 60;
+    if (hasBreak) {
+        // 每 5 小時涵蓋 1 小時休息
+        hours -= Math.floor(hours / 5);
+    }
+    return hours;
+};
+
 const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
     const [view, setView] = useState<ShiftView>('plan');
     const [activePerson, setActivePerson] = useState<ShiftPerson>('禹君');
@@ -40,11 +54,12 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
 
     // -------- Plan View State --------
         const [planLocationId, setPlanLocationId] = useState('');
-    const [planDate, setPlanDate] = useState('');
+    const [planDates, setPlanDates] = useState<string[]>([]);
     const [planStartTime, setPlanStartTime] = useState('');
     const [planEndTime, setPlanEndTime] = useState('');
     const [planRemarks, setPlanRemarks] = useState('');
     const [editPlanId, setEditPlanId] = useState<string | null>(null);
+    const [upcomingSort, setUpcomingSort] = useState<'date_asc' | 'date_desc' | 'time_asc' | 'time_desc'>('date_asc');
     
     const [quickEditDate, setQuickEditDate] = useState<string | null>(null);
     const [salaryLocFilter, setSalaryLocFilter] = useState<string>('all');
@@ -64,7 +79,7 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
     const handlePointerDownDay = (dateStr: string) => {
         longPressTimerRef.current = setTimeout(() => {
             setQuickEditDate(dateStr);
-            setPlanDate(dateStr);
+            setPlanDates([dateStr]);
             setPlanStartTime('');
             setPlanEndTime('');
             setPlanRemarks('');
@@ -119,19 +134,34 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
     }), [records, activePerson]);
     const upcomingRecords = useMemo(() => {
         const today = new Date().toISOString().split('T')[0];
-        return currentRecords.filter(r => r.date >= today).sort((a, b) => {
-            const cmp = a.date.localeCompare(b.date);
-            if (cmp !== 0) return cmp;
-            return a.startTime.localeCompare(b.startTime);
+        let sorted = currentRecords.filter(r => r.date >= today);
+        sorted.sort((a, b) => {
+            if (upcomingSort === 'date_asc') return a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime);
+            if (upcomingSort === 'date_desc') return b.date.localeCompare(a.date) || a.startTime.localeCompare(b.startTime);
+            if (upcomingSort === 'time_asc') return a.startTime.localeCompare(b.startTime) || a.date.localeCompare(b.date);
+            if (upcomingSort === 'time_desc') return b.startTime.localeCompare(a.startTime) || a.date.localeCompare(b.date);
+            return 0;
         });
-    }, [currentRecords]);
+        return sorted;
+    }, [currentRecords, upcomingSort]);
+
+    const upcomingSummary = useMemo(() => {
+        const summary = new Map<string, number>();
+        upcomingRecords.forEach(r => {
+            const locInfo = currentLocs.find(l => l.id === r.locationId);
+            const hrs = calculateHours(r.startTime, r.endTime, locInfo?.hasBreak);
+            const locName = locInfo?.name || '未知';
+            summary.set(locName, (summary.get(locName) || 0) + hrs);
+        });
+        return Array.from(summary.entries());
+    }, [upcomingRecords, currentLocs]);
 
     // ==== Plan Functions ====
     const handleSavePlan = async () => {
-        if (!planLocationId || !planDate || !planStartTime || !planEndTime) return;
+        if (!planLocationId || planDates.length === 0 || !planStartTime || !planEndTime) return;
         
         // Check duplicate (exclude current edit)
-        const isDuplicate = records.some(r => r.id !== editPlanId && r.person === activePerson && r.date === planDate && r.startTime === planStartTime && r.endTime === planEndTime && r.locationId === planLocationId);
+        const isDuplicate = records.some(r => r.id !== editPlanId && r.person === activePerson && planDates.includes(r.date) && r.startTime === planStartTime && r.endTime === planEndTime && r.locationId === planLocationId);
         if (isDuplicate) {
             alert('已有重複的排班資料（日期、時間、地點皆相同）！請確認後再存檔。');
             return;
@@ -140,30 +170,53 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
         if (editPlanId) {
             await updateDoc(doc(collection(db, 'shiftRecords'), editPlanId), {
                 locationId: planLocationId,
-                date: planDate,
+                date: planDates[0],
                 startTime: planStartTime,
                 endTime: planEndTime,
                 remarks: planRemarks
             });
+            if (planDates.length > 1) {
+                const batch = writeBatch(db);
+                for (let i = 1; i < planDates.length; i++) {
+                    const newId = generateUUID();
+                    const newDocRef = doc(collection(db, 'shiftRecords'), newId);
+                    batch.set(newDocRef, {
+                        id: newId,
+                        person: activePerson,
+                        locationId: planLocationId,
+                        date: planDates[i],
+                        startTime: planStartTime,
+                        endTime: planEndTime,
+                        remarks: planRemarks,
+                        createdAt: Date.now()
+                    });
+                }
+                await batch.commit();
+            }
         } else {
-            const newRec: ShiftRecord = {
-                id: generateUUID(),
-                person: activePerson,
-                locationId: planLocationId,
-                date: planDate,
-                startTime: planStartTime,
-                endTime: planEndTime,
-                remarks: planRemarks,
-                createdAt: Date.now()
-            };
-            await setDoc(doc(collection(db, 'shiftRecords'), newRec.id), newRec);
+            const batch = writeBatch(db);
+            planDates.forEach(date => {
+                const newId = generateUUID();
+                const newDocRef = doc(collection(db, 'shiftRecords'), newId);
+                batch.set(newDocRef, {
+                    id: newId,
+                    person: activePerson,
+                    locationId: planLocationId,
+                    date: date,
+                    startTime: planStartTime,
+                    endTime: planEndTime,
+                    remarks: planRemarks,
+                    createdAt: Date.now()
+                });
+            });
+            await batch.commit();
         }
-        setPlanDate(''); setPlanStartTime(''); setPlanEndTime(''); setPlanRemarks(''); setEditPlanId(null);
+        setPlanDates([]); setPlanStartTime(''); setPlanEndTime(''); setPlanRemarks(''); setEditPlanId(null);
     };
 
     const handleEditRecord = (r: ShiftRecord) => {
         setPlanLocationId(r.locationId);
-        setPlanDate(r.date);
+        setPlanDates([r.date]);
         setPlanStartTime(r.startTime);
         setPlanEndTime(r.endTime);
         setPlanRemarks(r.remarks);
@@ -233,19 +286,7 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
         return wList.length > 0 ? wList[0].hourlyWage : 0;
     };
 
-    const calculateHours = (start: string, end: string, hasBreak: boolean = false) => {
-        const [sh, sm] = start.split(':').map(Number);
-        const [eh, em] = end.split(':').map(Number);
-        let sMins = sh * 60 + sm;
-        let eMins = eh * 60 + em;
-        if (eMins < sMins) eMins += 24 * 60; // assumed overnight
-        let hours = (eMins - sMins) / 60;
-        if (hasBreak) {
-            // 每 5 小時涵蓋 1 小時休息
-            hours -= Math.floor(hours / 5);
-        }
-        return hours;
-    };
+    // calculateHours moved outside
 
     // Salary Stats
     const salaryStats = useMemo(() => {
@@ -427,8 +468,25 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                                 </div>
                             </div>
                             <div>
-                                <div className="flex gap-1.5 mb-1.5">
-                                    <input type="date" className="flex-1 h-9 px-2 border rounded-lg bg-slate-50 font-mono text-sm" value={planDate} onChange={e => setPlanDate(e.target.value)} />
+                                <div className="flex flex-col gap-1.5 mb-1.5">
+                                    <input type="date" className="flex-1 h-9 px-2 border rounded-lg bg-slate-50 font-mono text-sm" value={planDates.length === 1 ? planDates[0] : ''} onChange={e => {
+                                        const d = e.target.value;
+                                        if (d && !planDates.includes(d)) {
+                                            setPlanDates(editPlanId ? [d] : [...planDates, d].sort());
+                                        } else if (d && planDates.includes(d) && planDates.length === 1) {
+                                            setPlanDates([d]);
+                                        }
+                                    }} />
+                                    {planDates.length > 0 && (
+                                        <div className="flex flex-wrap gap-1">
+                                            {planDates.map(date => (
+                                                <span key={date} className={`bg-${mainColor}-100 text-${mainColor}-700 px-2 py-0.5 rounded text-xs font-bold flex items-center gap-1 shadow-sm`}>
+                                                    {date}
+                                                    <button onClick={() => setPlanDates(planDates.filter(d => d !== date))} className="hover:text-rose-500 rounded-full bg-white/50 p-0.5"><X size={10}/></button>
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="flex gap-1.5 items-center">
                                     <input type="time" step="1800" className="flex-1 h-9 px-2 border rounded-lg bg-slate-50 font-mono text-sm" required value={planStartTime} onChange={e => setPlanStartTime(e.target.value)} />
@@ -440,23 +498,41 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                                 <input type="text" className="w-full h-9 px-2 border rounded-lg bg-slate-50 text-sm" value={planRemarks} onChange={e => setPlanRemarks(e.target.value)} placeholder="備註說明" />
                             </div>
                             <div className="flex gap-1.5 mt-1">
-                                <button onClick={() => {setPlanDate(''); setPlanStartTime(''); setPlanEndTime(''); setPlanRemarks(''); setEditPlanId(null);}} className="flex-1 h-9 rounded-lg border border-slate-300 font-bold text-slate-600">取消</button>
-                                <button onClick={handleSavePlan} disabled={!planLocationId || !planDate || !planStartTime || !planEndTime} className={`flex-1 h-9 rounded-lg font-bold text-white transition-opacity ${!planLocationId || !planDate || !planStartTime || !planEndTime ? 'opacity-50' : ''} ${mainColorClass}`}>{editPlanId ? '更新' : '存檔'}</button>
+                                <button onClick={() => {setPlanDates([]); setPlanStartTime(''); setPlanEndTime(''); setPlanRemarks(''); setEditPlanId(null);}} className="flex-1 h-9 rounded-lg border border-slate-300 font-bold text-slate-600">取消</button>
+                                <button onClick={handleSavePlan} disabled={!planLocationId || planDates.length === 0 || !planStartTime || !planEndTime} className={`flex-1 h-9 rounded-lg font-bold text-white transition-opacity ${!planLocationId || planDates.length === 0 || !planStartTime || !planEndTime ? 'opacity-50' : ''} ${mainColorClass}`}>{editPlanId ? '更新' : '存檔'}</button>
                             </div>
                         </div>
 
                         <div className="mt-1">
-                            <h3 className="font-bold text-slate-700 mb-2 flex items-center gap-2"><div className={`w-1.5 h-4 rounded-full bg-${mainColor}-500`}></div>即將到來的排班</h3>
+                            <div className="flex justify-between items-center mb-2">
+                                <h3 className="font-bold text-slate-700 flex items-center gap-2"><div className={`w-1.5 h-4 rounded-full bg-${mainColor}-500`}></div>即將到來的排班</h3>
+                                <div className="flex gap-4 text-xs font-bold text-slate-500">
+                                    <button className={`hover:text-${mainColor}-600 transition-colors ${upcomingSort.startsWith('date_') ? `text-${mainColor}-600` : ''}`} onClick={() => setUpcomingSort(s => s === 'date_asc' ? 'date_desc' : 'date_asc')}>
+                                        日期 {upcomingSort === 'date_asc' ? '↑' : upcomingSort === 'date_desc' ? '↓' : ''}
+                                    </button>
+                                    <button className={`hover:text-${mainColor}-600 transition-colors ${upcomingSort.startsWith('time_') ? `text-${mainColor}-600` : ''}`} onClick={() => setUpcomingSort(s => s === 'time_asc' ? 'time_desc' : 'time_asc')}>
+                                        時間 {upcomingSort === 'time_asc' ? '↑' : upcomingSort === 'time_desc' ? '↓' : ''}
+                                    </button>
+                                </div>
+                            </div>
                             <div className="flex flex-col gap-1.5">
                                 {upcomingRecords.map(r => (
                                     <div key={r.id} className="bg-white p-1 rounded-lg border border-slate-100 flex justify-between items-center shadow-sm text-xs overflow-hidden">
                                         <div className="flex items-center gap-1.5 flex-1 overflow-hidden whitespace-nowrap">
                                             <span className="font-mono text-slate-800 font-bold shrink-0">{r.date}</span>
-                                            <span className={`text-[9px] px-1.5 py-0.5 rounded bg-${mainColor}-100 text-${mainColor}-700 font-bold shrink-0`}>{currentLocs.find(l=>l.id===r.locationId)?.name || '未知'}</span>
                                             {(() => {
                                                 const locInfo = currentLocs.find(l => l.id === r.locationId);
+                                                const locName = locInfo?.name || '未知';
                                                 const hrs = calculateHours(r.startTime, r.endTime, locInfo?.hasBreak);
-                                                return <span className="font-mono font-bold text-slate-600 shrink-0">{r.startTime}-{r.endTime} ({Number(hrs.toFixed(2))}H)</span>;
+                                                const locIndex = currentLocs.findIndex(l => l.id === r.locationId);
+                                                const colors = ['text-blue-700 bg-blue-100', 'text-emerald-700 bg-emerald-100', 'text-amber-700 bg-amber-100', 'text-rose-700 bg-rose-100', 'text-purple-700 bg-purple-100', 'text-cyan-700 bg-cyan-100'];
+                                                const colorClass = locIndex >= 0 ? colors[locIndex % colors.length] : 'text-slate-700 bg-slate-100';
+                                                return (
+                                                    <>
+                                                        <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold shrink-0 ${colorClass}`}>{locName}</span>
+                                                        <span className="font-mono font-bold text-slate-600 shrink-0">{r.startTime}-{r.endTime} ({Number(hrs.toFixed(2))}H)</span>
+                                                    </>
+                                                );
                                             })()}
                                             {r.remarks && <span className="text-slate-400 text-[10px] truncate ml-1">{r.remarks}</span>}
                                         </div>
@@ -468,6 +544,19 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                                 ))}
                                 {upcomingRecords.length === 0 && <div className="text-center py-6 text-slate-400 text-sm bg-white rounded-lg border border-slate-100">尚無即將到來的排班</div>}
                             </div>
+                            {upcomingSummary.length > 0 && (
+                                <div className="mt-2 bg-slate-50 p-2 rounded-lg border border-slate-200 text-xs shadow-inner">
+                                    <div className="font-bold text-slate-500 mb-1">時數統計</div>
+                                    <div className="flex flex-wrap gap-2">
+                                        {upcomingSummary.map(([locName, hrs]) => (
+                                            <div key={locName} className="flex gap-1 items-center bg-white px-2 py-1 rounded-md border border-slate-200 shadow-sm">
+                                                <span className="text-slate-600 font-bold">{locName}:</span>
+                                                <span className={`text-${mainColor}-600 font-bold font-mono`}>{Number(hrs.toFixed(2))}H</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
