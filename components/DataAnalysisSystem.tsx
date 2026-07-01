@@ -11,7 +11,7 @@ interface DataAnalysisSystemProps {
 
 export default function DataAnalysisSystem({ onNavigateHome }: DataAnalysisSystemProps) {
   const [mainModule, setMainModule] = useState<'investment' | 'withdrawal' | 'lending' | 'pledge'>('investment');
-  const [activeTab, setActiveTab] = useState('year');
+  const [activeTab, setActiveTab] = useState('data');
   const [activeAccount, setActiveAccount] = useState('all');
   const [refreshKey] = useState(0);
   
@@ -22,7 +22,9 @@ export default function DataAnalysisSystem({ onNavigateHome }: DataAnalysisSyste
       <div className="bg-indigo-600 text-white shrink-0 z-10 p-2.5 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h1 className="font-bold tracking-wide">
-            {mainModule === 'withdrawal' ? <span className="text-base">資金領用</span> : <span className="text-lg">{mainModule === 'lending' ? '借劵系統' : mainModule === 'pledge' ? '質押系統' : '績效分析'}</span>}
+          <span className="text-lg">
+            {mainModule === 'withdrawal' ? '資金領用' : mainModule === 'lending' ? '借劵系統' : mainModule === 'pledge' ? '質押系統' : '績效分析'}
+          </span>
           </h1>
         </div>
         
@@ -63,114 +65,53 @@ export default function DataAnalysisSystem({ onNavigateHome }: DataAnalysisSyste
       {mainModule === 'investment' ? (
         <>
           {/* 2. 第二列 分頁按鈕 */}
-          <div className="bg-white px-2 py-1.5 flex justify-between gap-1 shrink-0 border-b border-slate-200">
+          <div className="bg-white px-2 py-1.5 flex justify-between gap-1 shrink-0 border-b border-slate-200 overflow-x-auto no-scrollbar">
             <button 
-              onClick={() => setActiveTab('day')}
-              className={`px-2 py-1.5 rounded-xl text-xs transition-all flex-1 text-center ${activeTab === 'day' ? 'bg-white shadow-[0_2px_8px_rgba(0,0,0,0.1)] font-bold text-slate-800' : 'text-slate-500'}`}
+              onClick={() => setActiveTab('assets')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors ${activeTab === 'assets' ? 'bg-indigo-100 text-indigo-700' : 'text-slate-500 hover:bg-slate-100'}`}
             >
-              日分析
+              資產
             </button>
             <button 
-              onClick={() => setActiveTab('month')}
-              className={`px-2 py-1.5 rounded-xl text-xs transition-all flex-1 text-center ${activeTab === 'month' ? 'bg-white shadow-[0_2px_8px_rgba(0,0,0,0.1)] font-bold text-slate-800' : 'text-slate-500'}`}
+              onClick={() => setActiveTab('income')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors ${activeTab === 'income' ? 'bg-indigo-100 text-indigo-700' : 'text-slate-500 hover:bg-slate-100'}`}
             >
-              月分析
+              收入
             </button>
             <button 
-              onClick={() => setActiveTab('year')}
-              className={`px-2 py-1.5 rounded-xl text-xs transition-all flex-1 text-center ${activeTab === 'year' ? 'bg-white shadow-[0_2px_8px_rgba(0,0,0,0.1)] font-bold text-slate-800' : 'text-slate-500'}`}
+              onClick={() => setActiveTab('expense')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors ${activeTab === 'expense' ? 'bg-indigo-100 text-indigo-700' : 'text-slate-500 hover:bg-slate-100'}`}
             >
-              年分析
+              支出
             </button>
             <button 
-              onClick={() => setActiveTab('trend')}
-              className={`px-2 py-1.5 rounded-xl text-xs transition-all flex-1 text-center ${activeTab === 'trend' ? 'bg-white shadow-[0_2px_8px_rgba(0,0,0,0.1)] font-bold text-slate-800' : 'text-slate-500'}`}
+              onClick={() => setActiveTab('data')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors ${activeTab === 'data' ? 'bg-indigo-100 text-indigo-700' : 'text-slate-500 hover:bg-slate-100'}`}
             >
-              月趨勢
+              資料
             </button>
-            <button 
-              onClick={() => setActiveTab('dividend')}
-              className={`px-2 py-1.5 rounded-xl text-xs transition-all flex-1 text-center ${activeTab === 'dividend' ? 'bg-white shadow-[0_2px_8px_rgba(0,0,0,0.1)] font-bold text-slate-800' : 'text-slate-500'}`}
+            <a 
+              href="https://docs.google.com/forms/d/1X-s9lS79bF4C3_2o-Yt2E_n7Q4sM1X8rE-c3gZkO9fQ/viewform" 
+              target="_blank" 
+              rel="noreferrer" 
+              className="flex items-center gap-1 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition-colors shrink-0"
             >
-              月股息
-            </button>
-            <button 
-              onClick={() => setActiveTab('XXXX')}
-              className={`px-2 py-1.5 rounded-xl text-xs transition-all flex-1 text-center ${activeTab === 'XXXX' ? 'bg-white shadow-[0_2px_8px_rgba(0,0,0,0.1)] font-bold text-slate-800' : 'text-slate-500'}`}
-            >
-              XXXX
-            </button>
-            <button 
-              onClick={() => setActiveTab('YYYY')}
-              className={`px-2 py-1.5 rounded-xl text-xs transition-all flex-1 text-center ${activeTab === 'YYYY' ? 'bg-white shadow-[0_2px_8px_rgba(0,0,0,0.1)] font-bold text-slate-800' : 'text-slate-500'}`}
-            >
-              YYYY
-            </button>
-          </div>
-
-          {/* 3. 第三區域 合計列 */}
-          <div className="bg-white px-3 py-3 shrink-0 shadow-sm border-b border-slate-200 z-0">
-            <div className="flex justify-between items-baseline mb-2.5">
-              <div className="flex items-baseline gap-3">
-                <span className="text-slate-500 text-xs">投資</span>
-                <span className="text-lg font-bold text-slate-800">26,397,766</span>
-              </div>
-              <div className="flex items-baseline gap-3">
-                <span className="text-slate-500 text-xs">市值</span>
-                <span className="text-lg font-bold text-slate-800">51,044,319</span>
-              </div>
-            </div>
-            <div className="flex justify-between items-baseline">
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-slate-500 text-xs">損益</span>
-                <span className="text-base font-bold text-[#e1251b]">24,646,553</span>
-              </div>
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-slate-500 text-xs">股息</span>
-                <span className="text-base font-bold text-slate-800">8,054,927</span>
-              </div>
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-slate-500 text-xs">績效</span>
-                <span className="text-base font-bold text-[#e1251b]">32,701,479</span>
-              </div>
-            </div>
+              新增
+            </a>
           </div>
 
           {/* 4. 第四區為 介面資料或表格 (佔位區) */}
           <div className="flex-1 overflow-y-auto p-2 pb-20 bg-slate-50 space-y-3">
-            {activeTab === 'XXXX' ? (
+            {activeTab === 'data' ? (
               <InvestmentXXXXView activeAccount={activeAccount} refreshKey={refreshKey} />
-            ) : activeTab === 'YYYY' ? (
+            ) : (
               <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col items-center justify-center text-slate-400 h-full">
                 <FileText size={40} className="mb-2 opacity-50" />
-                <span className="font-bold text-sm">YYYY 視圖區塊</span>
+                <span className="font-bold text-sm">
+                  {activeTab === 'assets' ? '資產視圖' : activeTab === 'income' ? '收入視圖' : '支出視圖'}
+                </span>
                 <span className="text-[10px] mt-1">（規劃中）</span>
               </div>
-            ) : (
-              <>
-                {/* 圖表佔位 */}
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 h-64 flex flex-col items-center justify-center text-slate-400">
-                   <LineChart size={40} className="mb-2 opacity-50" />
-                   <span className="font-bold text-sm">歷年變動趨勢圖表區塊</span>
-                   <span className="text-[10px] mt-1">（規劃中）</span>
-                </div>
-                
-                {/* 表格佔位 */}
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                  <div className="grid grid-cols-5 bg-slate-50 p-2 border-b border-slate-100 text-[10px] text-slate-500 font-bold text-center">
-                    <div>年份</div>
-                    <div>資產市值</div>
-                    <div>股息收益</div>
-                    <div>投資金額</div>
-                    <div>損益變化</div>
-                  </div>
-                  <div className="p-6 text-center text-slate-400 font-bold flex flex-col items-center">
-                    <FileText size={24} className="mb-2 opacity-50" />
-                    <span className="text-sm">詳細資料表格區塊</span>
-                    <span className="text-[10px] mt-1">（規劃中）</span>
-                  </div>
-                </div>
-              </>
             )}
           </div>
         </>

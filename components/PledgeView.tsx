@@ -252,23 +252,23 @@ export default function PledgeView({ activeAccount, refreshKey }: { activeAccoun
         <div className="flex gap-1 overflow-x-auto no-scrollbar">
           <button 
             onClick={() => setActiveTab('loan')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors ${activeTab === 'loan' ? 'bg-indigo-100 text-indigo-700' : 'text-slate-500 hover:bg-slate-100'}`}
+            className={`px-1.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition-colors ${activeTab === 'loan' ? 'bg-indigo-100 text-indigo-700' : 'text-slate-500 hover:bg-slate-100'}`}
           >證金錢</button>
           <button 
             onClick={() => setActiveTab('interest')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors ${activeTab === 'interest' ? 'bg-indigo-100 text-indigo-700' : 'text-slate-500 hover:bg-slate-100'}`}
+            className={`px-1.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition-colors ${activeTab === 'interest' ? 'bg-indigo-100 text-indigo-700' : 'text-slate-500 hover:bg-slate-100'}`}
           >證金息</button>
           <button 
             onClick={() => setActiveTab('brokerLoan')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors ${activeTab === 'brokerLoan' ? 'bg-indigo-100 text-indigo-700' : 'text-slate-500 hover:bg-slate-100'}`}
+            className={`px-1.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition-colors ${activeTab === 'brokerLoan' ? 'bg-indigo-100 text-indigo-700' : 'text-slate-500 hover:bg-slate-100'}`}
           >證劵錢</button>
           <button 
             onClick={() => setActiveTab('brokerInterest')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors ${activeTab === 'brokerInterest' ? 'bg-indigo-100 text-indigo-700' : 'text-slate-500 hover:bg-slate-100'}`}
+            className={`px-1.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition-colors ${activeTab === 'brokerInterest' ? 'bg-indigo-100 text-indigo-700' : 'text-slate-500 hover:bg-slate-100'}`}
           >證劵息</button>
           <button 
             onClick={() => setActiveTab('estimate')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors ${activeTab === 'estimate' ? 'bg-indigo-100 text-indigo-700' : 'text-slate-500 hover:bg-slate-100'}`}
+            className={`px-1.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition-colors ${activeTab === 'estimate' ? 'bg-indigo-100 text-indigo-700' : 'text-slate-500 hover:bg-slate-100'}`}
           >明細</button>
         </div>
         <a href="https://docs.google.com/forms/d/1X-s9lS79bF4C3_2o-Yt2E_n7Q4sM1X8rE-c3gZkO9fQ/viewform" target="_blank" rel="noreferrer" className="flex items-center gap-1 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition-colors shrink-0">
@@ -287,8 +287,8 @@ export default function PledgeView({ activeAccount, refreshKey }: { activeAccoun
                   <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} tickFormatter={(val) => `${val/10000}W`} />
                   <Tooltip cursor={{fill: '#f1f5f9'}} contentStyle={{fontSize: '12px', borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} formatter={(val: number) => val.toLocaleString()} />
                   <Legend verticalAlign="top" align="right" content={renderCustomLegend} />
-                  <Bar dataKey="netLoan" name="貸款總額" stackId="a" fill="#bae6fd" />
-                  <Bar dataKey="cumRepay" name="還款金額" stackId="a" fill="#e2e8f0" />
+                  <Bar dataKey="netLoan" name="貸款總額(累)" stackId="a" fill="#0284c7" />
+                  <Bar dataKey="cumRepay" name="還款金額" stackId="a" fill="#94a3b8" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -301,7 +301,7 @@ export default function PledgeView({ activeAccount, refreshKey }: { activeAccoun
                       <th className="p-1.5 font-bold sticky left-0 bg-indigo-50/90 backdrop-blur-sm border-r border-slate-200 z-40 text-center">年月</th>
                       <th className="p-1.5 font-bold text-right pr-4">貸款金額</th>
                       <th className="p-1.5 font-bold text-right pr-4">還款金額</th>
-                      <th className="p-1.5 font-bold text-indigo-600 text-right pr-4">貸款總額</th>
+                      <th className="p-1.5 font-bold text-indigo-600 text-right pr-4">貸款總額(累)</th>
                     </tr>
                   </thead>
                   <tbody className="text-slate-600 divide-y divide-slate-100">
@@ -330,8 +330,8 @@ export default function PledgeView({ activeAccount, refreshKey }: { activeAccoun
                   <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} tickFormatter={(val) => `${val/1000}k`} />
                   <Tooltip cursor={{fill: '#f1f5f9'}} contentStyle={{fontSize: '12px', borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} formatter={(val: number) => val.toLocaleString()} />
                   <Legend verticalAlign="top" align="right" content={renderCustomLegend} />
-                  <Bar dataKey="cumInterest" name="貸款利息" stackId="a" fill="#fecaca" />
-                  <Bar dataKey="cumRepay" name="還款金額" stackId="a" fill="#e2e8f0" />
+                  <Bar dataKey="cumInterest" name="貸款利息(累)" stackId="a" fill="#dc2626" />
+                  <Bar dataKey="cumRepay" name="還款金額" stackId="a" fill="#94a3b8" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -344,7 +344,7 @@ export default function PledgeView({ activeAccount, refreshKey }: { activeAccoun
                       <th className="p-1.5 font-bold sticky left-0 bg-indigo-50/90 backdrop-blur-sm border-r border-slate-200 z-40 text-center">年月</th>
                       <th className="p-1.5 font-bold text-right pr-4">貸款金額</th>
                       <th className="p-1.5 font-bold text-right pr-4">還款利息</th>
-                      <th className="p-1.5 font-bold text-indigo-600 text-right pr-4">貸款利息</th>
+                      <th className="p-1.5 font-bold text-indigo-600 text-right pr-4">貸款利息(累)</th>
                     </tr>
                   </thead>
                   <tbody className="text-slate-600 divide-y divide-slate-100">
@@ -373,8 +373,8 @@ export default function PledgeView({ activeAccount, refreshKey }: { activeAccoun
                   <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} tickFormatter={(val) => `${val/10000}W`} />
                   <Tooltip cursor={{fill: '#f1f5f9'}} contentStyle={{fontSize: '12px', borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} formatter={(val: number) => val.toLocaleString()} />
                   <Legend verticalAlign="top" align="right" content={renderCustomLegend} />
-                  <Bar dataKey="netLoan" name="貸款總額" stackId="a" fill="#bae6fd" />
-                  <Bar dataKey="cumRepay" name="還款金額" stackId="a" fill="#e2e8f0" />
+                  <Bar dataKey="netLoan" name="貸款總額(累)" stackId="a" fill="#0284c7" />
+                  <Bar dataKey="cumRepay" name="還款金額" stackId="a" fill="#94a3b8" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -387,7 +387,7 @@ export default function PledgeView({ activeAccount, refreshKey }: { activeAccoun
                       <th className="p-1.5 font-bold sticky left-0 bg-indigo-50/90 backdrop-blur-sm border-r border-slate-200 z-40 text-center">年月</th>
                       <th className="p-1.5 font-bold text-right pr-4">貸款金額</th>
                       <th className="p-1.5 font-bold text-right pr-4">還款金額</th>
-                      <th className="p-1.5 font-bold text-indigo-600 text-right pr-4">貸款總額</th>
+                      <th className="p-1.5 font-bold text-indigo-600 text-right pr-4">貸款總額(累)</th>
                     </tr>
                   </thead>
                   <tbody className="text-slate-600 divide-y divide-slate-100">
@@ -416,8 +416,8 @@ export default function PledgeView({ activeAccount, refreshKey }: { activeAccoun
                   <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} tickFormatter={(val) => `${val/1000}k`} />
                   <Tooltip cursor={{fill: '#f1f5f9'}} contentStyle={{fontSize: '12px', borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} formatter={(val: number) => val.toLocaleString()} />
                   <Legend verticalAlign="top" align="right" content={renderCustomLegend} />
-                  <Bar dataKey="cumInterest" name="貸款利息" stackId="a" fill="#fecaca" />
-                  <Bar dataKey="cumRepay" name="還款金額" stackId="a" fill="#e2e8f0" />
+                  <Bar dataKey="cumInterest" name="貸款利息(累)" stackId="a" fill="#dc2626" />
+                  <Bar dataKey="cumRepay" name="還款金額" stackId="a" fill="#94a3b8" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -430,7 +430,7 @@ export default function PledgeView({ activeAccount, refreshKey }: { activeAccoun
                       <th className="p-1.5 font-bold sticky left-0 bg-indigo-50/90 backdrop-blur-sm border-r border-slate-200 z-40 text-center">年月</th>
                       <th className="p-1.5 font-bold text-right pr-4">貸款金額</th>
                       <th className="p-1.5 font-bold text-right pr-4">還款利息</th>
-                      <th className="p-1.5 font-bold text-indigo-600 text-right pr-4">貸款利息</th>
+                      <th className="p-1.5 font-bold text-indigo-600 text-right pr-4">貸款利息(累)</th>
                     </tr>
                   </thead>
                   <tbody className="text-slate-600 divide-y divide-slate-100">

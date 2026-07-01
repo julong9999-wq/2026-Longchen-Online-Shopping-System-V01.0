@@ -236,12 +236,14 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
     });
 
     purchases.forEach(r => {
-      if (r.buySell === '買入') {
-        const parts = r.date.split('/');
-        if (parts.length >= 2) {
-          const year = parseInt(parts[0], 10);
-          if (!yearlyData.has(year)) yearlyData.set(year, { year, purchase: 0, dividend: 0, withdrawal: 0 });
+      const parts = r.date.split('/');
+      if (parts.length >= 2) {
+        const year = parseInt(parts[0], 10);
+        if (!yearlyData.has(year)) yearlyData.set(year, { year, purchase: 0, dividend: 0, withdrawal: 0 });
+        if (r.buySell === '買入') {
           yearlyData.get(year)!.purchase += (r.price * r.shares + r.fee + r.tax);
+        } else if (r.buySell === '賣出') {
+          yearlyData.get(year)!.purchase -= (r.price * r.shares - r.fee - r.tax);
         }
       }
     });
@@ -472,13 +474,59 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
     );
   };
 
-  const renderOverview = () => {
+  
+  const overviewMonthlyData = useMemo(() => {
+    if (activeTab !== 'overview' || overviewSubTab !== 'monthly') return null;
+    
+    const currentYear = selectedYear;
+    const prevYear = selectedYear - 1;
+    const months = Array.from({ length: 12 }, (_, i) => i + 1);
+    
+    const allFeeTypesSet = new Set<string>();
+    
+    const tableData = months.map(m => {
+       const currentRecords = filteredRecords.filter(r => r.year === currentYear && r.month === m && r.feeType !== '虛擬帳戶');
+       const prevRecords = filteredRecords.filter(r => r.year === prevYear && r.month === m && r.feeType !== '虛擬帳戶');
+       const totalRecords = filteredRecords.filter(r => r.month === m && r.feeType !== '虛擬帳戶');
+       
+       const currentSum = currentRecords.reduce((sum, r) => sum + r.amount, 0);
+       const prevSum = prevRecords.reduce((sum, r) => sum + r.amount, 0);
+       const totalSum = totalRecords.reduce((sum, r) => sum + r.amount, 0);
+       
+       currentRecords.forEach(r => { if (r.feeType) allFeeTypesSet.add(r.feeType); });
+       
+       return {
+          month: m,
+          current: currentSum,
+          prev: prevSum,
+          total: totalSum
+       };
+    });
+    
+    const allFeeTypes = Array.from(allFeeTypesSet).sort((a, b) => a.localeCompare(b, 'zh-TW'));
+    
+    const chartData = months.map(m => {
+      const currentRecords = filteredRecords.filter(r => r.year === currentYear && r.month === m && r.feeType !== '虛擬帳戶');
+      const dataPoint: any = { month: m };
+      currentRecords.forEach(r => {
+         if (r.feeType) {
+            dataPoint[r.feeType] = (dataPoint[r.feeType] || 0) + r.amount;
+         }
+      });
+      return dataPoint;
+    });
+
+    return { tableData, chartData, allFeeTypes };
+  }, [filteredRecords, selectedYear, activeTab, overviewSubTab]);
+
+const renderOverview = () => {
     const { chartData = [], allFeeTypes = [], tree = [] } = overviewAmountData || {};
 
     return (
       <div className="flex flex-col h-full space-y-2">
         <div className="flex gap-2 p-1.5 bg-white border-b border-slate-200">
-          <button onClick={() => setOverviewSubTab('amount')} className={`px-2.5 py-1 text-xs rounded-md font-bold transition-colors ${overviewSubTab === 'amount' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}>領用金額</button>
+          <button onClick={() => setOverviewSubTab('amount')} className={`px-2.5 py-1 text-xs rounded-md font-bold transition-colors ${overviewSubTab === 'amount' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}>總表明細</button>
+          <button onClick={() => setOverviewSubTab('monthly')} className={`px-2.5 py-1 text-xs rounded-md font-bold transition-colors ${overviewSubTab === 'monthly' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}>月份明細</button>
           <button onClick={() => setOverviewSubTab('dividend')} className={`px-2.5 py-1 text-xs rounded-md font-bold transition-colors ${overviewSubTab === 'dividend' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}>領用率</button>
         </div>
         
@@ -554,6 +602,65 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
           </div>
         )}
 
+        
+        {overviewSubTab === 'monthly' && overviewMonthlyData && (
+          <div className="flex-1 flex flex-col min-h-0 px-1 space-y-1 pb-16">
+            <div className="shrink-0 bg-white rounded-lg shadow-sm border border-slate-200 p-1.5 h-52">
+              {overviewMonthlyData.chartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={overviewMonthlyData.chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                    <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} tickFormatter={(val) => `${val}月`} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} tickFormatter={(val) => `${val/1000}k`} />
+                    <Tooltip cursor={{fill: '#f1f5f9'}} contentStyle={{fontSize: '12px', borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} formatter={(val: number) => val.toLocaleString()} />
+                    <Legend verticalAlign="top" align="right" content={renderCustomLegend} />
+                    {overviewMonthlyData.allFeeTypes.map((type, idx) => (
+                      <Bar key={type} dataKey={type} stackId="a" fill={COLORS[idx % COLORS.length]} />
+                    ))}
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-slate-400">
+                  <span className="font-bold text-sm">無資料</span>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex-1 bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col min-h-0 text-[10px]">
+              <div className="shrink-0 grid grid-cols-[2fr_1.5fr_0.5fr_1.5fr_0.5fr_1.5fr] bg-slate-100 p-1 border-b border-slate-200 text-slate-600 font-bold text-center items-center rounded-t-lg">
+                <div className="text-left pl-1">月份</div>
+                <div className="text-indigo-600 text-right">{selectedYear}</div>
+                <button onClick={handleNextYear} disabled={!availableYears.find(y => y > selectedYear)} className="hover:bg-slate-300 rounded p-0.5 disabled:opacity-30 mx-auto"><ChevronRight size={14}/></button>
+                <div className="text-right">{selectedYear - 1}</div>
+                <button onClick={handlePrevYear} disabled={!availableYears.find(y => y < selectedYear)} className="hover:bg-slate-300 rounded p-0.5 disabled:opacity-30 mx-auto"><ChevronLeft size={14}/></button>
+                <div className="text-right pr-1">合計</div>
+              </div>
+              <div className="flex-1 overflow-y-auto no-scrollbar divide-y divide-slate-100">
+                {overviewMonthlyData.tableData.map(item => (
+                  <div key={item.month} className="grid grid-cols-[2fr_1.5fr_0.5fr_1.5fr_0.5fr_1.5fr] p-1.5 items-center hover:bg-slate-50 transition-colors">
+                    <div className="font-bold text-left text-slate-700 pl-1">{item.month}月</div>
+                    <div className="text-right text-indigo-600 font-bold">{formatCurrency(item.current)}</div>
+                    <div></div>
+                    <div className="text-right font-bold text-slate-600">{formatCurrency(item.prev)}</div>
+                    <div></div>
+                    <div className="text-right font-bold text-slate-700 pr-1">{formatCurrency(item.total)}</div>
+                  </div>
+                ))}
+                {overviewMonthlyData.tableData.length > 0 && (
+                  <div className="grid grid-cols-[2fr_1.5fr_0.5fr_1.5fr_0.5fr_1.5fr] p-1.5 items-center bg-indigo-100/50 sticky bottom-0 border-t border-indigo-200">
+                    <div className="font-bold text-left text-indigo-900 pl-1">合計</div>
+                    <div className="text-right text-indigo-700 font-bold">{formatCurrency(overviewMonthlyData.tableData.reduce((sum, m) => sum + m.current, 0))}</div>
+                    <div></div>
+                    <div className="text-right font-bold text-slate-700">{formatCurrency(overviewMonthlyData.tableData.reduce((sum, m) => sum + m.prev, 0))}</div>
+                    <div></div>
+                    <div className="text-right font-bold text-slate-800 pr-1">{formatCurrency(overviewMonthlyData.tableData.reduce((sum, m) => sum + m.total, 0))}</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {overviewSubTab === 'dividend' && (
           <div className="flex-1 flex flex-col min-h-0 px-1 space-y-1 pb-16">
             <div className="shrink-0 bg-white rounded-lg shadow-sm border border-slate-200 p-1.5 h-52 flex flex-col">
@@ -576,7 +683,7 @@ export default function WithdrawalView({ activeAccount = 'all', refreshKey = 0 }
             <div className="flex-1 bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col min-h-0 text-xs">
               <div className="shrink-0 grid grid-cols-[1fr_2fr_2fr_2fr] bg-slate-100 p-1.5 border-b border-slate-200 text-slate-600 font-bold text-center items-center rounded-t-lg">
                 <div>年份</div>
-                <div className="text-right">購買金額</div>
+                <div className="text-right">投資金額(累)</div>
                 <div className="text-right">股息金額</div>
                 <div className="text-right pr-2">領用金額</div>
               </div>
