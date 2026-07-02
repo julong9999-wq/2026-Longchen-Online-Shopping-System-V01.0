@@ -6,17 +6,22 @@ const CSV_URL_AP213_HISTORY = 'https://docs.google.com/spreadsheets/d/e/2PACX-1v
 const CSV_URL_WITHDRAWAL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSnkojvITxtjSfxyv0D85BEfMv80ANLdGyXGZih5prz6-W_0KfP1Fr5fRFwx8jUGkvEIQjoVa4afbnJ/pub?gid=24682956&single=true&output=csv';
 const CSV_URL_LENDING = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSnkojvITxtjSfxyv0D85BEfMv80ANLdGyXGZih5prz6-W_0KfP1Fr5fRFwx8jUGkvEIQjoVa4afbnJ/pub?gid=1204781169&single=true&output=csv';
 const CSV_URL_PLEDGE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSnkojvITxtjSfxyv0D85BEfMv80ANLdGyXGZih5prz6-W_0KfP1Fr5fRFwx8jUGkvEIQjoVa4afbnJ/pub?gid=1021924150&single=true&output=csv';
+const CSV_URL_BROKER = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSnkojvITxtjSfxyv0D85BEfMv80ANLdGyXGZih5prz6-W_0KfP1Fr5fRFwx8jUGkvEIQjoVa4afbnJ/pub?gid=1923278022&single=true&output=csv';
 const CSV_URL_INV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSnkojvITxtjSfxyv0D85BEfMv80ANLdGyXGZih5prz6-W_0KfP1Fr5fRFwx8jUGkvEIQjoVa4afbnJ/pub?gid=522688960&single=true&output=csv';
 const CSV_URL_AP215 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR5JvOGT3eB4xq9phw2dXHApJKOgQkUZcs69CsJfL0Iw3s6egADwA8HdbimrWUceQZl_73pnsSLVnQw/pub?output=csv';
 
 interface CombinedData {
   yearMonth: string;
-  investmentAmount: number; // 投資金額
-  profitLoss: number; // 損益金額
-  dividendIncome: number; // 股息收益
-  withdrawalAmount: number; // 領錢金額
-  lendingIncome: number; // 借劵收入
-  pledgeInterest: number; // 貸款利息
+  investmentAmount: number;
+  marketValueCumulative: number;
+  profitLoss: number;
+  dividendIncome: number;
+  withdrawalAmount: number;
+  lendingIncome: number;
+  marginInterest: number;
+  securitiesInterest: number;
+  marginLoanCumulative: number;
+  securitiesLoanCumulative: number;
 }
 
 export default function InvestmentXXXXView({ activeAccount, refreshKey }: { activeAccount: string, refreshKey: number }) {
@@ -27,7 +32,7 @@ export default function InvestmentXXXXView({ activeAccount, refreshKey }: { acti
     async function fetchData() {
       setLoading(true);
       try {
-        const [ap217Res, ap213Res, wdRes, lendRes, pledgeRes, invRes, ap215Res] = await Promise.all([
+        const [ap217Res, ap213Res, wdRes, lendRes, pledgeRes, invRes, ap215Res, brokerRes] = await Promise.all([
           fetch(CSV_URL_AP217).then(r => r.text()),
           fetch(CSV_URL_AP213_HISTORY).then(r => r.text()),
           fetch(CSV_URL_WITHDRAWAL).then(r => r.text()),
@@ -35,6 +40,7 @@ export default function InvestmentXXXXView({ activeAccount, refreshKey }: { acti
           fetch(CSV_URL_PLEDGE).then(r => r.text()),
           fetch(CSV_URL_INV).then(r => r.text()),
           fetch(CSV_URL_AP215).then(r => r.text()),
+          fetch(CSV_URL_BROKER).then(r => r.text()),
         ]);
 
         const parsedAP217 = Papa.parse(ap217Res, { header: true, skipEmptyLines: true }).data;
@@ -44,6 +50,7 @@ export default function InvestmentXXXXView({ activeAccount, refreshKey }: { acti
         const parsedPledge = Papa.parse(pledgeRes, { header: true, skipEmptyLines: true }).data;
         const parsedInv = Papa.parse(invRes, { header: true, skipEmptyLines: true }).data;
         const parsedAP215 = Papa.parse(ap215Res, { header: true, skipEmptyLines: true }).data;
+        const parsedBroker = Papa.parse(brokerRes, { header: true, skipEmptyLines: true }).data;
 
         const monthMap = new Map<string, CombinedData>();
 
@@ -59,11 +66,15 @@ export default function InvestmentXXXXView({ activeAccount, refreshKey }: { acti
             monthMap.set(m, {
               yearMonth: m,
               investmentAmount: 0,
+              marketValueCumulative: 0,
               profitLoss: 0,
               dividendIncome: 0,
               withdrawalAmount: 0,
               lendingIncome: 0,
-              pledgeInterest: 0
+              marginInterest: 0,
+              securitiesInterest: 0,
+              marginLoanCumulative: 0,
+              securitiesLoanCumulative: 0
             });
           }
           return monthMap.get(m)!;
@@ -71,10 +82,11 @@ export default function InvestmentXXXXView({ activeAccount, refreshKey }: { acti
 
         // 1. Withdrawal
         parsedWd.forEach((r: any) => {
-          const acc = r['證券戶']?.trim();
+          let acc = r['證券戶']?.trim();
+          if (acc === '信用卡') acc = '俊龍';
           if (activeAccount !== 'all' && acc !== activeAccount) return;
-          const m = getMonthKey(r['領錢日期']);
-          if (m) initMonth(m).withdrawalAmount += parseFloat(r['領錢金額']?.replace(/,/g, '') || '0');
+          const m = getMonthKey(r['日期']);
+          if (m) initMonth(m).withdrawalAmount += parseFloat(r['金額']?.replace(/,/g, '') || '0');
         });
 
         // 2. Lending
@@ -97,13 +109,43 @@ export default function InvestmentXXXXView({ activeAccount, refreshKey }: { acti
         });
 
         // 3. Pledge
+        const marginLoanMonthlyDelta = new Map<string, number>();
         parsedPledge.forEach((r: any) => {
           const acc = r['證券戶']?.trim();
           if (activeAccount !== 'all' && acc !== activeAccount) return;
-          const returnDate = r['還款日期']?.trim();
-          if (returnDate) {
-            const m = getMonthKey(returnDate);
-            if (m) initMonth(m).pledgeInterest += parseFloat(r['貸款利息']?.replace(/,/g, '') || '0');
+          const loanAmt = parseFloat(r['貸款金額']?.replace(/,/g, '') || '0');
+          
+          if (!isNaN(loanAmt)) {
+            const lendM = getMonthKey(r['貸款日期']);
+            if (lendM) marginLoanMonthlyDelta.set(lendM, (marginLoanMonthlyDelta.get(lendM) || 0) + loanAmt);
+
+            const returnM = getMonthKey(r['還款日期']);
+            if (returnM) marginLoanMonthlyDelta.set(returnM, (marginLoanMonthlyDelta.get(returnM) || 0) - loanAmt);
+          }
+          
+          const returnM = getMonthKey(r['還款日期']);
+          if (returnM) {
+            initMonth(returnM).marginInterest += parseFloat(r['貸款利息']?.replace(/,/g, '') || '0');
+          }
+        });
+
+        const secLoanMonthlyDelta = new Map<string, number>();
+        parsedBroker.forEach((r: any) => {
+          let acc = r['證劵戶']?.trim();
+          if (activeAccount !== 'all' && acc !== activeAccount) return;
+          const m = getMonthKey(r['交易日']);
+          if (!m) return;
+          
+          const summary = r['摘要']?.trim();
+          if (summary === '撥款') {
+            const amt = parseFloat(r['收入']?.replace(/,/g, '') || '0');
+            secLoanMonthlyDelta.set(m, (secLoanMonthlyDelta.get(m) || 0) + amt);
+          } else if (summary === '還款') {
+            const amt = parseFloat(r['支出']?.replace(/,/g, '') || '0');
+            secLoanMonthlyDelta.set(m, (secLoanMonthlyDelta.get(m) || 0) - amt);
+          } else if (summary === '利息') {
+            const amt = parseFloat(r['支出']?.replace(/,/g, '') || '0');
+            initMonth(m).securitiesInterest += amt;
           }
         });
 
@@ -186,13 +228,10 @@ export default function InvestmentXXXXView({ activeAccount, refreshKey }: { acti
           let invIndex = 0;
 
           let lastKnownPrices = new Map<string, number>();
-          let prevMarketValue = 0;
 
           while (curYear < endYear || (curYear === endYear && curMonth <= endMonth)) {
             const mKey = `${curYear}/${String(curMonth).padStart(2, '0')}`;
             
-            let monthlyNetInvestment = 0;
-
             // Process transactions up to the end of this month
             while (invIndex < validInv.length) {
               const r: any = validInv[invIndex];
@@ -210,11 +249,9 @@ export default function InvestmentXXXXView({ activeAccount, refreshKey }: { acti
                   if (type === '買入') {
                     portfolio.set(stockId, (portfolio.get(stockId) || 0) + shares);
                     cumInv += (price * shares) + fee + tax;
-                    monthlyNetInvestment += (price * shares) + fee + tax;
                   } else if (type === '賣出') {
                     portfolio.set(stockId, (portfolio.get(stockId) || 0) - shares);
                     cumInv -= ((price * shares) - fee - tax);
-                    monthlyNetInvestment -= ((price * shares) - fee - tax);
                   }
                 }
                 invIndex++;
@@ -239,10 +276,9 @@ export default function InvestmentXXXXView({ activeAccount, refreshKey }: { acti
 
             const mData = initMonth(mKey);
             mData.investmentAmount = cumInv;
-            mData.profitLoss = marketValue - prevMarketValue - monthlyNetInvestment;
+            mData.marketValueCumulative = marketValue;
+            mData.profitLoss = marketValue - cumInv;
             
-            prevMarketValue = marketValue;
-
             curMonth++;
             if (curMonth > 12) {
               curMonth = 1;
@@ -275,12 +311,16 @@ export default function InvestmentXXXXView({ activeAccount, refreshKey }: { acti
           <thead className="sticky top-0 z-30">
             <tr className="bg-indigo-50/90 backdrop-blur-sm border-b border-slate-200 text-indigo-800">
               <th className="p-1.5 font-bold sticky left-0 bg-indigo-50/90 backdrop-blur-sm border-r border-slate-200 z-40">年月</th>
-              <th className="p-1.5 font-bold text-right pr-4">投資金額</th>
+              <th className="p-1.5 font-bold text-right pr-4">投資金額(累)</th>
+              <th className="p-1.5 font-bold text-right pr-4">資產市值(累)</th>
               <th className="p-1.5 font-bold text-right pr-4">損益金額</th>
               <th className="p-1.5 font-bold text-right pr-4">股息收益</th>
               <th className="p-1.5 font-bold text-right pr-4">領錢金額</th>
               <th className="p-1.5 font-bold text-right pr-4">借劵收入</th>
-              <th className="p-1.5 font-bold text-right pr-4">貸款利息</th>
+              <th className="p-1.5 font-bold text-right pr-4">證金利息</th>
+              <th className="p-1.5 font-bold text-right pr-4">證劵利息</th>
+              <th className="p-1.5 font-bold text-right pr-4">證金貸款(累)</th>
+              <th className="p-1.5 font-bold text-right pr-4">證劵貸款(累)</th>
             </tr>
           </thead>
           <tbody className="text-slate-600 divide-y divide-slate-100">
@@ -288,22 +328,30 @@ export default function InvestmentXXXXView({ activeAccount, refreshKey }: { acti
               <tr key={d.yearMonth} className="hover:bg-slate-50 transition-colors">
                 <td className="p-1.5 font-bold bg-slate-50/50 border-r border-slate-200 sticky left-0 z-10">{d.yearMonth}</td>
                 <td className="p-1.5 text-right pr-4">{formatCurrency(d.investmentAmount)}</td>
-                <td className="p-1.5 text-indigo-600 font-bold text-right pr-4">{formatCurrency(d.profitLoss)}</td>
+                <td className="p-1.5 text-right pr-4 font-bold">{formatCurrency(d.marketValueCumulative)}</td>
+                <td className={`p-1.5 font-bold text-right pr-4 ${d.profitLoss >= 0 ? 'text-rose-600' : 'text-emerald-600'}`}>{formatCurrency(d.profitLoss)}</td>
                 <td className="p-1.5 text-green-600 font-bold text-right pr-4">{formatCurrency(d.dividendIncome)}</td>
                 <td className="p-1.5 text-right pr-4">{formatCurrency(d.withdrawalAmount)}</td>
                 <td className="p-1.5 text-right pr-4">{formatCurrency(d.lendingIncome)}</td>
-                <td className="p-1.5 text-right pr-4">{formatCurrency(d.pledgeInterest)}</td>
+                <td className="p-1.5 text-right pr-4">{formatCurrency(d.marginInterest)}</td>
+                <td className="p-1.5 text-right pr-4">{formatCurrency(d.securitiesInterest)}</td>
+                <td className="p-1.5 text-right pr-4">{formatCurrency(d.marginLoanCumulative)}</td>
+                <td className="p-1.5 text-right pr-4">{formatCurrency(d.securitiesLoanCumulative)}</td>
               </tr>
             ))}
             {data.length > 0 && (
               <tr className="sticky bottom-0 z-30 bg-indigo-50/90 backdrop-blur-sm border-t border-slate-200 text-indigo-800 font-bold shadow-[0_-1px_2px_rgba(0,0,0,0.05)]">
                 <td className="p-1.5 font-bold border-r border-slate-200 sticky left-0 z-40 bg-indigo-50/90 backdrop-blur-sm">合計</td>
                 <td className="p-1.5 text-right pr-4">{formatCurrency(data.reduce((s, d) => s + d.investmentAmount, 0))}</td>
-                <td className="p-1.5 text-right pr-4 text-indigo-600">{formatCurrency(data.reduce((s, d) => s + d.profitLoss, 0))}</td>
+                <td className="p-1.5 text-right pr-4 text-indigo-600">{data.length > 0 ? formatCurrency(data[0].marketValueCumulative) : 0}</td>
+                <td className="p-1.5 text-right pr-4 text-indigo-600">{data.length > 0 ? formatCurrency(data[0].profitLoss) : 0}</td>
                 <td className="p-1.5 text-right pr-4 text-green-600">{formatCurrency(data.reduce((s, d) => s + d.dividendIncome, 0))}</td>
                 <td className="p-1.5 text-right pr-4">{formatCurrency(data.reduce((s, d) => s + d.withdrawalAmount, 0))}</td>
                 <td className="p-1.5 text-right pr-4">{formatCurrency(data.reduce((s, d) => s + d.lendingIncome, 0))}</td>
-                <td className="p-1.5 text-right pr-4">{formatCurrency(data.reduce((s, d) => s + d.pledgeInterest, 0))}</td>
+                <td className="p-1.5 text-right pr-4">{formatCurrency(data.reduce((s, d) => s + d.marginInterest, 0))}</td>
+                <td className="p-1.5 text-right pr-4">{formatCurrency(data.reduce((s, d) => s + d.securitiesInterest, 0))}</td>
+                <td className="p-1.5 text-right pr-4">{data.length > 0 ? formatCurrency(data[0].marginLoanCumulative) : 0}</td>
+                <td className="p-1.5 text-right pr-4">{data.length > 0 ? formatCurrency(data[0].securitiesLoanCumulative) : 0}</td>
               </tr>
             )}
             {data.length === 0 && (
