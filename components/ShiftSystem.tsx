@@ -17,6 +17,14 @@ type ShiftView = 'schedule' | 'plan' | 'salary' | 'dictionary' | 'analysis';
 const getDaysInMonth = (year: number, month: number) => new Date(year, month, 0).getDate();
 const getFirstDayOfMonth = (year: number, month: number) => new Date(year, month - 1, 1).getDay();
 
+const getTimeColor = (timeStr: string) => {
+    if (!timeStr) return 'text-slate-700';
+    const hour = parseInt(timeStr.split(':')[0], 10);
+    if (hour >= 5 && hour < 12) return 'text-amber-600';
+    if (hour >= 12 && hour < 18) return 'text-orange-600';
+    return 'text-indigo-600';
+};
+
 const calculateHours = (start: string, end: string, hasBreak: boolean = false) => {
     const [sh, sm] = start.split(':').map(Number);
     const [eh, em] = end.split(':').map(Number);
@@ -459,37 +467,39 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                     <div className="p-2 flex-1 overflow-y-auto flex flex-col gap-1.5">
                         {renderPersonToggle()}
                         <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-200 flex flex-col gap-2">
-                            <div className="flex justify-between items-center">
-                                <div className="flex flex-wrap gap-1.5">
+                            <div className="flex items-center gap-2 w-full overflow-hidden">
+                                <div className="flex-1 overflow-x-auto flex items-center gap-1.5 no-scrollbar pb-1">
                                     <button 
                                         onClick={() => setPlanListLocFilter('all')}
-                                        className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-colors ${planListLocFilter === 'all' ? activeBtnClass : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
+                                        className={`shrink-0 px-3 h-8 rounded-lg border text-xs font-bold transition-colors ${planListLocFilter === 'all' ? activeBtnClass : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
                                     >全部</button>
                                     {activeCurrentLocs.map(l => (
                                         <button 
                                             key={l.id} 
                                             onClick={() => setPlanListLocFilter(l.id)}
-                                            className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-colors ${planListLocFilter === l.id ? activeBtnClass : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
+                                            className={`shrink-0 px-3 h-8 rounded-lg border text-xs font-bold transition-colors ${planListLocFilter === l.id ? activeBtnClass : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
                                         >
                                             {l.name}
                                         </button>
                                     ))}
-                                    {activeCurrentLocs.length === 0 && <span className="text-sm text-slate-400">請先至詞庫新增顯示的打工地點</span>}
+                                    {activeCurrentLocs.length === 0 && <span className="text-sm text-slate-400 shrink-0">請至詞庫新增地點</span>}
                                 </div>
-                                <button 
-                                    onClick={() => {
-                                        setPlanLocationId('');
-                                        setPlanDates([]);
-                                        setPlanStartTime('');
-                                        setPlanEndTime('');
-                                        setPlanRemarks('');
-                                        setEditPlanId(null);
-                                        setShowPlanModal(true);
-                                    }}
-                                    className={`shrink-0 px-4 py-1.5 rounded-lg font-bold text-white shadow-sm flex items-center gap-1 ${mainColorClass}`}
-                                >
-                                    <Plus size={16}/> 新增
-                                </button>
+                                <div className="shrink-0 border-l pl-2 pb-1">
+                                    <button 
+                                        onClick={() => {
+                                            setPlanLocationId('');
+                                            setPlanDates([]);
+                                            setPlanStartTime('');
+                                            setPlanEndTime('');
+                                            setPlanRemarks('');
+                                            setEditPlanId(null);
+                                            setShowPlanModal(true);
+                                        }}
+                                        className={`h-8 px-4 rounded-lg font-bold text-white shadow-sm flex items-center gap-1 text-xs ${mainColorClass}`}
+                                    >
+                                        <Plus size={14}/> 新增
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -520,7 +530,7 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                                                 return (
                                                     <>
                                                         <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold shrink-0 ${colorClass}`}>{locName}</span>
-                                                        <span className="font-mono font-bold text-slate-600 shrink-0">{r.startTime}-{r.endTime} ({Number(hrs.toFixed(2))}H)</span>
+                                                        <span className={`font-mono font-bold shrink-0 ${getTimeColor(r.startTime)}`}>{r.startTime}-{r.endTime} ({Number(hrs.toFixed(2))}H)</span>
                                                     </>
                                                 );
                                             })()}
@@ -673,8 +683,8 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                                                         return (
                                                         <div key={r.id} className={`${bClass} border flex flex-col items-center justify-around flex-1 min-h-[0] rounded-sm p-0.5 overflow-hidden`} title={`${currentLocs.find(l=>l.id===r.locationId)?.name}`}>
                                                             <div className="text-[8px] md:text-[10px] truncate leading-none mb-0.5 opacity-90">{currentLocs.find(l=>l.id===r.locationId)?.name}</div>
-                                                            <div className="text-[9px] md:text-xs font-bold leading-none">{r.startTime}</div>
-                                                            <div className="text-[9px] md:text-xs font-bold leading-none">{r.endTime}</div>
+                                                            <div className={`text-[9px] md:text-xs font-bold leading-none ${getTimeColor(r.startTime)}`}>{r.startTime}</div>
+                                                            <div className={`text-[9px] md:text-xs font-bold leading-none ${getTimeColor(r.endTime)}`}>{r.endTime}</div>
                                                         </div>
                                                     )})}
                                                 </div>
@@ -903,34 +913,43 @@ const ShiftSystem: React.FC<ShiftSystemProps> = ({ onNavigateHome }) => {
                                     </button>
                                 ))}
                             </div>
-                            <div className="flex flex-col gap-1.5">
-                                <input type="date" className="flex-1 h-10 px-3 border rounded-lg bg-slate-50 font-mono text-sm"  value={planDates.length === 1 ? planDates[0] : ''} onChange={e => {
-                                    const d = e.target.value;
-                                    if (editPlanId) {
-                                        setPlanDates([d]);
-                                        return;
-                                    }
-                                    if (d && !planDates.includes(d)) {
-                                        setPlanDates([...planDates, d].sort());
-                                    } else if (d && planDates.includes(d) && planDates.length === 1) {
-                                        setPlanDates([d]);
-                                    }
-                                }} />
-                                {planDates.length > 0 && !editPlanId && (
-                                    <div className="flex flex-wrap gap-1">
-                                        {planDates.map(date => (
-                                            <span key={date} className={`bg-${mainColor}-100 text-${mainColor}-700 px-2 py-1 rounded text-xs font-bold flex items-center gap-1 shadow-sm`}>
-                                                {date}
-                                                <button onClick={() => setPlanDates(planDates.filter(d => d !== date))} className="hover:text-rose-500 rounded-full bg-white/50 p-0.5"><X size={12}/></button>
-                                            </span>
-                                        ))}
-                                    </div>
-                                )}
+                            <div className="w-full h-10 px-2 border rounded-lg bg-slate-50 flex items-center gap-1.5 overflow-x-auto no-scrollbar relative">
+                                <div className="relative shrink-0 flex items-center justify-center h-7 px-2 bg-slate-200 text-slate-700 rounded font-bold text-xs cursor-pointer hover:bg-slate-300 transition-colors">
+                                    <CalendarIcon size={14} className="mr-1"/> 選擇日期
+                                    <input 
+                                        type="date" 
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
+                                        disabled={!!editPlanId}
+                                        value={planDates.length > 0 ? planDates[planDates.length - 1] : ''} 
+                                        onChange={e => {
+                                            const d = e.target.value;
+                                            if (!d) return;
+                                            if (editPlanId) {
+                                                setPlanDates([d]);
+                                                return;
+                                            }
+                                            if (!planDates.includes(d)) {
+                                                setPlanDates([...planDates, d].sort());
+                                            }
+                                        }} 
+                                    />
+                                </div>
+                                {planDates.map(date => (
+                                    <span key={date} className={`shrink-0 bg-${mainColor}-100 text-${mainColor}-700 px-2 h-7 rounded text-xs font-bold flex items-center gap-1 shadow-sm`}>
+                                        {date}
+                                        {!editPlanId && (
+                                            <button onClick={() => setPlanDates(planDates.filter(d => d !== date))} className="hover:text-rose-500 rounded-full bg-white/50 p-0.5 ml-0.5">
+                                                <X size={10}/>
+                                            </button>
+                                        )}
+                                    </span>
+                                ))}
+                                {planDates.length === 0 && <span className="text-slate-400 text-sm ml-1">未選擇</span>}
                             </div>
                             <div className="flex gap-2 items-center">
-                                <input type="time" step="1800" className="flex-1 h-10 px-3 border rounded-lg bg-slate-50 font-mono text-sm" required value={planStartTime} onChange={e => setPlanStartTime(e.target.value)} />
+                                <input type="time" step="1800" className={`flex-1 h-10 px-3 border rounded-lg bg-slate-50 font-mono text-sm font-bold ${getTimeColor(planStartTime)}`} required value={planStartTime} onChange={e => setPlanStartTime(e.target.value)} />
                                 <span className="text-slate-400">~</span>
-                                <input type="time" step="1800" className="flex-1 h-10 px-3 border rounded-lg bg-slate-50 font-mono text-sm" required value={planEndTime} onChange={e => setPlanEndTime(e.target.value)} />
+                                <input type="time" step="1800" className={`flex-1 h-10 px-3 border rounded-lg bg-slate-50 font-mono text-sm font-bold ${getTimeColor(planEndTime)}`} required value={planEndTime} onChange={e => setPlanEndTime(e.target.value)} />
                             </div>
                             <div>
                                 <input type="text" className="w-full h-10 px-3 border rounded-lg bg-slate-50 text-sm" value={planRemarks} onChange={e => setPlanRemarks(e.target.value)} placeholder="備註說明" />
