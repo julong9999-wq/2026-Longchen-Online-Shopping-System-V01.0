@@ -508,8 +508,8 @@ export default function LendingView({ activeAccount, refreshKey }: { activeAccou
                       <td className="p-1.5 text-right pr-4 font-bold text-indigo-600 sticky right-0 bg-indigo-50 border-l border-slate-200 z-40">{formatCurrency(d.total)}</td>
                     </tr>
                   ))}
-                  <tr className="bg-slate-50/50">
-                    <td className="p-1.5 font-bold border-r border-slate-200 sticky left-0 z-10 text-left pl-2">合計</td>
+                  <tr className="sticky bottom-0 z-30 bg-indigo-50 border-t border-slate-200 text-indigo-800 shadow-[0_-1px_2px_rgba(0,0,0,0.05)]">
+                    <td className="p-1.5 font-bold border-r border-slate-200 sticky left-0 z-40 bg-indigo-50 text-left pl-2">合計</td>
                     {availableYears.slice(stockWindowIndex, stockWindowIndex + 2).map(y => (
                       <td key={y} className="p-1.5 font-bold text-right pr-4">{formatCurrency(stockData.reduce((s, d) => s + (d[y] || 0), 0))}</td>
                     ))}

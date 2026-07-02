@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import Papa from 'papaparse';
 
 const CSV_URL_AP217 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQaRKeSBt4XfeC9uNf56p38DwscoPK0-eFM3J4-Vz8LeVBdgsClDZy0baU-FHyFv5cz-QNCXUVMwBfr/pub?output=csv'; 
@@ -304,63 +305,304 @@ export default function InvestmentXXXXView({ activeAccount, refreshKey }: { acti
 
   const formatCurrency = (val: number) => Math.round(val).toLocaleString();
 
+    const [activeTab, setActiveTab] = useState<'investment' | 'income' | 'expense' | 'return'>('investment');
+
+  // Prepare Yearly Data
+  const yearlyDataMap = new Map<string, any>();
+  
+  data.forEach(d => {
+    const year = d.yearMonth.substring(0, 4);
+    if (!yearlyDataMap.has(year)) {
+      yearlyDataMap.set(year, {
+        year,
+        investmentAmount: 0,
+        marginLoanCumulative: 0,
+        securitiesLoanCumulative: 0,
+        dividendIncome: 0,
+        lendingIncome: 0,
+        incomeTotal: 0,
+        withdrawalAmount: 0,
+        marginInterest: 0,
+        securitiesInterest: 0,
+        expenseTotal: 0,
+        profitLoss: 0
+      });
+    }
+    const yData = yearlyDataMap.get(year)!;
+    
+    yData.dividendIncome += d.dividendIncome;
+    yData.lendingIncome += d.lendingIncome;
+    yData.withdrawalAmount += d.withdrawalAmount;
+    yData.marginInterest += d.marginInterest;
+    yData.securitiesInterest += d.securitiesInterest;
+    yData.profitLoss += d.profitLoss;
+  });
+  
+  const processedYears = new Set<string>();
+  data.forEach(d => {
+    const year = d.yearMonth.substring(0, 4);
+    if (!processedYears.has(year)) {
+      processedYears.add(year);
+      const yData = yearlyDataMap.get(year)!;
+      yData.investmentAmount = d.investmentAmount;
+      yData.marginLoanCumulative = d.marginLoanCumulative;
+      yData.securitiesLoanCumulative = d.securitiesLoanCumulative;
+    }
+  });
+
+  const yearlyData = Array.from(yearlyDataMap.values()).sort((a, b) => b.year.localeCompare(a.year));
+  
+  yearlyData.forEach(y => {
+    y.incomeTotal = y.dividendIncome + y.lendingIncome;
+    y.expenseTotal = y.withdrawalAmount + y.marginInterest + y.securitiesInterest;
+    y.remainingInvestment = Math.max(0, y.investmentAmount - y.marginLoanCumulative - y.securitiesLoanCumulative);
+    y.remainingIncome = Math.max(0, y.incomeTotal - y.withdrawalAmount - y.marginInterest - y.securitiesInterest);
+  });
+
+  const renderCustomLegend = (props: any) => {
+    const { payload } = props;
+    return (
+      <ul className="flex flex-wrap justify-end gap-x-2 gap-y-1 mb-2">
+        {payload?.map((entry: any, index: number) => (
+          <li key={`item-${index}`} className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-sm shrink-0" style={{ backgroundColor: entry.color }} />
+            <span className="text-slate-600 text-[9px]">{entry.value}</span>
+          </li>
+        ))}
+      </ul>
+    );
+  };
+
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-full">
-      <div className="flex-1 overflow-auto no-scrollbar">
-        <table className="w-full text-[10px] text-center whitespace-nowrap">
-          <thead className="sticky top-0 z-30">
-            <tr className="bg-indigo-50/90 backdrop-blur-sm border-b border-slate-200 text-indigo-800">
-              <th className="p-1.5 font-bold sticky left-0 bg-indigo-50/90 backdrop-blur-sm border-r border-slate-200 z-40">年月</th>
-              <th className="p-1.5 font-bold text-right pr-4">投資金額(累)</th>
-              <th className="p-1.5 font-bold text-right pr-4">資產市值(累)</th>
-              <th className="p-1.5 font-bold text-right pr-4">損益金額</th>
-              <th className="p-1.5 font-bold text-right pr-4">股息收益</th>
-              <th className="p-1.5 font-bold text-right pr-4">領錢金額</th>
-              <th className="p-1.5 font-bold text-right pr-4">借劵收入</th>
-              <th className="p-1.5 font-bold text-right pr-4">證金利息</th>
-              <th className="p-1.5 font-bold text-right pr-4">證劵利息</th>
-              <th className="p-1.5 font-bold text-right pr-4">證金貸款(累)</th>
-              <th className="p-1.5 font-bold text-right pr-4">證劵貸款(累)</th>
-            </tr>
-          </thead>
-          <tbody className="text-slate-600 divide-y divide-slate-100">
-            {data.map(d => (
-              <tr key={d.yearMonth} className="hover:bg-slate-50 transition-colors">
-                <td className="p-1.5 font-bold bg-slate-50/50 border-r border-slate-200 sticky left-0 z-10">{d.yearMonth}</td>
-                <td className="p-1.5 text-right pr-4">{formatCurrency(d.investmentAmount)}</td>
-                <td className="p-1.5 text-right pr-4 font-bold">{formatCurrency(d.marketValueCumulative)}</td>
-                <td className={`p-1.5 font-bold text-right pr-4 ${d.profitLoss >= 0 ? 'text-rose-600' : 'text-emerald-600'}`}>{formatCurrency(d.profitLoss)}</td>
-                <td className="p-1.5 text-green-600 font-bold text-right pr-4">{formatCurrency(d.dividendIncome)}</td>
-                <td className="p-1.5 text-right pr-4">{formatCurrency(d.withdrawalAmount)}</td>
-                <td className="p-1.5 text-right pr-4">{formatCurrency(d.lendingIncome)}</td>
-                <td className="p-1.5 text-right pr-4">{formatCurrency(d.marginInterest)}</td>
-                <td className="p-1.5 text-right pr-4">{formatCurrency(d.securitiesInterest)}</td>
-                <td className="p-1.5 text-right pr-4">{formatCurrency(d.marginLoanCumulative)}</td>
-                <td className="p-1.5 text-right pr-4">{formatCurrency(d.securitiesLoanCumulative)}</td>
-              </tr>
-            ))}
-            {data.length > 0 && (
-              <tr className="sticky bottom-0 z-30 bg-indigo-50/90 backdrop-blur-sm border-t border-slate-200 text-indigo-800 font-bold shadow-[0_-1px_2px_rgba(0,0,0,0.05)]">
-                <td className="p-1.5 font-bold border-r border-slate-200 sticky left-0 z-40 bg-indigo-50/90 backdrop-blur-sm">合計</td>
-                <td className="p-1.5 text-right pr-4">{formatCurrency(data.reduce((s, d) => s + d.investmentAmount, 0))}</td>
-                <td className="p-1.5 text-right pr-4 text-indigo-600">{data.length > 0 ? formatCurrency(data[0].marketValueCumulative) : 0}</td>
-                <td className="p-1.5 text-right pr-4 text-indigo-600">{data.length > 0 ? formatCurrency(data[0].profitLoss) : 0}</td>
-                <td className="p-1.5 text-right pr-4 text-green-600">{formatCurrency(data.reduce((s, d) => s + d.dividendIncome, 0))}</td>
-                <td className="p-1.5 text-right pr-4">{formatCurrency(data.reduce((s, d) => s + d.withdrawalAmount, 0))}</td>
-                <td className="p-1.5 text-right pr-4">{formatCurrency(data.reduce((s, d) => s + d.lendingIncome, 0))}</td>
-                <td className="p-1.5 text-right pr-4">{formatCurrency(data.reduce((s, d) => s + d.marginInterest, 0))}</td>
-                <td className="p-1.5 text-right pr-4">{formatCurrency(data.reduce((s, d) => s + d.securitiesInterest, 0))}</td>
-                <td className="p-1.5 text-right pr-4">{data.length > 0 ? formatCurrency(data[0].marginLoanCumulative) : 0}</td>
-                <td className="p-1.5 text-right pr-4">{data.length > 0 ? formatCurrency(data[0].securitiesLoanCumulative) : 0}</td>
-              </tr>
-            )}
-            {data.length === 0 && (
-              <tr>
-                <td colSpan={7} className="p-4 text-center text-slate-400">目前無資料</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+    <div className="flex flex-col h-full bg-slate-50 text-slate-900 overflow-hidden">
+      <div className="flex justify-between items-center bg-white px-2 py-1.5 border-b border-slate-200 shrink-0">
+        <div className="flex gap-1 overflow-x-auto no-scrollbar">
+          <button 
+            onClick={() => setActiveTab('investment')}
+            className={`px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap transition-colors ${activeTab === 'investment' ? 'bg-indigo-100 text-indigo-700' : 'text-slate-500 hover:bg-slate-100'}`}
+          >投資</button>
+          <button 
+            onClick={() => setActiveTab('income')}
+            className={`px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap transition-colors ${activeTab === 'income' ? 'bg-indigo-100 text-indigo-700' : 'text-slate-500 hover:bg-slate-100'}`}
+          >收入</button>
+          <button 
+            onClick={() => setActiveTab('expense')}
+            className={`px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap transition-colors ${activeTab === 'expense' ? 'bg-indigo-100 text-indigo-700' : 'text-slate-500 hover:bg-slate-100'}`}
+          >支出</button>
+          <button 
+            onClick={() => setActiveTab('return')}
+            className={`px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap transition-colors ${activeTab === 'return' ? 'bg-indigo-100 text-indigo-700' : 'text-slate-500 hover:bg-slate-100'}`}
+          >報酬</button>
+        </div>
+      </div>
+      
+      <div className="flex-1 overflow-y-auto px-1 pt-1 pb-2 flex flex-col space-y-1">
+        {activeTab === 'investment' && (
+          <>
+            <div className="shrink-0 bg-white rounded-lg shadow-sm border border-slate-200 p-1.5 h-52">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={[...yearlyData].reverse()} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                  <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} tickFormatter={(val) => `${val/10000}W`} />
+                  <Tooltip cursor={{fill: '#f1f5f9'}} contentStyle={{fontSize: '12px', borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} formatter={(val: number) => val.toLocaleString()} />
+                  <Legend verticalAlign="top" align="right" content={renderCustomLegend} />
+                  <Bar dataKey="securitiesLoanCumulative" name="證劵貸款(累)" stackId="a" fill="#fca5a5" />
+                  <Bar dataKey="marginLoanCumulative" name="證金貸款(累)" stackId="a" fill="#f87171" />
+                  <Bar dataKey="remainingInvestment" name="淨投資金額(累)" stackId="a" fill="#3b82f6" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex-1 bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col min-h-0">
+              <div className="flex-1 overflow-auto no-scrollbar">
+                <table className="w-full text-[10px] text-center whitespace-nowrap">
+                  <thead className="sticky top-0 z-30">
+                    <tr className="bg-indigo-50 border-b border-slate-200 text-indigo-800">
+                      <th className="p-1.5 font-bold sticky left-0 bg-indigo-50 border-r border-slate-200 z-40 text-center shadow-[1px_0_0_0_#e2e8f0]">年份</th>
+                      <th className="p-1.5 font-bold text-right pr-4">投資金額(累)</th>
+                      <th className="p-1.5 font-bold text-right pr-4">證金貸款(累)</th>
+                      <th className="p-1.5 font-bold text-right pr-4">證劵貸款(累)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-slate-600 divide-y divide-slate-100">
+                    {yearlyData.map(d => (
+                      <tr key={d.year} className="hover:bg-slate-50 transition-colors">
+                        <td className="p-1.5 font-bold bg-slate-50/50 border-r border-slate-200 sticky left-0 z-10 text-center shadow-[1px_0_0_0_#e2e8f0]">{d.year}</td>
+                        <td className="p-1.5 text-right pr-4 font-bold text-indigo-600">{formatCurrency(d.investmentAmount)}</td>
+                        <td className="p-1.5 text-right pr-4">{formatCurrency(d.marginLoanCumulative)}</td>
+                        <td className="p-1.5 text-right pr-4">{formatCurrency(d.securitiesLoanCumulative)}</td>
+                      </tr>
+                    ))}
+                    {yearlyData.length > 0 && (
+                      <tr className="sticky bottom-0 z-30 bg-indigo-50 border-t border-slate-200 text-indigo-800 shadow-[0_-1px_2px_rgba(0,0,0,0.05)]">
+                        <td className="p-1.5 font-bold border-r border-slate-200 sticky left-0 z-40 bg-indigo-50 text-center shadow-[1px_0_0_0_#e2e8f0]">合計</td>
+                        <td className="p-1.5 text-right pr-4 font-bold text-indigo-600">{formatCurrency(yearlyData[0].investmentAmount)}</td>
+                        <td className="p-1.5 text-right pr-4">{formatCurrency(yearlyData[0].marginLoanCumulative)}</td>
+                        <td className="p-1.5 text-right pr-4">{formatCurrency(yearlyData[0].securitiesLoanCumulative)}</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
+
+        {activeTab === 'income' && (
+          <>
+            <div className="shrink-0 bg-white rounded-lg shadow-sm border border-slate-200 p-1.5 h-52">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={[...yearlyData].reverse()} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                  <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} tickFormatter={(val) => `${val/10000}W`} />
+                  <Tooltip cursor={{fill: '#f1f5f9'}} contentStyle={{fontSize: '12px', borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} formatter={(val: number) => val.toLocaleString()} />
+                  <Legend verticalAlign="top" align="right" content={renderCustomLegend} />
+                  <Bar dataKey="dividendIncome" name="股息收益" stackId="a" fill="#10b981" />
+                  <Bar dataKey="lendingIncome" name="借劵收入" stackId="a" fill="#fb923c" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex-1 bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col min-h-0">
+              <div className="flex-1 overflow-auto no-scrollbar">
+                <table className="w-full text-[10px] text-center whitespace-nowrap">
+                  <thead className="sticky top-0 z-30">
+                    <tr className="bg-indigo-50 border-b border-slate-200 text-indigo-800">
+                      <th className="p-1.5 font-bold sticky left-0 bg-indigo-50 border-r border-slate-200 z-40 text-center shadow-[1px_0_0_0_#e2e8f0]">年份</th>
+                      <th className="p-1.5 font-bold text-right pr-4">股息收益</th>
+                      <th className="p-1.5 font-bold text-right pr-4">借劵收入</th>
+                      <th className="p-1.5 font-bold text-right pr-4">收入總額</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-slate-600 divide-y divide-slate-100">
+                    {yearlyData.map(d => (
+                      <tr key={d.year} className="hover:bg-slate-50 transition-colors">
+                        <td className="p-1.5 font-bold bg-slate-50/50 border-r border-slate-200 sticky left-0 z-10 text-center shadow-[1px_0_0_0_#e2e8f0]">{d.year}</td>
+                        <td className="p-1.5 text-right pr-4 text-emerald-600 font-bold">{formatCurrency(d.dividendIncome)}</td>
+                        <td className="p-1.5 text-right pr-4 text-orange-500 font-bold">{formatCurrency(d.lendingIncome)}</td>
+                        <td className="p-1.5 text-right pr-4 text-indigo-600 font-bold">{formatCurrency(d.incomeTotal)}</td>
+                      </tr>
+                    ))}
+                    {yearlyData.length > 0 && (
+                      <tr className="sticky bottom-0 z-30 bg-indigo-50 border-t border-slate-200 text-indigo-800 shadow-[0_-1px_2px_rgba(0,0,0,0.05)]">
+                        <td className="p-1.5 font-bold border-r border-slate-200 sticky left-0 z-40 bg-indigo-50 text-center shadow-[1px_0_0_0_#e2e8f0]">合計</td>
+                        <td className="p-1.5 text-right pr-4 text-emerald-600 font-bold">{formatCurrency(yearlyData.reduce((s,d)=>s+d.dividendIncome, 0))}</td>
+                        <td className="p-1.5 text-right pr-4 text-orange-500 font-bold">{formatCurrency(yearlyData.reduce((s,d)=>s+d.lendingIncome, 0))}</td>
+                        <td className="p-1.5 text-right pr-4 text-indigo-600 font-bold">{formatCurrency(yearlyData.reduce((s,d)=>s+d.incomeTotal, 0))}</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
+
+        {activeTab === 'expense' && (
+          <>
+            <div className="shrink-0 bg-white rounded-lg shadow-sm border border-slate-200 p-1.5 h-52">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={[...yearlyData].reverse()} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                  <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} tickFormatter={(val) => `${val/10000}W`} />
+                  <Tooltip cursor={{fill: '#f1f5f9'}} contentStyle={{fontSize: '12px', borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} formatter={(val: number) => val.toLocaleString()} />
+                  <Legend verticalAlign="top" align="right" content={renderCustomLegend} />
+                  <Bar dataKey="withdrawalAmount" name="領錢金額" stackId="a" fill="#fca5a5" />
+                  <Bar dataKey="securitiesInterest" name="證劵利息" stackId="a" fill="#f87171" />
+                  <Bar dataKey="marginInterest" name="證金利息" stackId="a" fill="#ef4444" />
+                  <Bar dataKey="remainingIncome" name="淨收入" stackId="a" fill="#10b981" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex-1 bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col min-h-0">
+              <div className="flex-1 overflow-auto no-scrollbar">
+                <table className="w-full text-[10px] text-center whitespace-nowrap">
+                  <thead className="sticky top-0 z-30">
+                    <tr className="bg-indigo-50 border-b border-slate-200 text-indigo-800">
+                      <th className="p-1.5 font-bold sticky left-0 bg-indigo-50 border-r border-slate-200 z-40 text-center shadow-[1px_0_0_0_#e2e8f0]">年份</th>
+                      <th className="p-1.5 font-bold text-right pr-4">收入總額</th>
+                      <th className="p-1.5 font-bold text-right pr-4">領錢金額</th>
+                      <th className="p-1.5 font-bold text-right pr-4">證金利息</th>
+                      <th className="p-1.5 font-bold text-right pr-4">證劵利息</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-slate-600 divide-y divide-slate-100">
+                    {yearlyData.map(d => (
+                      <tr key={d.year} className="hover:bg-slate-50 transition-colors">
+                        <td className="p-1.5 font-bold bg-slate-50/50 border-r border-slate-200 sticky left-0 z-10 text-center shadow-[1px_0_0_0_#e2e8f0]">{d.year}</td>
+                        <td className="p-1.5 text-right pr-4 text-emerald-600 font-bold">{formatCurrency(d.incomeTotal)}</td>
+                        <td className="p-1.5 text-right pr-4">{formatCurrency(d.withdrawalAmount)}</td>
+                        <td className="p-1.5 text-right pr-4">{formatCurrency(d.marginInterest)}</td>
+                        <td className="p-1.5 text-right pr-4">{formatCurrency(d.securitiesInterest)}</td>
+                      </tr>
+                    ))}
+                    {yearlyData.length > 0 && (
+                      <tr className="sticky bottom-0 z-30 bg-indigo-50 border-t border-slate-200 text-indigo-800 shadow-[0_-1px_2px_rgba(0,0,0,0.05)]">
+                        <td className="p-1.5 font-bold border-r border-slate-200 sticky left-0 z-40 bg-indigo-50 text-center shadow-[1px_0_0_0_#e2e8f0]">合計</td>
+                        <td className="p-1.5 text-right pr-4 text-emerald-600 font-bold">{formatCurrency(yearlyData.reduce((s,d)=>s+d.incomeTotal, 0))}</td>
+                        <td className="p-1.5 text-right pr-4">{formatCurrency(yearlyData.reduce((s,d)=>s+d.withdrawalAmount, 0))}</td>
+                        <td className="p-1.5 text-right pr-4">{formatCurrency(yearlyData.reduce((s,d)=>s+d.marginInterest, 0))}</td>
+                        <td className="p-1.5 text-right pr-4">{formatCurrency(yearlyData.reduce((s,d)=>s+d.securitiesInterest, 0))}</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
+
+        {activeTab === 'return' && (
+          <>
+            <div className="shrink-0 bg-white rounded-lg shadow-sm border border-slate-200 p-1.5 h-52">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={[...yearlyData].reverse()} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                  <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} tickFormatter={(val) => `${val/10000}W`} />
+                  <Tooltip cursor={{fill: '#f1f5f9'}} contentStyle={{fontSize: '12px', borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} formatter={(val: number) => val.toLocaleString()} />
+                  <Legend verticalAlign="top" align="right" content={renderCustomLegend} />
+                  <Bar dataKey="dividendIncome" name="股息收入" stackId="a" fill="#10b981" />
+                  <Bar dataKey="profitLoss" name="損益金額" stackId="a" fill="#ef4444" />
+                  <Bar dataKey="investmentAmount" name="投資金額(累)" stackId="a" fill="#3b82f6" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex-1 bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col min-h-0">
+              <div className="flex-1 overflow-auto no-scrollbar">
+                <table className="w-full text-[10px] text-center whitespace-nowrap">
+                  <thead className="sticky top-0 z-30">
+                    <tr className="bg-indigo-50 border-b border-slate-200 text-indigo-800">
+                      <th className="p-1.5 font-bold sticky left-0 bg-indigo-50 border-r border-slate-200 z-40 text-center shadow-[1px_0_0_0_#e2e8f0]">年份</th>
+                      <th className="p-1.5 font-bold text-right pr-4">投資金額(累)</th>
+                      <th className="p-1.5 font-bold text-right pr-4">損益金額</th>
+                      <th className="p-1.5 font-bold text-right pr-4">股息收入</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-slate-600 divide-y divide-slate-100">
+                    {yearlyData.map(d => (
+                      <tr key={d.year} className="hover:bg-slate-50 transition-colors">
+                        <td className="p-1.5 font-bold bg-slate-50/50 border-r border-slate-200 sticky left-0 z-10 text-center shadow-[1px_0_0_0_#e2e8f0]">{d.year}</td>
+                        <td className="p-1.5 text-right pr-4 text-indigo-600 font-bold">{formatCurrency(d.investmentAmount)}</td>
+                        <td className={`p-1.5 text-right pr-4 font-bold ${d.profitLoss >= 0 ? 'text-rose-600' : 'text-emerald-600'}`}>{formatCurrency(d.profitLoss)}</td>
+                        <td className="p-1.5 text-right pr-4 text-emerald-600 font-bold">{formatCurrency(d.dividendIncome)}</td>
+                      </tr>
+                    ))}
+                    {yearlyData.length > 0 && (
+                      <tr className="sticky bottom-0 z-30 bg-indigo-50 border-t border-slate-200 text-indigo-800 shadow-[0_-1px_2px_rgba(0,0,0,0.05)]">
+                        <td className="p-1.5 font-bold border-r border-slate-200 sticky left-0 z-40 bg-indigo-50 text-center shadow-[1px_0_0_0_#e2e8f0]">合計</td>
+                        <td className="p-1.5 text-right pr-4 text-indigo-600 font-bold">{formatCurrency(yearlyData[0].investmentAmount)}</td>
+                        <td className="p-1.5 text-right pr-4 text-rose-600 font-bold">{formatCurrency(yearlyData.reduce((s,d)=>s+d.profitLoss, 0))}</td>
+                        <td className="p-1.5 text-right pr-4 text-emerald-600 font-bold">{formatCurrency(yearlyData.reduce((s,d)=>s+d.dividendIncome, 0))}</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
