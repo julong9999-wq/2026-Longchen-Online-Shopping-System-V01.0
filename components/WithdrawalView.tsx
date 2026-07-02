@@ -588,7 +588,7 @@ const renderOverview = () => {
                   </div>
                 ))}
                 {tree.length > 0 && (
-                  <div className="grid grid-cols-[2fr_1.5fr_0.5fr_1.5fr_0.5fr_1.5fr] p-1 items-center bg-indigo-50 z-30 sticky bottom-0 border-t border-indigo-200">
+                  <div className="grid grid-cols-[2fr_1.5fr_0.5fr_1.5fr_0.5fr_1.5fr] p-1 items-center bg-indigo-100/50 sticky bottom-0 border-t border-indigo-200">
                     <div className="font-bold truncate text-left text-indigo-900 pl-1">合計</div>
                     <div className="text-right text-indigo-700 font-bold">{formatCurrency(tree.reduce((sum, m) => sum + m.current, 0))}</div>
                     <div></div>
@@ -647,7 +647,7 @@ const renderOverview = () => {
                   </div>
                 ))}
                 {overviewMonthlyData.tableData.length > 0 && (
-                  <div className="grid grid-cols-[2fr_1.5fr_0.5fr_1.5fr_0.5fr_1.5fr] p-1.5 items-center bg-indigo-50 z-30 sticky bottom-0 border-t border-indigo-200">
+                  <div className="grid grid-cols-[2fr_1.5fr_0.5fr_1.5fr_0.5fr_1.5fr] p-1.5 items-center bg-indigo-100/50 sticky bottom-0 border-t border-indigo-200">
                     <div className="font-bold text-left text-indigo-900 pl-1">合計</div>
                     <div className="text-right text-indigo-700 font-bold">{formatCurrency(overviewMonthlyData.tableData.reduce((sum, m) => sum + m.current, 0))}</div>
                     <div></div>
@@ -702,7 +702,7 @@ const renderOverview = () => {
                   </div>
                 )}
                 {dividendTableData && dividendTableData.length > 0 && (
-                  <div className="grid grid-cols-[1fr_2fr_2fr_2fr] p-1.5 items-center bg-indigo-50 z-30 sticky bottom-0 border-t border-indigo-200 text-slate-600">
+                  <div className="grid grid-cols-[1fr_2fr_2fr_2fr] p-1.5 items-center bg-indigo-100/50 sticky bottom-0 border-t border-indigo-200 text-slate-600">
                     <div className="font-bold text-indigo-900 text-center">合計</div>
                     <div className="text-right text-indigo-700 font-bold">{formatCurrency(Math.max(...dividendTableData.map(d => d.purchase), 0))}</div>
                     <div className="text-right text-green-700 font-bold">{formatCurrency(dividendTableData.reduce((sum, item) => sum + item.dividend, 0))}</div>
@@ -779,7 +779,7 @@ const renderOverview = () => {
               </div>
             ))}
             {tree.length > 0 && (
-              <div className="grid grid-cols-[2fr_1.5fr_0.5fr_1.5fr_0.5fr_1.5fr] p-1 items-center bg-indigo-50 z-30 sticky bottom-0 border-t border-indigo-200">
+              <div className="grid grid-cols-[2fr_1.5fr_0.5fr_1.5fr_0.5fr_1.5fr] p-1 items-center bg-indigo-100/50 sticky bottom-0 border-t border-indigo-200">
                 <div className="font-bold truncate text-left text-indigo-900 pl-1">合計</div>
                 <div className="text-right text-indigo-700 font-bold">{formatCurrency(tree.reduce((sum, m) => sum + m.current, 0))}</div>
                 <div></div>
