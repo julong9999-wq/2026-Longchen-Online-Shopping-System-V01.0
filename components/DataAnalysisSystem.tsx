@@ -101,7 +101,7 @@ export default function DataAnalysisSystem({ onNavigateHome }: DataAnalysisSyste
           </div>
 
           {/* 4. 第四區為 介面資料或表格 (佔位區) */}
-          <div className="flex-1 overflow-y-auto p-2 pb-20 bg-slate-50 space-y-3">
+          <div className="flex-1 overflow-y-auto p-2 pb-2 bg-slate-50 space-y-3">
             {activeTab === 'data' ? (
               <InvestmentXXXXView activeAccount={activeAccount} refreshKey={refreshKey} />
             ) : (
@@ -124,7 +124,7 @@ export default function DataAnalysisSystem({ onNavigateHome }: DataAnalysisSyste
       )}
 
       {/* 5. 最下列為 功能列 */}
-      <div className="absolute bottom-0 left-0 right-0 bg-indigo-600 text-white p-1.5 pb-safe shadow-[0_-4px_10px_rgba(0,0,0,0.1)] z-20">
+      <div className="bg-indigo-600 text-white p-1.5 pb-safe shadow-[0_-4px_10px_rgba(0,0,0,0.1)] z-20 shrink-0">
         <div className="flex justify-between items-center gap-1 max-w-md mx-auto px-1">
           <button 
             onClick={() => setMainModule('withdrawal')}

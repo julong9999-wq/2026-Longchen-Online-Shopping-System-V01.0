@@ -531,7 +531,7 @@ const renderOverview = () => {
         </div>
         
         {overviewSubTab === 'amount' && (
-          <div className="flex-1 flex flex-col min-h-0 px-1 space-y-1 pb-16">
+          <div className="flex-1 flex flex-col min-h-0 px-1 space-y-1 pb-2">
             <div className="shrink-0 bg-white rounded-lg shadow-sm border border-slate-200 p-1.5 h-52">
               {chartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
@@ -604,7 +604,7 @@ const renderOverview = () => {
 
         
         {overviewSubTab === 'monthly' && overviewMonthlyData && (
-          <div className="flex-1 flex flex-col min-h-0 px-1 space-y-1 pb-16">
+          <div className="flex-1 flex flex-col min-h-0 px-1 space-y-1 pb-2">
             <div className="shrink-0 bg-white rounded-lg shadow-sm border border-slate-200 p-1.5 h-52">
               {overviewMonthlyData.chartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
@@ -662,7 +662,7 @@ const renderOverview = () => {
         )}
 
         {overviewSubTab === 'dividend' && (
-          <div className="flex-1 flex flex-col min-h-0 px-1 space-y-1 pb-16">
+          <div className="flex-1 flex flex-col min-h-0 px-1 space-y-1 pb-2">
             <div className="shrink-0 bg-white rounded-lg shadow-sm border border-slate-200 p-1.5 h-52 flex flex-col">
               <div className="flex justify-start gap-2 mb-1 shrink-0 pl-1">
                 <button onClick={() => setDividendChartMode('purchase')} className={`px-3 py-1 rounded-md text-[10px] font-bold border ${dividendChartMode === 'purchase' ? 'border-indigo-500 text-indigo-700 bg-indigo-50' : 'border-slate-200 text-slate-600 hover:border-indigo-300'}`}>本金領用率</button>
@@ -722,7 +722,7 @@ const renderOverview = () => {
     const { chartData, chartKeys = [], tree } = summaryData;
 
     return (
-      <div className="flex-1 flex flex-col min-h-0 px-1 space-y-1 pb-16 pt-1">
+      <div className="flex-1 flex flex-col min-h-0 px-1 space-y-1 pb-2 pt-1">
         <div className="shrink-0 bg-white rounded-lg shadow-sm border border-slate-200 p-1.5 h-52">
           {chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
@@ -799,7 +799,7 @@ const renderOverview = () => {
     const { activeUsageType, chartData, allExpenseTypes, expenseTypeTotals } = monthlyData;
 
     return (
-      <div className="flex-1 flex flex-col min-h-0 px-1 space-y-1 pb-16 pt-1">
+      <div className="flex-1 flex flex-col min-h-0 px-1 space-y-1 pb-2 pt-1">
         <div className="shrink-0 bg-white rounded-lg shadow-sm border border-slate-200 p-1.5 h-52 relative flex flex-col">
           <div className="flex justify-between items-start gap-2 px-1 mb-1 z-10">
             <div className="flex justify-start items-center gap-2 shrink-0">

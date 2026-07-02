@@ -362,7 +362,7 @@ export default function LendingView({ activeAccount, refreshKey }: { activeAccou
         </a>
       </div>
       
-      <div className="flex-1 overflow-y-auto px-1 pt-1 pb-2 flex flex-col space-y-1">
+      <div className="flex-1 min-h-0 px-1 pt-1 pb-2 flex flex-col space-y-1">
         {activeTab === 'month' && yearMonthData && yearMonthChartData && (
           <>
             <div className="shrink-0 bg-white rounded-lg shadow-sm border border-slate-200 p-1.5 h-52">
@@ -413,7 +413,7 @@ export default function LendingView({ activeAccount, refreshKey }: { activeAccou
                     <tr className="sticky bottom-0 z-30 bg-indigo-50 border-t border-slate-200 text-indigo-800 shadow-[0_-1px_2px_rgba(0,0,0,0.05)]">
                       <td className="p-1.5 font-bold border-r border-slate-200 sticky left-0 z-40 bg-indigo-50 text-center">合計</td>
                       {availableYears.slice(yearWindowIndex, yearWindowIndex + 3).map(y => (
-                        <td key={y} className="p-1.5 font-bold text-right pr-4">{formatCurrency(yearMonthData.reduce((s, d) => s + (d[y] || 0), 0))}</td>
+                        <td key={y} className="p-1.5 font-bold text-right pr-4 bg-indigo-50">{formatCurrency(yearMonthData.reduce((s, d) => s + (d[y] || 0), 0))}</td>
                       ))}
                       <td className="p-1.5 font-bold text-indigo-600 text-right pr-4 sticky right-0 bg-indigo-50 border-l border-slate-200 z-40">{formatCurrency(yearMonthData.reduce((s, d) => s + d.total, 0))}</td>
                     </tr>
@@ -448,7 +448,7 @@ export default function LendingView({ activeAccount, refreshKey }: { activeAccou
                     <tr className="bg-indigo-50 border-b border-slate-200 text-indigo-800">
                       <th className="p-1.5 font-bold sticky left-0 bg-indigo-50 border-r border-slate-200 z-40 text-center">年份</th>
                       {yearModeData.accounts.map(acc => (
-                        <th key={acc} className="p-1.5 font-bold text-right pr-4">{acc}</th>
+                        <th key={acc} className="p-1.5 font-bold text-right pr-4 bg-indigo-50">{acc}</th>
                       ))}
                       <th className="p-1.5 font-bold text-indigo-600 text-right pr-4 sticky right-0 bg-indigo-50 border-l border-slate-200 z-40">合計</th>
                     </tr>
@@ -466,7 +466,7 @@ export default function LendingView({ activeAccount, refreshKey }: { activeAccou
                     <tr className="sticky bottom-0 z-30 bg-indigo-50 border-t border-slate-200 text-indigo-800 shadow-[0_-1px_2px_rgba(0,0,0,0.05)]">
                       <td className="p-1.5 font-bold border-r border-slate-200 sticky left-0 z-40 bg-indigo-50 text-center">合計</td>
                       {yearModeData.accounts.map(acc => (
-                        <td key={acc} className="p-1.5 font-bold text-right pr-4">{formatCurrency(yearModeData.data.reduce((s: number, d: any) => s + (d[acc] || 0), 0))}</td>
+                        <td key={acc} className="p-1.5 font-bold text-right pr-4 bg-indigo-50">{formatCurrency(yearModeData.data.reduce((s: number, d: any) => s + (d[acc] || 0), 0))}</td>
                       ))}
                       <td className="p-1.5 font-bold text-indigo-600 text-right pr-4 sticky right-0 bg-indigo-50 border-l border-slate-200 z-40">{formatCurrency(yearModeData.data.reduce((s: number, d: any) => s + d.total, 0))}</td>
                     </tr>
@@ -508,10 +508,10 @@ export default function LendingView({ activeAccount, refreshKey }: { activeAccou
                       <td className="p-1.5 text-right pr-4 font-bold text-indigo-600 sticky right-0 bg-indigo-50 border-l border-slate-200 z-40">{formatCurrency(d.total)}</td>
                     </tr>
                   ))}
-                  <tr className="bg-slate-50/50">
-                    <td className="p-1.5 font-bold border-r border-slate-200 sticky left-0 z-10 text-left pl-2">合計</td>
+                  <tr className="sticky bottom-0 z-30 bg-indigo-50 border-t border-slate-200 text-indigo-800 shadow-[0_-1px_2px_rgba(0,0,0,0.05)]">
+                    <td className="p-1.5 font-bold border-r border-slate-200 sticky left-0 z-40 bg-indigo-50 text-left pl-2">合計</td>
                     {availableYears.slice(stockWindowIndex, stockWindowIndex + 2).map(y => (
-                      <td key={y} className="p-1.5 font-bold text-right pr-4">{formatCurrency(stockData.reduce((s, d) => s + (d[y] || 0), 0))}</td>
+                      <td key={y} className="p-1.5 font-bold text-right pr-4 bg-indigo-50">{formatCurrency(stockData.reduce((s, d) => s + (d[y] || 0), 0))}</td>
                     ))}
                     <td className="p-1.5 font-bold text-indigo-600 text-right pr-4 sticky right-0 bg-indigo-50 border-l border-slate-200 z-40">{formatCurrency(stockData.reduce((s, d) => s + d.total, 0))}</td>
                   </tr>
@@ -592,8 +592,8 @@ export default function LendingView({ activeAccount, refreshKey }: { activeAccou
                   {detailTab === 'estimate' && (
                     <tr className="sticky bottom-0 z-30 bg-indigo-50 border-t border-slate-200 text-indigo-800 shadow-[0_-1px_2px_rgba(0,0,0,0.05)]">
                       <td colSpan={2} className="p-1.5 font-bold text-center border-r border-slate-200 sticky left-0 z-40 bg-indigo-50">合計</td>
-                      <td className="p-1.5 font-bold text-right pr-4">{formatCurrency(detailData.reduce((s: number, d: any) => s + d.shares, 0))}</td>
-                      <td className="p-1.5 font-bold text-right pr-4">{formatCurrency(detailData.reduce((s: number, d: any) => s + d.days, 0))}</td>
+                      <td className="p-1.5 font-bold text-right pr-4 bg-indigo-50">{formatCurrency(detailData.reduce((s: number, d: any) => s + d.shares, 0))}</td>
+                      <td className="p-1.5 font-bold text-right pr-4 bg-indigo-50">{formatCurrency(detailData.reduce((s: number, d: any) => s + d.days, 0))}</td>
                       <td className="p-1.5 font-bold text-indigo-600 text-right pr-4">{formatCurrency(detailData.reduce((s: number, d: any) => s + d.estimate, 0))}</td>
                     </tr>
                   )}
