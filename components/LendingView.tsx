@@ -407,15 +407,15 @@ export default function LendingView({ activeAccount, refreshKey }: { activeAccou
                         {availableYears.slice(yearWindowIndex, yearWindowIndex + 3).map(y => (
                           <td key={y} className="p-1.5 text-right pr-4">{formatCurrency(d[y] || 0)}</td>
                         ))}
-                        <td className="p-1.5 text-right pr-4 font-bold text-indigo-600 sticky right-0 bg-slate-50/50 border-l border-slate-200 z-10">{formatCurrency(d.total)}</td>
+                        <td className="p-1.5 text-right pr-4 font-bold text-indigo-600 sticky right-0 bg-indigo-50 border-l border-slate-200 z-40">{formatCurrency(d.total)}</td>
                       </tr>
                     ))}
-                    <tr className="bg-slate-50/50">
-                      <td className="p-1.5 font-bold border-r border-slate-200 sticky left-0 z-10 text-center">合計</td>
+                    <tr className="sticky bottom-0 z-30 bg-indigo-50 border-t border-slate-200 text-indigo-800 shadow-[0_-1px_2px_rgba(0,0,0,0.05)]">
+                      <td className="p-1.5 font-bold border-r border-slate-200 sticky left-0 z-40 bg-indigo-50 text-center">合計</td>
                       {availableYears.slice(yearWindowIndex, yearWindowIndex + 3).map(y => (
                         <td key={y} className="p-1.5 font-bold text-right pr-4">{formatCurrency(yearMonthData.reduce((s, d) => s + (d[y] || 0), 0))}</td>
                       ))}
-                      <td className="p-1.5 font-bold text-indigo-600 text-right pr-4 sticky right-0 bg-slate-50 border-l border-slate-200 z-10">{formatCurrency(yearMonthData.reduce((s, d) => s + d.total, 0))}</td>
+                      <td className="p-1.5 font-bold text-indigo-600 text-right pr-4 sticky right-0 bg-indigo-50 border-l border-slate-200 z-40">{formatCurrency(yearMonthData.reduce((s, d) => s + d.total, 0))}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -460,15 +460,15 @@ export default function LendingView({ activeAccount, refreshKey }: { activeAccou
                         {yearModeData.accounts.map(acc => (
                           <td key={acc} className="p-1.5 text-right pr-4">{formatCurrency(d[acc] || 0)}</td>
                         ))}
-                        <td className="p-1.5 text-right pr-4 font-bold text-indigo-600 sticky right-0 bg-slate-50/50 border-l border-slate-200 z-10">{formatCurrency(d.total)}</td>
+                        <td className="p-1.5 text-right pr-4 font-bold text-indigo-600 sticky right-0 bg-indigo-50 border-l border-slate-200 z-40">{formatCurrency(d.total)}</td>
                       </tr>
                     ))}
-                    <tr className="bg-slate-50/50">
-                      <td className="p-1.5 font-bold border-r border-slate-200 sticky left-0 z-10 text-center">合計</td>
+                    <tr className="sticky bottom-0 z-30 bg-indigo-50 border-t border-slate-200 text-indigo-800 shadow-[0_-1px_2px_rgba(0,0,0,0.05)]">
+                      <td className="p-1.5 font-bold border-r border-slate-200 sticky left-0 z-40 bg-indigo-50 text-center">合計</td>
                       {yearModeData.accounts.map(acc => (
                         <td key={acc} className="p-1.5 font-bold text-right pr-4">{formatCurrency(yearModeData.data.reduce((s: number, d: any) => s + (d[acc] || 0), 0))}</td>
                       ))}
-                      <td className="p-1.5 font-bold text-indigo-600 text-right pr-4 sticky right-0 bg-slate-50 border-l border-slate-200 z-10">{formatCurrency(yearModeData.data.reduce((s: number, d: any) => s + d.total, 0))}</td>
+                      <td className="p-1.5 font-bold text-indigo-600 text-right pr-4 sticky right-0 bg-indigo-50 border-l border-slate-200 z-40">{formatCurrency(yearModeData.data.reduce((s: number, d: any) => s + d.total, 0))}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -505,7 +505,7 @@ export default function LendingView({ activeAccount, refreshKey }: { activeAccou
                       {availableYears.slice(stockWindowIndex, stockWindowIndex + 2).map(y => (
                         <td key={y} className="p-1.5 text-right pr-4">{formatCurrency(d[y] || 0)}</td>
                       ))}
-                      <td className="p-1.5 text-right pr-4 font-bold text-indigo-600 sticky right-0 bg-slate-50/50 border-l border-slate-200 z-10">{formatCurrency(d.total)}</td>
+                      <td className="p-1.5 text-right pr-4 font-bold text-indigo-600 sticky right-0 bg-indigo-50 border-l border-slate-200 z-40">{formatCurrency(d.total)}</td>
                     </tr>
                   ))}
                   <tr className="bg-slate-50/50">
@@ -513,7 +513,7 @@ export default function LendingView({ activeAccount, refreshKey }: { activeAccou
                     {availableYears.slice(stockWindowIndex, stockWindowIndex + 2).map(y => (
                       <td key={y} className="p-1.5 font-bold text-right pr-4">{formatCurrency(stockData.reduce((s, d) => s + (d[y] || 0), 0))}</td>
                     ))}
-                    <td className="p-1.5 font-bold text-indigo-600 text-right pr-4 sticky right-0 bg-slate-50 border-l border-slate-200 z-10">{formatCurrency(stockData.reduce((s, d) => s + d.total, 0))}</td>
+                    <td className="p-1.5 font-bold text-indigo-600 text-right pr-4 sticky right-0 bg-indigo-50 border-l border-slate-200 z-40">{formatCurrency(stockData.reduce((s, d) => s + d.total, 0))}</td>
                   </tr>
                 </tbody>
               </table>
@@ -590,8 +590,8 @@ export default function LendingView({ activeAccount, refreshKey }: { activeAccou
                     </tr>
                   ))}
                   {detailTab === 'estimate' && (
-                    <tr className="bg-slate-50/50">
-                      <td colSpan={2} className="p-1.5 font-bold text-center border-r border-slate-200">合計</td>
+                    <tr className="sticky bottom-0 z-30 bg-indigo-50 border-t border-slate-200 text-indigo-800 shadow-[0_-1px_2px_rgba(0,0,0,0.05)]">
+                      <td colSpan={2} className="p-1.5 font-bold text-center border-r border-slate-200 sticky left-0 z-40 bg-indigo-50">合計</td>
                       <td className="p-1.5 font-bold text-right pr-4">{formatCurrency(detailData.reduce((s: number, d: any) => s + d.shares, 0))}</td>
                       <td className="p-1.5 font-bold text-right pr-4">{formatCurrency(detailData.reduce((s: number, d: any) => s + d.days, 0))}</td>
                       <td className="p-1.5 font-bold text-indigo-600 text-right pr-4">{formatCurrency(detailData.reduce((s: number, d: any) => s + d.estimate, 0))}</td>
@@ -606,8 +606,8 @@ export default function LendingView({ activeAccount, refreshKey }: { activeAccou
                     </tr>
                   ))}
                   {(detailTab === 'lent' || detailTab === 'inventory') && (
-                    <tr className="bg-slate-50/50">
-                      <td colSpan={2} className="p-1.5 font-bold text-right border-r border-slate-200 pr-4">合計</td>
+                    <tr className="sticky bottom-0 z-30 bg-indigo-50 border-t border-slate-200 text-indigo-800 shadow-[0_-1px_2px_rgba(0,0,0,0.05)]">
+                      <td colSpan={2} className="p-1.5 font-bold text-right border-r border-slate-200 pr-4 sticky left-0 z-40 bg-indigo-50">合計</td>
                       <td className="p-1.5 font-bold text-indigo-600 text-right pr-4">{formatCurrency(detailData.reduce((s: number, d: any) => s + d.shares, 0))}</td>
                     </tr>
                   )}

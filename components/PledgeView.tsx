@@ -488,8 +488,8 @@ export default function PledgeView({ activeAccount, refreshKey }: { activeAccoun
                       </tr>
                     ))}
                     {sortedEstimateData.length > 0 && (
-                      <tr className="bg-slate-50/50 font-bold">
-                        <td className="p-1.5 text-center border-r border-slate-200 sticky left-0 z-10">合計</td>
+                      <tr className="sticky bottom-0 z-30 bg-indigo-50/90 backdrop-blur-sm border-t border-slate-200 text-indigo-800 font-bold shadow-[0_-1px_2px_rgba(0,0,0,0.05)]">
+                        <td className="p-1.5 text-center border-r border-slate-200 sticky left-0 z-40 bg-indigo-50/90 backdrop-blur-sm">合計</td>
                         <td className="p-1.5 text-right pr-4">{sortedEstimateData.reduce((s, d) => s + d.shares, 0)}</td>
                         <td className="p-1.5 text-right pr-4">{formatCurrency(sortedEstimateData.reduce((s, d) => s + d.loanAmount, 0))}</td>
                         <td className="p-1.5 text-right pr-4"></td>

@@ -295,6 +295,17 @@ export default function InvestmentXXXXView({ activeAccount, refreshKey }: { acti
                 <td className="p-1.5 text-right pr-4">{formatCurrency(d.pledgeInterest)}</td>
               </tr>
             ))}
+            {data.length > 0 && (
+              <tr className="sticky bottom-0 z-30 bg-indigo-50/90 backdrop-blur-sm border-t border-slate-200 text-indigo-800 font-bold shadow-[0_-1px_2px_rgba(0,0,0,0.05)]">
+                <td className="p-1.5 font-bold border-r border-slate-200 sticky left-0 z-40 bg-indigo-50/90 backdrop-blur-sm">合計</td>
+                <td className="p-1.5 text-right pr-4">{formatCurrency(data.reduce((s, d) => s + d.investmentAmount, 0))}</td>
+                <td className="p-1.5 text-right pr-4 text-indigo-600">{formatCurrency(data.reduce((s, d) => s + d.profitLoss, 0))}</td>
+                <td className="p-1.5 text-right pr-4 text-green-600">{formatCurrency(data.reduce((s, d) => s + d.dividendIncome, 0))}</td>
+                <td className="p-1.5 text-right pr-4">{formatCurrency(data.reduce((s, d) => s + d.withdrawalAmount, 0))}</td>
+                <td className="p-1.5 text-right pr-4">{formatCurrency(data.reduce((s, d) => s + d.lendingIncome, 0))}</td>
+                <td className="p-1.5 text-right pr-4">{formatCurrency(data.reduce((s, d) => s + d.pledgeInterest, 0))}</td>
+              </tr>
+            )}
             {data.length === 0 && (
               <tr>
                 <td colSpan={7} className="p-4 text-center text-slate-400">目前無資料</td>

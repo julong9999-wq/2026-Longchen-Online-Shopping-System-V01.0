@@ -860,17 +860,17 @@ const renderOverview = () => {
                         rowTotal += amount;
                         return <td key={type} className="p-1.5 text-right pr-2" style={activeUsageType === '全部支出' ? { minWidth: '25vw', width: '25vw' } : {}}>{formatCurrency(amount)}</td>;
                       })}
-                      <td className="p-1.5 font-bold text-indigo-600 sticky right-0 bg-slate-50/50 border-l border-slate-200 z-10 shadow-[-1px_0_0_0_#e2e8f0] text-right pr-2">{formatCurrency(rowTotal)}</td>
+                      <td className="p-1.5 font-bold text-indigo-600 sticky right-0 bg-indigo-50 border-l border-slate-200 z-40 shadow-[-1px_0_0_0_#e2e8f0] text-right pr-2">{formatCurrency(rowTotal)}</td>
                     </tr>
                   );
                 })}
-                <tr className="bg-slate-50/50">
-                  <td className="p-1.5 font-bold border-r border-slate-200 sticky left-0 z-10 shadow-[1px_0_0_0_#e2e8f0] text-center">合計</td>
+                <tr className="sticky bottom-0 z-30 bg-indigo-50 border-t border-slate-200 text-indigo-800 shadow-[0_-1px_2px_rgba(0,0,0,0.05)]">
+                  <td className="p-1.5 font-bold border-r border-slate-200 sticky left-0 z-40 bg-indigo-50 shadow-[1px_0_0_0_#e2e8f0] text-center">合計</td>
                   {allExpenseTypes.map(type => {
                     const total = expenseTypeTotals.find(e => e.name === type)?.total || 0;
                     return <td key={type} className="p-1.5 font-bold text-right pr-2" style={activeUsageType === '全部支出' ? { minWidth: '25vw', width: '25vw' } : {}}>{formatCurrency(total)}</td>;
                   })}
-                  <td className="p-1.5 font-bold text-indigo-600 sticky right-0 bg-slate-50/50 border-l border-slate-200 z-10 shadow-[-1px_0_0_0_#e2e8f0] text-right pr-2">
+                  <td className="p-1.5 font-bold text-indigo-600 sticky right-0 bg-indigo-50 border-l border-slate-200 z-40 shadow-[-1px_0_0_0_#e2e8f0] text-right pr-2">
                     {formatCurrency(expenseTypeTotals.reduce((sum, e) => sum + e.total, 0))}
                   </td>
                 </tr>
